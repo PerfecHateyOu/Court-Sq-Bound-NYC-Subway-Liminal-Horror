@@ -1165,6 +1165,16 @@ export class GameEngine {
     this.GT += dt;
     this.runSched();
 
+    // Sanity tier drives visuals, audio, parent behaviour and the haven cue. Recompute it
+    // every frame, and tell the UI when it changes so the tier color grading follows.
+    if (this.phase !== 'menu' && this.phase !== 'end') {
+      const tier = tierOf(this.san);
+      if (tier !== this.tier) {
+        this.tier = tier;
+        this.notifyUI();
+      }
+    }
+
     if (this.phase === 'trial') {
       const k = 1 - Math.exp(-22 * dt);
       this.yaw += (this.ty - this.yaw) * k;
