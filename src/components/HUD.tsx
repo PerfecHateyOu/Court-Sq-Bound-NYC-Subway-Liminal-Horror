@@ -213,6 +213,10 @@ export const HUD: React.FC<HUDProps> = ({
           <div>
             Heart: {G.heartBpm.toFixed(0)} bpm | Intercom: next {Math.max(0, G.intercomT).toFixed(0)}s ({G.intercomCount} played)
           </div>
+          <div>
+            Glitch: decoy in {Math.max(0, G.glitchDecoyT).toFixed(0)}s | {G.glitchLog.filter((g) => g.reason === 'anomaly').length} real,{' '}
+            {G.glitchLog.filter((g) => g.reason === 'decoy').length} decoy
+          </div>
         </div>
       )}
     </div>

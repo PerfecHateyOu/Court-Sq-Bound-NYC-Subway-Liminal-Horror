@@ -9,6 +9,7 @@ import {
   CFG,
   CHATS,
   DRIFT,
+  GLITCH_TIERS,
   HEART_BPM,
   HEART_JITTER,
   INTERCOM_EVERY,
@@ -140,6 +141,10 @@ export class GameEngine {
   public whisperT: number = 20;
   public intercomT: number = INTERCOM_FIRST[0]; // ride-time countdown to the next background announcement
   public intercomCount: number = 0;
+  // Screen glitch currently playing (game time), and the ride-time countdown to the next decoy.
+  public glitch: { start: number; duration: number; strength: number; seed: number } | null = null;
+  public glitchDecoyT: number = 30;
+  public glitchLog: Array<{ gt: number; reason: 'anomaly' | 'decoy'; strength: number; duration: number }> = [];
   // Heart clock: one source for the HUD trace and the Critical-tier thump, in game time.
   public heartBpm: number = HEART_BPM[0];
   public heartNextAt: number = 0;
@@ -363,6 +368,9 @@ export class GameEngine {
     this.heartBeats = [];
     this.intercomT = INTERCOM_FIRST[0] + Math.random() * (INTERCOM_FIRST[1] - INTERCOM_FIRST[0]);
     this.intercomCount = 0;
+    this.glitch = null;
+    this.glitchDecoyT = 30;
+    this.glitchLog = [];
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
     // Clear on-screen text too: with its timer zeroed, expiry never clears leftover text.
     this.subHtml = '';
@@ -1266,6 +1274,45 @@ export class GameEngine {
     this.intercomT = duration + INTERCOM_EVERY[0] + Math.random() * (INTERCOM_EVERY[1] - INTERCOM_EVERY[0]);
   }
 
+  /**
+   * Start a screen glitch. Real (anomaly) and decoy glitches draw from the same per-tier ranges,
+   * so strength and length never reveal which one it was. No glitches at High or Medium; a
+   * Critical anomaly appearing above Low still uses the Low ranges.
+   */
+  public triggerGlitch(reason: 'anomaly' | 'decoy') {
+    const p = GLITCH_TIERS[this.tier] ?? (reason === 'anomaly' ? GLITCH_TIERS[2] : null);
+    if (!p) return;
+    // One at a time: never restart a glitch that's still playing (e.g. two anomalies in one frame).
+    if (this.glitch && this.GT - this.glitch.start < this.glitch.duration) return;
+    const r = (range: [number, number]) => range[0] + Math.random() * (range[1] - range[0]);
+    const strength = r(p.strength);
+    const duration = r(p.duration);
+    this.glitch = { start: this.GT, duration, strength, seed: Math.random() * 1000 };
+    this.glitchLog.push({ gt: this.GT, reason, strength, duration });
+    if (this.glitchLog.length > 50) this.glitchLog.shift();
+  }
+
+  /** Current glitch strength 0..1: fast attack, eased decay. 0 when idle or paused. */
+  public glitchAmount(): number {
+    const g = this.glitch;
+    if (!g || this.paused) return 0;
+    const p = (this.GT - g.start) / g.duration;
+    if (p < 0 || p >= 1) return 0;
+    const env = p < 0.08 ? p / 0.08 : Math.pow(1 - (p - 0.08) / 0.92, 1.5);
+    return g.strength * env;
+  }
+
+  /** Decoy glitches at Low and Critical, at random during rides. */
+  private updateGlitchDecoys(dt: number) {
+    if (this.glitch && this.GT - this.glitch.start >= this.glitch.duration) this.glitch = null;
+    const p = GLITCH_TIERS[this.tier];
+    if (!p) return;
+    this.glitchDecoyT -= dt;
+    if (this.glitchDecoyT > 0) return;
+    if (!this.glitch) this.triggerGlitch('decoy');
+    this.glitchDecoyT = p.decoyEvery[0] + Math.random() * (p.decoyEvery[1] - p.decoyEvery[0]);
+  }
+
   private updateChoiceTimer(dt: number) {
     const C = this.choice;
     if (!C) return;
@@ -1405,6 +1452,8 @@ export class GameEngine {
         if (okToSpawn) {
           a.apply();
           a.at = this.GT;
+          // Critical, parent-implicated anomalies tear the screen the moment they happen.
+          if (a.tier >= 3) this.triggerGlitch('anomaly');
           if (a.id === 'dadanswer') {
             this.setSub(
               `<b>Dad:</b> ${['No, I didn\u2019t hear it either.', 'Because you didn\u2019t ask.', 'Two more. Don\u2019t count them.'][Math.floor(Math.random() * 3)]}`,
@@ -1490,6 +1539,7 @@ export class GameEngine {
       }
     }
     if (this.phase === 'ride' && this.seg) this.updateIntercom(dt, this.seg);
+    if (this.phase === 'ride') this.updateGlitchDecoys(dt);
     this.applyLighting();
     this.placeWorld(pos, speed);
   }

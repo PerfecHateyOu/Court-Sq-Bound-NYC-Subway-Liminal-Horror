@@ -79,6 +79,22 @@ export const INTERCOM_EVERY: [number, number] = [28, 55]; // between announcemen
 export const INTERCOM_RETRY = 6; // when the moment is busy, try again this much later
 export const INTERCOM_MIN_ROOM = 6; // never start within this long of braking
 
+// Screen glitch (tearing + chromatic aberration) by sanity tier. None at High or Medium,
+// keeping the clean baseline. Critical anomalies (Mom's frozen face, the empty car, Dad's
+// unasked answer) trigger one the moment they appear; decoys fire at random during rides, drawn
+// from the same strength/length ranges, so a tear is never proof that something changed.
+export interface GlitchTier {
+  strength: [number, number];
+  duration: [number, number]; // seconds
+  decoyEvery: [number, number]; // seconds of riding between decoys
+}
+export const GLITCH_TIERS: Array<GlitchTier | null> = [
+  null, // High
+  null, // Medium
+  { strength: [0.45, 0.75], duration: [0.28, 0.45], decoyEvery: [45, 90] }, // Low
+  { strength: [0.6, 1.0], duration: [0.3, 0.55], decoyEvery: [25, 55] }, // Critical
+];
+
 export const SUS = {
   falsePos: 20,
   maskFail: 15,
