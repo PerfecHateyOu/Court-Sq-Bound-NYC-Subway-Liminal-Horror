@@ -176,10 +176,11 @@ export class AudioEngine {
   }
 
   /**
-   * Subtle, randomized environmental glitch or metallic sound
-   * played when an anomaly is successfully spotted.
+   * Subtle, randomized environmental glitch or metallic sound played whenever a flag
+   * registers. It plays for every flag, right or wrong: flags are private, and accuracy
+   * is only revealed in the travel report, so the sound must not confirm a real anomaly.
    */
-  public anomalySpotted() {
+  public flagRegistered() {
     if (!this.ac || !this.masterGain) return;
     const t = this.ac.currentTime;
     const variation = Math.floor(Math.random() * 3);

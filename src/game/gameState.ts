@@ -345,10 +345,15 @@ export class GameEngine {
     this.trials = [];
     this.misleadUsed = false;
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
+    // Clear on-screen text too: with its timer zeroed, expiry never clears leftover text.
+    this.subHtml = '';
+    this.paText = '';
+    this.hintText = '';
     this.subUntil = 0;
     this.paUntil = 0;
     this.hintUntil = 0;
     this.choice = null;
+    this.paused = false;
 
     // Reset world entities
     const cb = this.carBuilder;
@@ -402,6 +407,12 @@ export class GameEngine {
     this.phase = 'intro';
     this.doorOpen = 1;
     this.doorTarget = 1;
+
+    // The report screen drops the master level and fades the hum out, and a Trial or the
+    // Stop 6 transition thins the bed. A new run (Ride again, or Restart from the pause
+    // menu) must start at full ambience.
+    audioEngine.setMasterLevel(0.85, 0.3);
+    audioEngine.setBedLevel(1.0, 0.3);
 
     this.sched(1.2, () => this.setPA('This is a Court Square–bound G train.', 4.0));
     this.sched(2.5, () =>
@@ -1427,9 +1438,8 @@ export class GameEngine {
         const alreadyFlagged = this.segFlags.some((f) => f.tid === this.flagTid && (!live || f.gt >= live.at!));
         if (!alreadyFlagged) {
           this.segFlags.push({ tid: this.flagTid, gt: this.GT });
-          if (live) {
-            audioEngine.anomalySpotted();
-          }
+          // Same sound for every flag, so it never tells the player whether they were right.
+          audioEngine.flagRegistered();
         }
         this.flagLock = true;
         this.notedT = this.GT;
