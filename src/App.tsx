@@ -396,6 +396,17 @@ export default function App() {
   const handlePause = pauseGame;
   const handleResume = resumeGame;
 
+  // Restart from the pause menu: a fresh run from Hoyt–Schermerhorn. The abandoned
+  // ride is not saved to run history (only endGame() saves).
+  const handleRestart = () => {
+    const G = engineRef.current;
+    if (!G) return;
+    G.startIntro(); // resets all run state and unpauses
+    audioEngine.wake();
+    requestLock();
+    triggerUpdate();
+  };
+
   const handlePlayAgain = () => {
     const G = engineRef.current;
     if (G) {
@@ -442,7 +453,7 @@ export default function App() {
 
       {/* Pause Screen Overlay */}
       {paused && engineRef.current && (
-        <PauseScreen engine={engineRef.current} onResume={handleResume} />
+        <PauseScreen engine={engineRef.current} onResume={handleResume} onRestart={handleRestart} />
       )}
 
       {/* End of Ride Psychological Travel Report */}
