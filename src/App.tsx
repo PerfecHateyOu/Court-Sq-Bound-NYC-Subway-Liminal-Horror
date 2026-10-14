@@ -13,6 +13,29 @@ import { ReportScreen } from './components/ReportScreen';
 import { PauseScreen } from './components/PauseScreen';
 import { RunHistoryRecord } from './types';
 
+// Touch = the primary pointer is coarse. Touchscreen laptops report touch points too,
+// but they have a mouse or trackpad and should get pointer lock and desktop tuning.
+const IS_TOUCH =
+  typeof window !== 'undefined' &&
+  (matchMedia('(pointer: coarse)').matches ||
+    ('ontouchstart' in window && !matchMedia('(pointer: fine)').matches));
+
+// The engine notifies React on discrete events only. These HUD values change every frame,
+// so refresh at ~30 Hz while any of them is on screen.
+const HUD_REFRESH_MS = 33;
+function hudNeedsLiveRefresh(G: GameEngine): boolean {
+  if (G.paused || G.phase === 'menu' || G.phase === 'end') return false;
+  return (
+    G.flagHeld ||
+    G.flagProg > 0 ||
+    !!G.choice ||
+    !!G.restraint ||
+    G.debug ||
+    G.GT < G.hintUntil ||
+    G.GT - G.notedT < 0.7
+  );
+}
+
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -29,8 +52,7 @@ export default function App() {
     vignetteOpacity: 0.55,
   });
 
-  const isTouch = typeof window !== 'undefined' &&
-    (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || matchMedia('(pointer: coarse)').matches);
+  const isTouch = IS_TOUCH;
 
   // Re-render helper
   const triggerUpdate = useCallback(() => {
@@ -53,6 +75,35 @@ export default function App() {
       }
     }
   }, []);
+
+  const requestLock = useCallback(() => {
+    if (isTouch) return;
+    const canvas = containerRef.current?.querySelector('canvas');
+    if (canvas && !document.pointerLockElement) {
+      canvas.requestPointerLock?.()?.catch?.(() => {});
+    }
+  }, [isTouch]);
+
+  // Every pause path (Esc, P, tab switch, pause button) goes through here so held inputs
+  // are released and the restraint gets its grace period on resume.
+  const pauseGame = useCallback(() => {
+    const G = engineRef.current;
+    if (!G || G.paused) return;
+    G.pause();
+    audioEngine.suspend();
+    // Free the cursor so the Resume button can be clicked.
+    if (document.pointerLockElement) document.exitPointerLock();
+    triggerUpdate();
+  }, [triggerUpdate]);
+
+  const resumeGame = useCallback(() => {
+    const G = engineRef.current;
+    if (!G || !G.paused) return;
+    G.resume();
+    audioEngine.wake();
+    requestLock();
+    triggerUpdate();
+  }, [requestLock, triggerUpdate]);
 
   // Initialize Three.js scene & Game Engine
   useEffect(() => {
@@ -107,6 +158,8 @@ export default function App() {
     let lastTime = performance.now();
     let perfAcc = 0;
     let perfN = 0;
+    let hudAcc = 0;
+    let hudWasLive = false;
 
     let animId: number;
     const animate = (currentTime: number) => {
@@ -135,6 +188,16 @@ export default function App() {
         engine.update(dt);
       }
 
+      // Live HUD: flag ring fill, answer countdown bars, hint expiry, debug overlay.
+      // One extra refresh after the last live frame lets them settle (e.g. a hint disappearing).
+      hudAcc += deltaMs;
+      const hudLive = hudNeedsLiveRefresh(engine);
+      if ((hudLive || hudWasLive) && hudAcc >= HUD_REFRESH_MS) {
+        hudAcc = 0;
+        hudWasLive = hudLive;
+        setTick((t) => t + 1);
+      }
+
       renderer.render(scene, camera);
     };
     animId = requestAnimationFrame(animate);
@@ -155,14 +218,6 @@ export default function App() {
     let dragId: number | null = null;
     let lx = 0;
     let ly = 0;
-
-    const requestLock = () => {
-      if (isTouch) return;
-      const canvas = container.querySelector('canvas');
-      if (canvas && !document.pointerLockElement) {
-        canvas.requestPointerLock?.().catch(() => {});
-      }
-    };
 
     const handlePointerDown = (e: PointerEvent) => {
       const G = engineRef.current;
@@ -207,15 +262,9 @@ export default function App() {
     container.addEventListener('pointercancel', handlePointerEnd);
     container.addEventListener('pointerleave', handlePointerEnd);
 
-    // Auto-pause when pointerlock is exited mid-game
+    // Auto-pause when pointerlock is exited mid-game (Esc)
     const handleLockChange = () => {
-      const G = engineRef.current;
-      if (!G) return;
-      if (!document.pointerLockElement && G.phase !== 'menu' && G.phase !== 'end' && !G.paused) {
-        G.paused = true;
-        audioEngine.suspend();
-        triggerUpdate();
-      }
+      if (!document.pointerLockElement) pauseGame();
     };
     document.addEventListener('pointerlockchange', handleLockChange);
 
@@ -227,7 +276,7 @@ export default function App() {
       container.removeEventListener('pointerleave', handlePointerEnd);
       document.removeEventListener('pointerlockchange', handleLockChange);
     };
-  }, [isTouch, triggerUpdate]);
+  }, [isTouch, requestLock, pauseGame]);
 
   // Keyboard Event Handlers
   useEffect(() => {
@@ -236,13 +285,8 @@ export default function App() {
       if (!G) return;
 
       if (e.code === 'KeyP' && G.phase !== 'menu' && G.phase !== 'end') {
-        G.paused = !G.paused;
-        if (G.paused) {
-          audioEngine.suspend();
-        } else {
-          audioEngine.wake();
-        }
-        triggerUpdate();
+        if (G.paused) resumeGame();
+        else pauseGame();
         return;
       }
 
@@ -289,24 +333,30 @@ export default function App() {
     };
 
     const handleVisibility = () => {
+      if (document.hidden) pauseGame();
+    };
+
+    // Alt-tab or clicking another window: the key-up never arrives, so release held
+    // inputs here. During the restraint this starts the grace period instead of failing it.
+    const handleBlur = () => {
       const G = engineRef.current;
-      if (document.hidden && G && G.phase !== 'menu' && G.phase !== 'end' && !G.paused) {
-        G.paused = true;
-        audioEngine.suspend();
-        triggerUpdate();
-      }
+      if (!G) return;
+      G.interruptInputs();
+      triggerUpdate();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [triggerUpdate]);
+  }, [triggerUpdate, pauseGame, resumeGame]);
 
   const handleStartGame = (startMuted: boolean, showDebug: boolean) => {
     audioEngine.init(startMuted);
@@ -343,23 +393,8 @@ export default function App() {
     triggerUpdate();
   };
 
-  const handlePause = () => {
-    const G = engineRef.current;
-    if (G) {
-      G.paused = true;
-      audioEngine.suspend();
-      triggerUpdate();
-    }
-  };
-
-  const handleResume = () => {
-    const G = engineRef.current;
-    if (G) {
-      G.paused = false;
-      audioEngine.wake();
-      triggerUpdate();
-    }
-  };
+  const handlePause = pauseGame;
+  const handleResume = resumeGame;
 
   const handlePlayAgain = () => {
     const G = engineRef.current;

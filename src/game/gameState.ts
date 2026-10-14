@@ -11,6 +11,7 @@ import {
   DRIFT,
   MASK_DIALOGUES,
   PARANOID_UI_WORDS,
+  RESTRAINT_GRACE,
   RESTRAINT_RAISE,
   SAN,
   SEGS,
@@ -204,6 +205,42 @@ export class GameEngine {
 
   private notifyUI() {
     if (this.onStateChange) this.onStateChange();
+  }
+
+  /** Head-snap tuning: on touch a snap must be faster and cover a big turn, so a quick swipe isn't a head whip. */
+  public get snapThresh(): number {
+    return this.isTouch ? CFG.snapThreshTouch : CFG.snapThresh;
+  }
+  public get snapArcMin(): number {
+    return this.isTouch ? CFG.snapArcTouch : CFG.snapArc;
+  }
+
+  /**
+   * Held inputs can be lost without a key/pointer-up (alt-tab, pause screen, Esc releasing the mouse).
+   * Release them, and during the restraint give the player a grace period to re-hold instead of failing it.
+   */
+  public interruptInputs() {
+    this.flagHeld = false;
+    if (this.restraint) {
+      this.restraint.grace = Math.max(this.restraint.grace, RESTRAINT_GRACE);
+    }
+  }
+
+  public pause() {
+    if (this.paused || this.phase === 'menu' || this.phase === 'end') return;
+    this.paused = true;
+    this.interruptInputs();
+    this.notifyUI();
+  }
+
+  public resume() {
+    if (!this.paused) return;
+    this.paused = false;
+    if (this.restraint) {
+      this.restraint.grace = Math.max(this.restraint.grace, RESTRAINT_GRACE);
+      this.setHint(this.isTouch ? 'Hold the button again. Don’t react.' : 'Hold Space again. Don’t react.', 3.0);
+    }
+    this.notifyUI();
   }
 
   public getBand(stop: number): [number, number] {
@@ -1211,7 +1248,7 @@ export class GameEngine {
       const da = this.dirVec.angleTo(this.prevDir);
       const a = da / dt;
       this.angVel = this.angVel * 0.55 + a * 0.45;
-      if (this.angVel > CFG.snapThresh * 0.4) {
+      if (this.angVel > this.snapThresh * 0.4) {
         this.snapArc += da;
         this.snapPeak = Math.max(this.snapPeak, this.angVel);
       } else {
@@ -1244,7 +1281,7 @@ export class GameEngine {
     // Visible reactions check
     this.snapCd -= dt;
     if (this.phase === 'ride' || this.phase === 'stop') {
-      if (this.snapPeak > CFG.snapThresh && this.snapArc >= CFG.snapArc && watcher && this.snapCd <= 0) {
+      if (this.snapPeak > this.snapThresh && this.snapArc >= this.snapArcMin && watcher && this.snapCd <= 0) {
         this.addSus(SUS.visible, `Snapped your head around while ${watcher.label} was watching`, watcher);
         this.snapCd = 2.5;
       }

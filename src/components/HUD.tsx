@@ -35,7 +35,7 @@ export const HUD: React.FC<HUDProps> = ({
   const isTrial = G.phase === 'trial';
 
   // Flag hold progress ring calculation
-  const flagProgRatio = Math.max(0, Math.min(1, G.flagLock ? 1 : G.flagProg / 0.7));
+  const flagProgRatio = Math.max(0, Math.min(1, G.flagLock ? 1 : G.flagProg / CFG.flagHold));
   const dashOffset = 88 * (1 - flagProgRatio);
   const isNoted = G.GT - G.notedT < 0.6;
 
@@ -193,7 +193,7 @@ export const HUD: React.FC<HUDProps> = ({
           <div>Sanity: {G.san.toFixed(0)} (Band: {b[0]}–{b[1]}) | Tier: {TIER_NAMES[G.tier]}</div>
           <div>Suspicion: {G.sus} (Peak: {G.peak})</div>
           <div>Gaze: {G.gazeTid || '—'} ({G.dwell.toFixed(1)}s)</div>
-          <div>AngVel: {G.angVel.toFixed(1)} / {CFG.snapThresh} (Arc: {G.snapArc.toFixed(2)})</div>
+          <div>AngVel: {G.angVel.toFixed(1)} / {G.snapThresh} (Arc: {G.snapArc.toFixed(2)} / {G.snapArcMin})</div>
           <div>
             Parents: {G.carBuilder.parents.map((p) => `${p.label}:${p.frozen ? 'FROZEN' : p.facing ? 'WATCHING' : p.mode}`).join(' | ')}
           </div>
