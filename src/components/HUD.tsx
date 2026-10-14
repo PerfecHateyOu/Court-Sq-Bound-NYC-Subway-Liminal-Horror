@@ -9,6 +9,7 @@ import { GameEngine } from '../game/gameState';
 import { STOPS, TIER_NAMES, CFG } from '../constants';
 import { Volume2, VolumeX, Pause } from 'lucide-react';
 import { audioEngine } from '../audio/audioEngine';
+import { HeartbeatTrace } from './HeartbeatTrace';
 
 interface HUDProps {
   engine: GameEngine;
@@ -78,6 +79,8 @@ export const HUD: React.FC<HUDProps> = ({
         </span>
         <span className="text-[#9a9684]">Next:</span>
         <b className="text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
+        <span className="w-px h-4 bg-white/15" aria-hidden="true" />
+        <HeartbeatTrace engine={G} />
       </div>
 
       {/* Top Right Controls: Mute and Pause */}

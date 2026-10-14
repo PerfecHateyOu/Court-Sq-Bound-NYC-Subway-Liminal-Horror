@@ -9,6 +9,8 @@ import {
   CFG,
   CHATS,
   DRIFT,
+  HEART_BPM,
+  HEART_JITTER,
   MASK_DIALOGUES,
   PARANOID_UI_WORDS,
   RESTRAINT_GRACE,
@@ -129,7 +131,10 @@ export class GameEngine {
   public hintText: string = '';
   public clackD: number = 6;
   public whisperT: number = 20;
-  public heartT: number = 0;
+  // Heart clock: one source for the HUD trace and the Critical-tier thump, in game time.
+  public heartBpm: number = HEART_BPM[0];
+  public heartNextAt: number = 0;
+  public heartBeats: number[] = []; // GT of recent beats, newest last
   public isTouch: boolean = false;
 
   // 3D Scene Components
@@ -344,6 +349,9 @@ export class GameEngine {
     this.trial = null;
     this.trials = [];
     this.misleadUsed = false;
+    this.heartBpm = HEART_BPM[0];
+    this.heartNextAt = 0;
+    this.heartBeats = [];
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
     // Clear on-screen text too: with its timer zeroed, expiry never clears leftover text.
     this.subHtml = '';
@@ -1165,6 +1173,17 @@ export class GameEngine {
     this.GT += dt;
     this.runSched();
 
+    // Sanity tier drives visuals, audio, parent behaviour and the haven cue. Recompute it
+    // every frame, and tell the UI when it changes so the tier color grading follows.
+    if (this.phase !== 'menu' && this.phase !== 'end') {
+      const tier = tierOf(this.san);
+      if (tier !== this.tier) {
+        this.tier = tier;
+        this.notifyUI();
+      }
+      this.updateHeart(dt);
+    }
+
     if (this.phase === 'trial') {
       const k = 1 - Math.exp(-22 * dt);
       this.yaw += (this.ty - this.yaw) * k;
@@ -1189,6 +1208,26 @@ export class GameEngine {
       this.paText = '';
       this.paUntil = 0;
     }
+  }
+
+  /**
+   * Heart rate follows the sanity tier, easing over a few seconds rather than jumping, and turns
+   * irregular at low sanity. At Critical each beat is also heard (the thump stays in sync with
+   * the HUD trace because both come from this clock).
+   */
+  private updateHeart(dt: number) {
+    const target = HEART_BPM[this.tier];
+    this.heartBpm += (target - this.heartBpm) * (1 - Math.exp(-dt / 2.5));
+    if (this.GT < this.heartNextAt) return;
+
+    // Anchor each beat to its planned time, not the frame it lands on, so the rate doesn't
+    // drift slow at low frame rates. After a long gap (new run), restart the clock.
+    const beatAt = this.GT - this.heartNextAt > 1 ? this.GT : this.heartNextAt;
+    this.heartBeats.push(beatAt);
+    if (this.heartBeats.length > 12) this.heartBeats.shift();
+    const period = (60 / this.heartBpm) * (1 + HEART_JITTER[this.tier] * (Math.random() * 2 - 1));
+    this.heartNextAt = beatAt + period;
+    if (this.tier >= 3) audioEngine.thump(period);
   }
 
   private updateChoiceTimer(dt: number) {
@@ -1414,14 +1453,6 @@ export class GameEngine {
         audioEngine.whisper(2.2);
       }
     }
-    if (this.tier >= 3) {
-      this.heartT -= dt;
-      if (this.heartT <= 0) {
-        this.heartT = 1.05;
-        audioEngine.thump();
-      }
-    }
-
     this.applyLighting();
     this.placeWorld(pos, speed);
   }
