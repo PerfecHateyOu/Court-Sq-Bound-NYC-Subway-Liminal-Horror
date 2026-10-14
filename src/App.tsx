@@ -90,7 +90,14 @@ export default function App() {
     const G = engineRef.current;
     if (!G || G.paused) return;
     G.pause();
-    audioEngine.suspend();
+    if (!G.paused) return; // menu or report: nothing to pause
+    if (document.hidden) {
+      // Tab switched away: silence everything; music starts when the player comes back.
+      audioEngine.suspend();
+    } else {
+      // Game audio fades out, pause music (shaped by the current sanity tier) fades in.
+      audioEngine.enterPause(G.tier);
+    }
     // Free the cursor so the Resume button can be clicked.
     if (document.pointerLockElement) document.exitPointerLock();
     triggerUpdate();
@@ -101,6 +108,7 @@ export default function App() {
     if (!G || !G.paused) return;
     G.resume();
     audioEngine.wake();
+    audioEngine.exitPause();
     requestLock();
     triggerUpdate();
   }, [requestLock, triggerUpdate]);
@@ -333,7 +341,15 @@ export default function App() {
     };
 
     const handleVisibility = () => {
-      if (document.hidden) pauseGame();
+      const G = engineRef.current;
+      if (document.hidden) {
+        if (G && G.paused) audioEngine.suspend(); // already paused: stop the pause music too
+        else pauseGame();
+      } else if (G && G.paused) {
+        // Back on the tab while paused: bring the pause music back.
+        audioEngine.wake();
+        audioEngine.enterPause(G.tier);
+      }
     };
 
     // Alt-tab or clicking another window: the key-up never arrives, so release held
@@ -401,6 +417,7 @@ export default function App() {
   const handleRestart = () => {
     const G = engineRef.current;
     if (!G) return;
+    audioEngine.exitPause();
     G.startIntro(); // resets all run state and unpauses
     audioEngine.wake();
     requestLock();

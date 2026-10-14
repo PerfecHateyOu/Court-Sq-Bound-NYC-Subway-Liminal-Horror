@@ -4,9 +4,19 @@
  * curve screeches, whispers, and heartbeats. Zero external audio file dependencies.
  */
 
+import { PauseMusic } from './pauseMusic';
+
+/*
+ * Signal chain:
+ *   game sounds + bed ─► masterGain (game bus: run level, ducked while paused) ─┐
+ *   pause music ──────────────────────────────────────────────────────────────┴► outGain (mute) ─► speakers
+ */
 export class AudioEngine {
   private ac: AudioContext | null = null;
+  private outGain: GainNode | null = null;
   private masterGain: GainNode | null = null;
+  private pauseMusic: PauseMusic | null = null;
+  private ducked: boolean = false;
   private bedGain: GainNode | null = null;
   private rumbleGain: GainNode | null = null;
   private lpFilter: BiquadFilterNode | null = null;
@@ -22,10 +32,17 @@ export class AudioEngine {
       this.ac = new AudioCtx();
       this.isMuted = startMuted;
 
-      // Master output bus
+      // Final output: mute lives here so it covers game audio and pause music alike
+      this.outGain = this.ac.createGain();
+      this.outGain.gain.setValueAtTime(this.isMuted ? 0 : 1, this.ac.currentTime);
+      this.outGain.connect(this.ac.destination);
+
+      // Game bus
       this.masterGain = this.ac.createGain();
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ac.currentTime);
-      this.masterGain.connect(this.ac.destination);
+      this.masterGain.gain.setValueAtTime(this.masterVolume, this.ac.currentTime);
+      this.masterGain.connect(this.outGain);
+
+      this.pauseMusic = new PauseMusic(this.ac, this.outGain);
 
       // Generate White and Brown noise buffers
       const sr = this.ac.sampleRate;
@@ -104,25 +121,51 @@ export class AudioEngine {
   }
 
   public toggleMute(): boolean {
-    this.isMuted = !this.isMuted;
-    this.setMasterLevel(this.masterVolume, 0.05);
+    this.setMute(!this.isMuted);
     return this.isMuted;
   }
 
   public setMute(muted: boolean) {
     this.isMuted = muted;
-    this.setMasterLevel(this.masterVolume, 0.05);
+    if (this.ac && this.outGain) {
+      this.outGain.gain.setTargetAtTime(muted ? 0 : 1, this.ac.currentTime, 0.05);
+    }
   }
 
   public getMuted(): boolean {
     return this.isMuted;
   }
 
+  /** Run-level volume of the game bus (e.g. 0.2 on the report screen). Kept while ducked for pause. */
   public setMasterLevel(level: number, rampTime: number = 0.3) {
     this.masterVolume = level;
-    if (this.ac && this.masterGain) {
-      this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : level, this.ac.currentTime, rampTime);
+    if (this.ac && this.masterGain && !this.ducked) {
+      this.masterGain.gain.setTargetAtTime(level, this.ac.currentTime, rampTime);
     }
+  }
+
+  /**
+   * Pause: fade the game out and the pause music in. The music degrades with sanity tier (0-3).
+   * The audio context keeps running; use suspend() instead when the tab is hidden.
+   */
+  public enterPause(tier: number) {
+    if (!this.ac || !this.masterGain) return;
+    this.ducked = true;
+    this.masterGain.gain.setTargetAtTime(0, this.ac.currentTime, 0.12);
+    this.pauseMusic?.start(tier);
+  }
+
+  /** Resume: fade the music out and the game back in to its run level. */
+  public exitPause() {
+    if (!this.ac || !this.masterGain) return;
+    this.ducked = false;
+    this.masterGain.gain.setTargetAtTime(this.masterVolume, this.ac.currentTime, 0.3);
+    this.pauseMusic?.stop();
+  }
+
+  /** For tests and the debug overlay. */
+  public getPauseMusic(): PauseMusic | null {
+    return this.pauseMusic;
   }
 
   public setBedLevel(level: number, rampTime: number = 0.3) {
