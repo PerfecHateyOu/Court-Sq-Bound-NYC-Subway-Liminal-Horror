@@ -1427,9 +1427,8 @@ export class GameEngine {
         const alreadyFlagged = this.segFlags.some((f) => f.tid === this.flagTid && (!live || f.gt >= live.at!));
         if (!alreadyFlagged) {
           this.segFlags.push({ tid: this.flagTid, gt: this.GT });
-          if (live) {
-            audioEngine.anomalySpotted();
-          }
+          // Same sound for every flag, so it never tells the player whether they were right.
+          audioEngine.flagRegistered();
         }
         this.flagLock = true;
         this.notedT = this.GT;
