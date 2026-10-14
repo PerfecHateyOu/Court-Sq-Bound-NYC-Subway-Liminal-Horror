@@ -11,6 +11,10 @@ import {
   DRIFT,
   HEART_BPM,
   HEART_JITTER,
+  INTERCOM_EVERY,
+  INTERCOM_FIRST,
+  INTERCOM_MIN_ROOM,
+  INTERCOM_RETRY,
   MASK_DIALOGUES,
   PARANOID_UI_WORDS,
   RESTRAINT_GRACE,
@@ -134,6 +138,8 @@ export class GameEngine {
   public hintText: string = '';
   public clackD: number = 6;
   public whisperT: number = 20;
+  public intercomT: number = INTERCOM_FIRST[0]; // ride-time countdown to the next background announcement
+  public intercomCount: number = 0;
   // Heart clock: one source for the HUD trace and the Critical-tier thump, in game time.
   public heartBpm: number = HEART_BPM[0];
   public heartNextAt: number = 0;
@@ -355,6 +361,8 @@ export class GameEngine {
     this.heartBpm = HEART_BPM[0];
     this.heartNextAt = 0;
     this.heartBeats = [];
+    this.intercomT = INTERCOM_FIRST[0] + Math.random() * (INTERCOM_FIRST[1] - INTERCOM_FIRST[0]);
+    this.intercomCount = 0;
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
     // Clear on-screen text too: with its timer zeroed, expiry never clears leftover text.
     this.subHtml = '';
@@ -1239,6 +1247,25 @@ export class GameEngine {
     if (this.tier >= 3) audioEngine.thump(period);
   }
 
+  /**
+   * Background intercom: a garbled announcement every 28–55 s of riding, pitched and paced by
+   * the sanity tier. It waits for a quiet moment (no real PA, dialogue, prompt, restraint or
+   * intervention) and never starts near braking, so it can't mask the arrival chime or doors.
+   */
+  private updateIntercom(dt: number, seg: SegmentDef) {
+    this.intercomT -= dt;
+    if (this.intercomT > 0) return;
+    const roomBeforeBraking = this.segLen(seg) - TD - this.ts;
+    const busy = !!this.paText || !!this.subHtml || !!this.choice || !!this.restraint || this.intervening;
+    if (busy || roomBeforeBraking < INTERCOM_MIN_ROOM) {
+      this.intercomT = INTERCOM_RETRY;
+      return;
+    }
+    const duration = audioEngine.intercom(this.tier);
+    this.intercomCount++;
+    this.intercomT = duration + INTERCOM_EVERY[0] + Math.random() * (INTERCOM_EVERY[1] - INTERCOM_EVERY[0]);
+  }
+
   private updateChoiceTimer(dt: number) {
     const C = this.choice;
     if (!C) return;
@@ -1462,6 +1489,7 @@ export class GameEngine {
         audioEngine.whisper(2.2);
       }
     }
+    if (this.phase === 'ride' && this.seg) this.updateIntercom(dt, this.seg);
     this.applyLighting();
     this.placeWorld(pos, speed);
   }

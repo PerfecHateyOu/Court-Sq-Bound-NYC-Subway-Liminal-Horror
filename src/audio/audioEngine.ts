@@ -5,6 +5,7 @@
  */
 
 import { PauseMusic } from './pauseMusic';
+import { Intercom } from './intercom';
 
 /*
  * Signal chain:
@@ -16,6 +17,7 @@ export class AudioEngine {
   private outGain: GainNode | null = null;
   private masterGain: GainNode | null = null;
   private pauseMusic: PauseMusic | null = null;
+  private intercomVoice: Intercom | null = null;
   private ducked: boolean = false;
   private bedGain: GainNode | null = null;
   private rumbleGain: GainNode | null = null;
@@ -61,6 +63,9 @@ export class AudioEngine {
       for (let i = 0; i < whiteLen; i++) {
         wd[i] = Math.random() * 2 - 1;
       }
+
+      // Background intercom on the game bus: ducked on pause, covered by mute.
+      this.intercomVoice = new Intercom(this.ac, this.masterGain, this.whiteBuffer);
 
       // Bed bus (hum + train rumble)
       this.bedGain = this.ac.createGain();
@@ -166,6 +171,15 @@ export class AudioEngine {
   /** For tests and the debug overlay. */
   public getPauseMusic(): PauseMusic | null {
     return this.pauseMusic;
+  }
+
+  /** One garbled background announcement, shaped by sanity tier. Returns its duration (s), 0 if audio is off. */
+  public intercom(tier: number): number {
+    return this.intercomVoice ? this.intercomVoice.play(tier) : 0;
+  }
+
+  public getIntercom(): Intercom | null {
+    return this.intercomVoice;
   }
 
   public setBedLevel(level: number, rampTime: number = 0.3) {

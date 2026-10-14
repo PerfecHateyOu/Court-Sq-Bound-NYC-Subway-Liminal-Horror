@@ -55,4 +55,5 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/graphics/` | Procedural subway car, characters, textures, and the Trial space |
 | `src/audio/audioEngine.ts` | WebAudio bed, chimes, screech, whispers |
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
+| `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
 | `src/components/` | React HUD, start, pause, and report screens |
