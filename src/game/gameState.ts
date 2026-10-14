@@ -1424,8 +1424,12 @@ export class GameEngine {
       this.flagProg += dt;
       if (this.flagProg >= CFG.flagHold) {
         const live = this.active.find((a) => a.at !== null && a.tids.includes(this.flagTid!));
-        if (!this.segFlags.some((f) => f.tid === this.flagTid && (!live || f.gt >= live.at!))) {
+        const alreadyFlagged = this.segFlags.some((f) => f.tid === this.flagTid && (!live || f.gt >= live.at!));
+        if (!alreadyFlagged) {
           this.segFlags.push({ tid: this.flagTid, gt: this.GT });
+          if (live) {
+            audioEngine.anomalySpotted();
+          }
         }
         this.flagLock = true;
         this.notedT = this.GT;

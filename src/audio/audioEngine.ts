@@ -175,6 +175,98 @@ export class AudioEngine {
     this.noiseHit(this.ac.currentTime, 0.09, 400, 1.0, 0.18, pan);
   }
 
+  /**
+   * Subtle, randomized environmental glitch or metallic sound
+   * played when an anomaly is successfully spotted.
+   */
+  public anomalySpotted() {
+    if (!this.ac || !this.masterGain) return;
+    const t = this.ac.currentTime;
+    const variation = Math.floor(Math.random() * 3);
+    const pan = Math.random() * 1.6 - 0.8;
+
+    switch (variation) {
+      case 0: {
+        // Metallic Resonant Tine Ring (eerie, high harmonic chime)
+        const f1 = 1480 + (Math.random() * 120 - 60);
+        const f2 = f1 * 1.51; // slightly dissonant overtone
+        this.tone(f1, t, 0.65, 0.045, 'sine');
+        this.tone(f2, t, 0.45, 0.025, 'triangle');
+        // Subtle metallic attack ping
+        this.noiseHit(t, 0.04, 2800, 16, 0.06, pan);
+        break;
+      }
+      case 1: {
+        // Environmental Tape / Electrical Frequency Glitch
+        this.noiseHit(t, 0.035, 3400, 8, 0.07, pan);
+        this.noiseHit(t + 0.05, 0.025, 1800, 12, 0.05, -pan);
+
+        const osc = this.ac.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(680, t + 0.02);
+        osc.frequency.exponentialRampToValueAtTime(240, t + 0.28);
+
+        const filter = this.ac.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, t + 0.02);
+        filter.frequency.exponentialRampToValueAtTime(300, t + 0.28);
+
+        const gain = this.ac.createGain();
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(0.04, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+
+        let outNode: AudioNode = gain;
+        if (this.ac.createStereoPanner) {
+          const panner = this.ac.createStereoPanner();
+          panner.pan.value = pan;
+          outNode = gain.connect(panner);
+        }
+
+        osc.connect(filter).connect(gain);
+        outNode.connect(this.masterGain);
+        osc.start(t + 0.02);
+        osc.stop(t + 0.3);
+        break;
+      }
+      case 2:
+      default: {
+        // Metallic Resonant Subway Scrape / Shiver
+        if (this.whiteBuffer) {
+          const s = this.ac.createBufferSource();
+          s.buffer = this.whiteBuffer;
+          const f = this.ac.createBiquadFilter();
+          f.type = 'bandpass';
+          f.Q.value = 24;
+          f.frequency.setValueAtTime(2600, t);
+          f.frequency.exponentialRampToValueAtTime(1450, t + 0.45);
+
+          const g = this.ac.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.055, t + 0.04);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+
+          let outNode: AudioNode = g;
+          if (this.ac.createStereoPanner) {
+            const panner = this.ac.createStereoPanner();
+            panner.pan.value = pan;
+            outNode = g.connect(panner);
+          }
+
+          s.connect(f).connect(g);
+          outNode.connect(this.masterGain);
+          s.start(t, Math.random());
+          s.stop(t + 0.5);
+        }
+
+        // Sub/metallic hollow undertone with eerie beat frequency
+        this.tone(1185, t, 0.4, 0.03, 'sine');
+        this.tone(1202, t, 0.4, 0.03, 'sine');
+        break;
+      }
+    }
+  }
+
   public screech(duration: number, volume: number = 0.08) {
     if (!this.ac || !this.whiteBuffer || !this.masterGain) return;
     const t = this.ac.currentTime;
