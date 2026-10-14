@@ -52,4 +52,5 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/game/anomalyManager.ts` | Anomaly catalog by sanity tier |
 | `src/graphics/` | Procedural subway car, characters, textures, and the Trial space |
 | `src/audio/audioEngine.ts` | WebAudio bed, chimes, screech, whispers |
+| `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/components/` | React HUD, start, pause, and report screens |
