@@ -29,6 +29,8 @@ No environment variables are required.
 2. **Don't show it.** Staring at something wrong, or whipping your head around, while a parent is looking at you raises their suspicion. When they talk to you, answer like nothing is wrong.
 3. **Read the doors.** At every stop you can stay on or step off. Stepping off is usually a trap.
 
+On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" on the start screen). iPhones don't support web vibration.
+
 A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy.
 
 ### Controls
