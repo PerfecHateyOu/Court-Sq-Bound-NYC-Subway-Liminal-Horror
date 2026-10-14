@@ -73,6 +73,24 @@ export function tierOf(san: number): number {
 export const HEART_BPM = [64, 82, 102, 118];
 export const HEART_JITTER = [0, 0.02, 0.05, 0.09];
 
+// Anxious breathing during rides: a slight, slow narrowing of the camera's field of view on
+// each inhale. By sanity tier (High, Medium, Low, Critical); none at High, so the baseline
+// stays clean. depthDeg is the narrowing at the 68° landscape FOV (scaled for portrait).
+// Each flag you place on a ride deepens it a little, up to BREATH_MAX_FLAGS. These are your
+// own flags, right or wrong, so the breathing never tells you whether something is real.
+export interface BreathTier {
+  bpm: number;
+  depthDeg: number;
+}
+export const BREATH_TIERS: Array<BreathTier | null> = [
+  null,
+  { bpm: 18, depthDeg: 0.35 }, // Medium
+  { bpm: 24, depthDeg: 0.6 }, // Low
+  { bpm: 32, depthDeg: 0.9 }, // Critical
+];
+export const BREATH_PER_FLAG_DEG = 0.22;
+export const BREATH_MAX_FLAGS = 3;
+
 // Background intercom (game seconds of riding). Random timing, unrelated to stop types.
 export const INTERCOM_FIRST: [number, number] = [10, 20]; // first one after boarding
 export const INTERCOM_EVERY: [number, number] = [28, 55]; // between announcements

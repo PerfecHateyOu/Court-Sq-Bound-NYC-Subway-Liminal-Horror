@@ -217,6 +217,9 @@ export const HUD: React.FC<HUDProps> = ({
             Glitch: decoy in {Math.max(0, G.glitchDecoyT).toFixed(0)}s | {G.glitchLog.filter((g) => g.reason === 'anomaly').length} real,{' '}
             {G.glitchLog.filter((g) => g.reason === 'decoy').length} decoy
           </div>
+          <div>
+            Breath: {G.breathDepth < 0.005 ? 'calm' : `${G.breathBpm.toFixed(0)}/min, ${G.breathDepth.toFixed(2)}° deep`}
+          </div>
         </div>
       )}
     </div>

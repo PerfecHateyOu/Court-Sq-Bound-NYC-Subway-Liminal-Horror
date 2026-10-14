@@ -8,6 +8,7 @@ import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
 import { RESTRAINT_RAISE } from '../constants';
 import { RotateCcw } from 'lucide-react';
+import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -41,6 +42,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
   const avgPeak = runs.length ? Math.round(runs.reduce((a, r) => a + r.peak, 0) / runs.length) : 0;
   const runsWithSan = runs.filter((r) => typeof r.sanPct === 'number');
   const avgSan = runsWithSan.length ? Math.round(runsWithSan.reduce((a, r) => a + r.sanPct, 0) / runsWithSan.length) : null;
+
+  // Psychological Log: this ride's anomalies, plus the case file kept across rides.
+  const psych = G.psychLog;
+  const archive = psych?.archive ?? {};
+  const documented = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
+  const unconfirmed = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'unconfirmed').length;
 
   const tellText = (r: StopLogRecord) => {
     let t =
@@ -235,6 +242,118 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
               </tbody>
             </table>
           </div>
+
+          {/* Psychological Log */}
+          <section aria-labelledby="psych-log-h" className="mt-5 border-t-2 border-[#1b1d18] pt-3">
+            <div className="flex items-baseline justify-between gap-3 mb-1">
+              <h3 id="psych-log-h" className="font-black text-xs sm:text-sm uppercase tracking-wide">
+                Psychological Log
+              </h3>
+              <span className="font-mono text-[11px] sm:text-xs font-bold whitespace-nowrap">
+                {documented} / {PSYCH_IDS.length} documented
+              </span>
+            </div>
+            <div
+              className="h-1.5 rounded-sm bg-[#c4bda7] overflow-hidden flex"
+              role="img"
+              aria-label={`${documented} of ${PSYCH_IDS.length} documented, ${unconfirmed} unconfirmed`}
+            >
+              <div className="h-full bg-[#264a22]" style={{ width: `${(documented / PSYCH_IDS.length) * 100}%` }} />
+              <div className="h-full bg-[#9f9883]" style={{ width: `${(unconfirmed / PSYCH_IDS.length) * 100}%` }} />
+            </div>
+            <p className="text-[10px] sm:text-[11px] text-[#55574c] mt-1">
+              Catch a phenomenon once to document it.{unconfirmed > 0 && ` ${unconfirmed} witnessed but never caught.`}
+            </p>
+
+            {/* This ride */}
+            <h4 className="mt-3 mb-1 font-extrabold text-[11px] uppercase tracking-wide text-[#55574c]">This ride</h4>
+            {psych && psych.ride.length > 0 ? (
+              <ol className="divide-y divide-[#c4bda7] text-xs">
+                {psych.ride.map((e, i) => {
+                  const def = PSYCH_ENTRIES[e.id];
+                  return (
+                    <li key={i} className="py-1.5 grid grid-cols-[3.25rem_1fr] gap-x-2">
+                      <span className="font-mono font-bold text-[11px] pt-px">Stop {e.stop}</span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span className="font-extrabold">{def.title}</span>
+                          <span className="font-mono text-[10px] text-[#55574c]">Class {PSYCH_CLASS[def.tier]}</span>
+                          <span className={`font-bold text-[10px] uppercase ${e.hit ? 'text-[#264a22]' : 'text-[#9b3526]'}`}>
+                            {e.hit ? 'Caught' : 'Missed'}
+                          </span>
+                          {e.isNew && (
+                            <span className="px-1 rounded-sm bg-[#1b1d18] text-[#e8e2cf] font-black text-[9px] tracking-wider">
+                              NEW
+                            </span>
+                          )}
+                          {e.confirmed && (
+                            <span className="px-1 rounded-sm bg-[#264a22] text-[#e8e2cf] font-black text-[9px] tracking-wider">
+                              CONFIRMED
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] sm:text-[11px] text-[#55574c] leading-snug mt-0.5">{e.desc}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <p className="text-xs text-[#55574c]">Nothing happened in front of you this ride. That you know of.</p>
+            )}
+
+            {/* Case file across rides */}
+            <h4 className="mt-3 mb-1 font-extrabold text-[11px] uppercase tracking-wide text-[#55574c]">Case file</h4>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+              {PSYCH_IDS.map((id, i) => {
+                const def = PSYCH_ENTRIES[id];
+                const rec = archive[id];
+                const state = entryState(rec);
+                const no = String(i + 1).padStart(2, '0');
+                return (
+                  <li
+                    key={id}
+                    className={`p-2 rounded-sm border ${
+                      state === 'documented'
+                        ? 'border-[#9f9883] bg-black/5'
+                        : state === 'unconfirmed'
+                        ? 'border-dashed border-[#9f9883]'
+                        : 'border-[#c4bda7] text-[#55574c]'
+                    }`}
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-mono text-[10px] text-[#55574c]">No. {no}</span>
+                      <span className="font-mono text-[10px] text-[#55574c]">Class {PSYCH_CLASS[def.tier]}</span>
+                    </div>
+                    {state === 'redacted' ? (
+                      <>
+                        <span
+                          className="block mt-1 h-3 rounded-sm bg-[#1b1d18]/80"
+                          style={{ width: `${45 + ((i * 37) % 40)}%` }}
+                          aria-label="Redacted"
+                        />
+                        <p className="mt-1 text-[10px] italic">Not yet witnessed.</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-extrabold text-[#1b1d18] mt-0.5">{def.title}</div>
+                        {state === 'documented' ? (
+                          <p className="text-[10px] sm:text-[11px] leading-snug mt-0.5">{def.note}</p>
+                        ) : (
+                          <p className="text-[10px] sm:text-[11px] leading-snug mt-0.5 italic text-[#55574c]">
+                            Unconfirmed. You were there; you didn’t catch it.
+                          </p>
+                        )}
+                        <p className="font-mono text-[10px] text-[#55574c] mt-1">
+                          Witnessed {rec!.seen}× · caught {rec!.caught}×
+                        </p>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
 
           {/* Historical Stats */}
           <div className="mt-4 pt-3 border-t border-[#9f9883] text-[11px] sm:text-xs text-[#55574c]">

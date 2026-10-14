@@ -31,7 +31,7 @@ No environment variables are required.
 
 On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" on the start screen). iPhones don't support web vibration.
 
-A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy.
+A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy, plus a Psychological Log: a case file of the 13 anomaly types that fills in across rides.
 
 ### Controls
 
@@ -56,5 +56,6 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/audioEngine.ts` | WebAudio bed, chimes, screech, whispers |
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
+| `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/glitchPass.ts` | Brief screen tearing and chromatic aberration, used for Critical anomalies and for decoy glitches at low sanity |
 | `src/components/` | React HUD, start, pause, and report screens |
