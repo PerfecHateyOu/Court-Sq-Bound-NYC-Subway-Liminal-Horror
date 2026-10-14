@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
+import { haptics } from './game/haptics';
 import { HUD } from './components/HUD';
 import { StartScreen } from './components/StartScreen';
 import { ReportScreen } from './components/ReportScreen';
@@ -91,6 +92,7 @@ export default function App() {
     if (!G || G.paused) return;
     G.pause();
     if (!G.paused) return; // menu or report: nothing to pause
+    haptics.stop();
     if (document.hidden) {
       // Tab switched away: silence everything; music starts when the player comes back.
       audioEngine.suspend();

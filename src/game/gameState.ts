@@ -29,6 +29,9 @@ import { audioEngine } from '../audio/audioEngine';
 import { SubwayCarBuilder } from '../graphics/subwayCarBuilder';
 import { TrialBuilder } from '../graphics/trialBuilder';
 import { AnomalyManager } from './anomalyManager';
+import { haptics } from './haptics';
+
+const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
 import {
   ActiveAnomaly,
   ChoiceItem,
@@ -563,6 +566,7 @@ export class GameEngine {
     };
 
     let dS = 0;
+    let catches = 0;
     this.active.forEach((a) => {
       if (a.at === null) {
         a.revert();
@@ -570,6 +574,7 @@ export class GameEngine {
       }
       const hit = this.segFlags.some((f) => a.tids.includes(f.tid) && f.gt >= a.at!);
       if (hit) {
+        catches++;
         this.acc.correct++;
         dS += SAN.clock;
       } else {
@@ -587,6 +592,10 @@ export class GameEngine {
 
     if (dS) this.addSanity(dS, `Stop ${seg.stop} anomalies`);
     if (!this.segSusGain && this.sus > 0) this.addSus(SUS.clean, 'Clean stop');
+
+    // Haptic reward: one pulse per catch on this ride, at the same moment of every arrival,
+    // so it reflects only how many you caught (never which flag, never the stop type).
+    if (catches > 0) this.sched(HAPTIC_DELAY_S, () => haptics.catches(catches));
 
     this.active = [];
     this.usedTids = new Set();

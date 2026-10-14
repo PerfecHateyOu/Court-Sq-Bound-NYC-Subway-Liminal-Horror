@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { Smartphone, HelpCircle } from 'lucide-react';
+import { haptics } from '../game/haptics';
 
 interface StartScreenProps {
   onStart: (muted: boolean, debug: boolean) => void;
@@ -13,6 +14,8 @@ interface StartScreenProps {
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, isTouch }) => {
   const [startMuted, setStartMuted] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
+  const [vibrate, setVibrate] = React.useState(haptics.enabled);
+  const canVibrate = isTouch && haptics.supported;
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 sm:p-6 bg-black/80 backdrop-blur-md">
@@ -91,7 +94,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, isTouch }) =>
             Board the Train
           </button>
 
-          <div className="flex items-center gap-4 text-xs text-[#9a9684]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#9a9684]">
             <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
               <input
                 type="checkbox"
@@ -101,6 +104,24 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, isTouch }) =>
               />
               Start muted
             </label>
+
+            {canVibrate && (
+              <label
+                className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
+                title="At each stop, a soft pulse for every anomaly you caught on the way in"
+              >
+                <input
+                  type="checkbox"
+                  checked={vibrate}
+                  onChange={(e) => {
+                    setVibrate(e.target.checked);
+                    haptics.setEnabled(e.target.checked);
+                  }}
+                  className="w-4 h-4 rounded accent-[#6cbe45]"
+                />
+                Vibrate for catches
+              </label>
+            )}
 
             <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
               <input
