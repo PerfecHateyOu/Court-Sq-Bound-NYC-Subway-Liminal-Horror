@@ -68,6 +68,11 @@ export function tierOf(san: number): number {
   return san >= 75 ? 0 : san >= 40 ? 1 : san >= 10 ? 2 : 3;
 }
 
+// Heartbeat by sanity tier (High, Medium, Low, Critical): resting to racing.
+// Jitter is beat-to-beat variation, so the rhythm turns irregular as sanity goes.
+export const HEART_BPM = [64, 82, 102, 118];
+export const HEART_JITTER = [0, 0.02, 0.05, 0.09];
+
 export const SUS = {
   falsePos: 20,
   maskFail: 15,

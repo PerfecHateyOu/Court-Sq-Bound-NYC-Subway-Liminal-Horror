@@ -205,11 +205,14 @@ export class AudioEngine {
     this.tone(740, this.ac.currentTime, 0.12, 0.025, 'triangle');
   }
 
-  public thump() {
+  /** Lub-dub. The gap shrinks with the beat period so fast heartbeats don't overlap. */
+  public thump(period: number = 1.05) {
     if (!this.ac) return;
     const t = this.ac.currentTime;
-    this.tone(52, t, 0.22, 0.22);
-    this.tone(48, t + 0.24, 0.25, 0.16);
+    const gap = Math.min(0.24, period * 0.38);
+    const len = Math.min(0.22, period * 0.35);
+    this.tone(52, t, len, 0.22);
+    this.tone(48, t + gap, len + 0.03, 0.16);
   }
 
   public step() {
