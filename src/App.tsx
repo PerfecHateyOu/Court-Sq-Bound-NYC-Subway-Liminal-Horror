@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
 import { haptics } from './game/haptics';
+import { GlitchPass } from './graphics/glitchPass';
 import { HUD } from './components/HUD';
 import { StartScreen } from './components/StartScreen';
 import { ReportScreen } from './components/ReportScreen';
@@ -16,6 +17,10 @@ import { RunHistoryRecord } from './types';
 
 // Touch = the primary pointer is coarse. Touchscreen laptops report touch points too,
 // but they have a mouse or trackpad and should get pointer lock and desktop tuning.
+// Screen tearing is skipped entirely for players who ask the OS for reduced motion.
+const REDUCED_MOTION =
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 const IS_TOUCH =
   typeof window !== 'undefined' &&
   (matchMedia('(pointer: coarse)').matches ||
@@ -156,6 +161,7 @@ export default function App() {
 
     // Create Engine instance
     const engine = new GameEngine(scene, camera, renderer, isTouch);
+    const glitchPass = new GlitchPass(renderer);
     engineRef.current = engine;
 
     engine.onStateChange = () => triggerUpdate();
@@ -208,13 +214,20 @@ export default function App() {
         setTick((t) => t + 1);
       }
 
-      renderer.render(scene, camera);
+      // Screen glitch: only route through the shader pass while one is playing.
+      const glitchAmt = REDUCED_MOTION ? 0 : engine.glitchAmount();
+      if (glitchAmt > 0.001 && engine.glitch) {
+        glitchPass.render(scene, camera, glitchAmt, engine.GT - engine.glitch.start, engine.glitch.seed);
+      } else {
+        renderer.render(scene, camera);
+      }
     };
     animId = requestAnimationFrame(animate);
 
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', fit);
+      glitchPass.dispose();
       renderer.dispose();
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
     };
