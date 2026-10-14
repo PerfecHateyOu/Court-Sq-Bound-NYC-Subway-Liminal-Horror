@@ -142,13 +142,16 @@ export default function App() {
     const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.08, 90);
     camera.rotation.order = 'YXZ';
 
+    // Base field of view; breathing narrows it slightly from here each frame.
+    let baseFov = 68;
     const fit = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
       if (!w || !h) return;
       const aspect = w / h;
       camera.aspect = aspect;
-      camera.fov = aspect < 1 ? 88 : 68;
+      baseFov = aspect < 1 ? 88 : 68;
+      camera.fov = baseFov;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
@@ -212,6 +215,14 @@ export default function App() {
         hudAcc = 0;
         hudWasLive = hudLive;
         setTick((t) => t + 1);
+      }
+
+      // Anxious breathing: a slight FOV pulse during low-sanity rides (off under reduced motion).
+      // The offset is in degrees at the 68° landscape FOV, so scale it for the wider portrait view.
+      const fov = baseFov * (1 + (REDUCED_MOTION ? 0 : engine.breathFovOffset()) / 68);
+      if (Math.abs(camera.fov - fov) > 1e-4) {
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
       }
 
       // Screen glitch: only route through the shader pass while one is playing.

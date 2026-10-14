@@ -74,6 +74,7 @@ export interface ActiveAnomaly {
 }
 
 export interface StopAnomalyRecord {
+  id: string;
   desc: string;
   hit: boolean;
 }

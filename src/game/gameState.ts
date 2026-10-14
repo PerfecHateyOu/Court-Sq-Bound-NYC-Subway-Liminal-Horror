@@ -6,6 +6,9 @@
 import * as THREE from 'three';
 import {
   BANDS,
+  BREATH_MAX_FLAGS,
+  BREATH_PER_FLAG_DEG,
+  BREATH_TIERS,
   CFG,
   CHATS,
   DRIFT,
@@ -30,6 +33,7 @@ import {
   V,
   tierOf,
 } from '../constants';
+import { recordRide, PsychLogResult } from './psychLog';
 import { audioEngine } from '../audio/audioEngine';
 import { SubwayCarBuilder } from '../graphics/subwayCarBuilder';
 import { TrialBuilder } from '../graphics/trialBuilder';
@@ -145,6 +149,12 @@ export class GameEngine {
   public glitch: { start: number; duration: number; strength: number; seed: number } | null = null;
   public glitchDecoyT: number = 30;
   public glitchLog: Array<{ gt: number; reason: 'anomaly' | 'decoy'; strength: number; duration: number }> = [];
+  // Breathing: phase 0..1 through the current breath, and the eased rate and depth (degrees).
+  public breathPhase: number = 0;
+  public breathBpm: number = 0;
+  public breathDepth: number = 0;
+  // Psychological Log for the finished ride (set at the end of a run).
+  public psychLog: PsychLogResult | null = null;
   // Heart clock: one source for the HUD trace and the Critical-tier thump, in game time.
   public heartBpm: number = HEART_BPM[0];
   public heartNextAt: number = 0;
@@ -371,6 +381,10 @@ export class GameEngine {
     this.glitch = null;
     this.glitchDecoyT = 30;
     this.glitchLog = [];
+    this.breathPhase = 0;
+    this.breathBpm = 0;
+    this.breathDepth = 0;
+    this.psychLog = null;
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
     // Clear on-screen text too: with its timer zeroed, expiry never clears leftover text.
     this.subHtml = '';
@@ -561,7 +575,12 @@ export class GameEngine {
 
     const tier = tierOf(this.san);
     for (let i = 0; i < seg.anoms; i++) {
-      const id = this.anomalyMgr.pickPoolTier(tier, seg.stop);
+      // Don't repeat an anomaly already planned for this ride (e.g. Stop 10's forced parent
+      // anomaly being picked again from the Critical pool): one flag would count twice.
+      let id = this.anomalyMgr.pickPoolTier(tier, seg.stop);
+      for (let k = 0; k < 6 && this.active.some((a) => a.id === id); k++) {
+        id = this.anomalyMgr.pickPoolTier(tier, seg.stop);
+      }
       const anom = this.anomalyMgr.createAnomaly(id, times[ti++]);
       if (anom) {
         anom.tids.forEach((t) => this.usedTids.add(t));
@@ -597,7 +616,7 @@ export class GameEngine {
         this.acc.miss++;
         dS += SAN.miss;
       }
-      rec.anoms.push({ desc: a.desc, hit });
+      rec.anoms.push({ id: a.id, desc: a.desc, hit });
       a.revert();
     });
 
@@ -1173,6 +1192,7 @@ export class GameEngine {
       trials: this.trials.length,
     });
     this.saveRuns(runs);
+    this.psychLog = recordRide(this.stopLog);
 
     if (this.onReportReady) {
       this.onReportReady(runs);
@@ -1207,6 +1227,7 @@ export class GameEngine {
         this.notifyUI();
       }
       this.updateHeart(dt);
+      this.updateBreath(dt);
     }
 
     if (this.phase === 'trial') {
@@ -1253,6 +1274,35 @@ export class GameEngine {
     const period = (60 / this.heartBpm) * (1 + HEART_JITTER[this.tier] * (Math.random() * 2 - 1));
     this.heartNextAt = beatAt + period;
     if (this.tier >= 3) audioEngine.thump(period);
+  }
+
+  /**
+   * Anxious breathing: during rides at Medium sanity and below, the view narrows slightly on each
+   * inhale. Rate and depth follow the tier, and each flag you've placed this ride deepens it.
+   * Everything eases, so it fades in over a few seconds and settles back out at each station.
+   */
+  private updateBreath(dt: number) {
+    const p = this.phase === 'ride' ? BREATH_TIERS[this.tier] : null;
+    const flags = Math.min(this.segFlags.length, BREATH_MAX_FLAGS);
+    const depth = p ? p.depthDeg + BREATH_PER_FLAG_DEG * flags : 0;
+    const bpm = p ? p.bpm : this.breathBpm;
+    const tau = depth > this.breathDepth ? 3 : 1.5;
+    this.breathDepth += (depth - this.breathDepth) * (1 - Math.exp(-dt / tau));
+    if (!this.breathBpm) this.breathBpm = bpm || BREATH_TIERS[1]!.bpm;
+    this.breathBpm += (bpm - this.breathBpm) * (1 - Math.exp(-dt / 2.5));
+    // A little slow wander in the rate, so it reads as breathing rather than a metronome.
+    const wander = 1 + 0.12 * Math.sin(this.GT * 0.41) + 0.06 * Math.sin(this.GT * 1.13 + 1.7);
+    this.breathPhase = (this.breathPhase + (dt * this.breathBpm * wander) / 60) % 1;
+  }
+
+  /** FOV change in degrees (at the 68° base) for this frame: 0 at rest, negative on the inhale. */
+  public breathFovOffset(): number {
+    if (this.breathDepth < 0.005) return 0;
+    // Short, quick inhale (35% of the cycle) and a longer exhale.
+    const ph = this.breathPhase;
+    const sm = (x: number) => x * x * (3 - 2 * x);
+    const shape = ph < 0.35 ? sm(ph / 0.35) : 1 - sm((ph - 0.35) / 0.65);
+    return -this.breathDepth * shape;
   }
 
   /**
