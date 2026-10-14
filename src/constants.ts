@@ -61,6 +61,7 @@ export const DRIFT: Record<number, number> = {
 };
 
 export const RESTRAINT_RAISE = 6; // Holding at Greenpoint lifts the 11-13 ceiling from 9 to 15
+export const RESTRAINT_GRACE = 2.5; // Seconds to re-hold after a pause, alt-tab, or lost focus during the restraint
 export const TIER_NAMES = ['High', 'Medium', 'Low', 'Critical'] as const;
 
 export function tierOf(san: number): number {
@@ -93,8 +94,10 @@ export const SAN = {
 
 export const CFG = {
   dwellReact: 1.5,
-  snapThresh: 5.5,
-  snapArc: 0,
+  snapThresh: 5.5, // rad/s, mouse
+  snapArc: 0, // rad, mouse: speed alone counts
+  snapThreshTouch: 8, // rad/s, touch
+  snapArcTouch: 1.3, // rad (~75°), touch: a snap must also be a big turn, so a quick swipe isn't a head whip
   flagHold: 0.7,
   misleadChance: 0.5,
 };
