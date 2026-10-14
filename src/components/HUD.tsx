@@ -210,6 +210,9 @@ export const HUD: React.FC<HUDProps> = ({
             Flags: {G.segFlags.length ? G.segFlags.map((f) => f.tid).join(', ') : '—'}
           </div>
           <div>Acc: ✓{G.acc.correct} | ✗{G.acc.miss} | FP:{G.acc.fp}</div>
+          <div>
+            Heart: {G.heartBpm.toFixed(0)} bpm | Intercom: next {Math.max(0, G.intercomT).toFixed(0)}s ({G.intercomCount} played)
+          </div>
         </div>
       )}
     </div>
