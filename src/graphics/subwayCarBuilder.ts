@@ -1,0 +1,652 @@
+/**
+ * 3D Subway Car, Station, and Tunnel Environment Builder
+ * Renders authentic NYC G-train car interior with PBR materials, stainless steel poles,
+ * ergonomic fiberglass seating, responsive sliding doors, and tunnel lighting.
+ */
+import * as THREE from 'three';
+import { ACROSS_ADS, NEAR_ADS, STOPS, AdDefinition } from '../constants';
+import { TextureGenerator } from './textureGenerator';
+import { CharacterBuilder } from './characterBuilder';
+import { PersonObject } from '../types';
+
+export interface TargetEntry {
+  root: THREE.Object3D;
+  meshes: THREE.Mesh[];
+  keep: () => boolean;
+}
+
+export interface AdObject {
+  def: AdDefinition;
+  canvas: HTMLCanvasElement;
+  tex: THREE.CanvasTexture;
+  mesh: THREE.Mesh;
+  tid: string;
+}
+
+export interface RouteMapObject {
+  canvas: HTMLCanvasElement;
+  tex: THREE.CanvasTexture;
+  mesh: THREE.Mesh;
+  tid: string;
+}
+
+export interface LightSegObject {
+  m: THREE.Mesh;
+  mat: THREE.MeshBasicMaterial;
+  tid: string;
+}
+
+export interface WindowPaneObject {
+  x: number;
+  tid: string;
+  decal: THREE.Mesh;
+  decalTexSticker: THREE.CanvasTexture;
+  decalTexStain: THREE.CanvasTexture;
+}
+
+export interface DoorLeaf {
+  g: THREE.Group;
+  x0: number;
+  side: number;
+}
+
+export interface StationObject {
+  g: THREE.Group;
+  baseX: number;
+  setName: (name: string) => void;
+}
+
+export class SubwayCarBuilder {
+  public scene: THREE.Scene;
+  public worldGroup: THREE.Group;
+  public carGroup: THREE.Group;
+  public tunnelGroup: THREE.Group;
+  public textureGen: TextureGenerator;
+  public charBuilder: CharacterBuilder;
+
+  // Game world elements
+  public carLights: THREE.PointLight[] = [];
+  public hemiLight!: THREE.HemisphereLight;
+  public ambLight!: THREE.AmbientLight;
+  public outLights: THREE.PointLight[] = [];
+  public lightSegs: LightSegObject[] = [];
+  public farLeaves: DoorLeaf[] = [];
+  public panes: WindowPaneObject[] = [];
+  public acrossAds: AdObject[] = [];
+  public nearAds: AdObject[] = [];
+  public maps: RouteMapObject[] = [];
+  public tunnelItems: Array<{ m: THREE.Mesh; base: number; s: number; light?: boolean }> = [];
+  public tunnelLength: number = 84;
+
+  public stA!: StationObject;
+  public stB!: StationObject;
+
+  // Characters
+  public parents: PersonObject[] = [];
+  public strangers: PersonObject[] = [];
+  public extraPerson!: PersonObject;
+  public crowd: PersonObject[] = [];
+
+  // Target registry for gaze & flagging
+  public registry: TargetEntry[] = [];
+  public targetLabels: Record<string, string> = {};
+
+  constructor(scene: THREE.Scene, maxAniso: number = 8) {
+    this.scene = scene;
+    this.textureGen = new TextureGenerator(maxAniso);
+    this.charBuilder = new CharacterBuilder();
+    this.worldGroup = new THREE.Group();
+    this.carGroup = new THREE.Group();
+    this.tunnelGroup = new THREE.Group();
+
+    this.scene.add(this.worldGroup);
+    this.worldGroup.add(this.carGroup);
+    this.worldGroup.add(this.tunnelGroup);
+  }
+
+  public registerTarget(root: THREE.Object3D, tid: string, label: string, keep: () => boolean = () => true) {
+    const meshes: THREE.Mesh[] = [];
+    root.traverse((m) => {
+      if ((m as THREE.Mesh).isMesh) {
+        m.userData.tid = tid;
+        meshes.push(m as THREE.Mesh);
+      }
+    });
+    this.registry.push({ root, meshes, keep });
+    this.targetLabels[tid] = label;
+  }
+
+  public getActiveTargets(): THREE.Mesh[] {
+    const active: THREE.Mesh[] = [];
+    this.registry.forEach((entry) => {
+      if (entry.keep() || entry.root.visible) {
+        active.push(...entry.meshes);
+      }
+    });
+    return active;
+  }
+
+  public buildScene() {
+    this.setupLighting();
+    this.buildCar();
+    this.buildAds();
+    this.buildRouteMaps();
+    this.buildPassengers();
+    this.buildTunnel();
+    this.stA = this.buildStationPlatform();
+    this.stB = this.buildStationPlatform();
+  }
+
+  private setupLighting() {
+    this.hemiLight = new THREE.HemisphereLight(0xfff3dc, 0x3a3b36, 0.65);
+    this.scene.add(this.hemiLight);
+
+    this.ambLight = new THREE.AmbientLight(0xffffff, 0.15);
+    this.scene.add(this.ambLight);
+
+    // 4 interior car ceiling lights
+    this.carLights = [-6, -2, 2, 6].map((x) => {
+      const pl = new THREE.PointLight(0xfff0d4, 0.55, 9.5, 1.6);
+      pl.position.set(x, 2.2, 0);
+      this.carGroup.add(pl);
+      return pl;
+    });
+
+    // Passing exterior tunnel lights
+    this.outLights = [-1, 1].map((s) => {
+      const pl = new THREE.PointLight(0xffcf8a, 0, 4.5, 2.0);
+      pl.position.set(0, 1.6, s * 2.1);
+      this.worldGroup.add(pl);
+      return pl;
+    });
+  }
+
+  private buildCar() {
+    const mWall = new THREE.MeshLambertMaterial({ color: 0xc9ccc4 });
+    const mLow = new THREE.MeshLambertMaterial({ color: 0x9fa49e });
+    const mSeatOrange = new THREE.MeshLambertMaterial({ color: 0xd8782e });
+    const mSeatYellow = new THREE.MeshLambertMaterial({ color: 0xdf9c32 });
+    const mBase = new THREE.MeshLambertMaterial({ color: 0x4a4d4f });
+    const mDoor = new THREE.MeshLambertMaterial({ color: 0xb2b7b2 });
+    const mDark = new THREE.MeshBasicMaterial({ color: 0x060809 });
+    const mSteel = new THREE.MeshStandardMaterial({
+      color: 0xdcdede,
+      metalness: 0.85,
+      roughness: 0.22,
+    });
+
+    // Floor with non-slip speckle texture
+    const floorTex = this.textureGen.createFloorTexture();
+    const floorMat = new THREE.MeshLambertMaterial({ map: floorTex });
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 3.06), floorMat);
+    floor.position.set(0, -0.03, 0);
+    this.carGroup.add(floor);
+
+    // Tactile door entrance strips
+    const tactileTex = this.textureGen.createTactileStripTexture();
+    const tactileMat = new THREE.MeshBasicMaterial({ map: tactileTex });
+    [-4.5, 4.5].forEach((x) => {
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.22), tactileMat);
+      strip.rotation.x = -Math.PI / 2;
+      strip.position.set(x, 0.002, -1.38);
+      this.carGroup.add(strip);
+    });
+
+    // Ceiling
+    const ceil = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 3.06), new THREE.MeshLambertMaterial({ color: 0xe6e4db }));
+    ceil.position.set(0, 2.43, 0);
+    this.carGroup.add(ceil);
+
+    // Ceiling Lights (continuous luminaire strip)
+    const LIGHT_ON = 0xfff4de;
+    [-0.62, 0.62].forEach((z, si) => {
+      for (let i = 0; i < 6; i++) {
+        const mat = new THREE.MeshBasicMaterial({ color: LIGHT_ON });
+        const m = new THREE.Mesh(new THREE.BoxGeometry(2.84, 0.03, 0.2), mat);
+        m.position.set(-7.25 + i * 2.9, 2.395, z);
+        this.carGroup.add(m);
+
+        const ls: LightSegObject = { m, mat, tid: `light:${si * 6 + i}` };
+        this.lightSegs.push(ls);
+        this.registerTarget(m, ls.tid, 'a ceiling light');
+      }
+    });
+
+    // Walls, windows, sliding doors, and poles
+    [-1, 1].forEach((s) => {
+      const z = s * 1.53;
+      // Lower wall kickboard
+      const lowWall = new THREE.Mesh(new THREE.BoxGeometry(18, 0.9, 0.06), mLow);
+      lowWall.position.set(0, 0.45, z);
+      this.carGroup.add(lowWall);
+
+      // Upper wall with ad frieze
+      const upWall = new THREE.Mesh(new THREE.BoxGeometry(18, 0.68, 0.06), mWall);
+      upWall.position.set(0, 2.06, z);
+      this.carGroup.add(upWall);
+
+      // Window vertical mullions
+      for (let i = 0; i <= 9; i++) {
+        const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.85, 0.08), mWall);
+        mullion.position.set(-8.55 + i * 1.9, 1.325, z);
+        this.carGroup.add(mullion);
+      }
+
+      // Tinted window glass
+      const glass = new THREE.Mesh(
+        new THREE.PlaneGeometry(18, 0.85),
+        new THREE.MeshBasicMaterial({ color: 0x6e8e89, transparent: true, opacity: 0.08, depthWrite: false })
+      );
+      glass.position.set(0, 1.325, z - s * 0.01);
+      if (s > 0) glass.rotation.y = Math.PI;
+      this.carGroup.add(glass);
+
+      // Sliding doors at x = -4.5 and +4.5
+      [-4.5, 4.5].forEach((x) => {
+        if (s < 0) {
+          // Far side: actual animated opening leaves
+          [-1, 1].forEach((side) => {
+            const g = new THREE.Group();
+            g.position.set(x + side * 0.335, 1.0, z + 0.045);
+            this.carGroup.add(g);
+
+            const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.66, 2.0, 0.05), mDoor);
+            const win = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.62, 0.056), mDark);
+            win.position.set(0, 0.36, 0);
+            const rubber = new THREE.Mesh(new THREE.BoxGeometry(0.02, 2.0, 0.054), new THREE.MeshLambertMaterial({ color: 0x333333 }));
+            rubber.position.set(-side * 0.32, 0, 0);
+            g.add(leaf, win, rubber);
+
+            this.farLeaves.push({ g, x0: x + side * 0.335, side });
+          });
+
+          // Door top header housing
+          const header = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.06, 0.08), new THREE.MeshLambertMaterial({ color: 0x50544f }));
+          header.position.set(x, 2.02, z + 0.03);
+          this.carGroup.add(header);
+        } else {
+          // Near side doors
+          const staticDoor = new THREE.Mesh(new THREE.BoxGeometry(1.34, 2.0, 0.05), mDoor);
+          staticDoor.position.set(x, 1.0, z - 0.045);
+          [-0.3, 0.3].forEach((dx) => {
+            const w = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.62, 0.056), mDark);
+            w.position.set(x + dx, 1.36, z - 0.052);
+            this.carGroup.add(w);
+          });
+          this.carGroup.add(staticDoor);
+        }
+      });
+
+      // Scooped molded subway benches
+      [[-8.85, -5.25], [-3.75, 3.75], [5.25, 8.85]].forEach(([a, b], bIdx) => {
+        const L = b - a;
+        const cx = (a + b) / 2;
+        const seatMat = bIdx % 2 === 0 ? mSeatOrange : mSeatYellow;
+
+        // Seat base cushion
+        const baseCushion = new THREE.Mesh(new THREE.BoxGeometry(L, 0.09, 0.46), seatMat);
+        baseCushion.position.set(cx, 0.455, s * 1.25);
+
+        // Seat backrest
+        const backrest = new THREE.Mesh(new THREE.BoxGeometry(L, 0.5, 0.07), seatMat);
+        backrest.position.set(cx, 0.76, s * 1.47);
+
+        // Underseat heater / riser box
+        const under = new THREE.Mesh(new THREE.BoxGeometry(L, 0.41, 0.36), mBase);
+        under.position.set(cx, 0.205, s * 1.3);
+
+        this.carGroup.add(baseCushion, backrest, under);
+      });
+
+      // Horizontal overhead grab bar
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 17.6, 12), mSteel);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(0, 2.02, s * 0.98);
+      this.carGroup.add(bar);
+
+      // Vertical stanchion poles
+      [-5.3, -3.7, 3.7, 5.3].forEach((x) => {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 2.42, 12), mSteel);
+        pole.position.set(x, 1.21, s * 0.98);
+        this.carGroup.add(pole);
+      });
+    });
+
+    // End car bulkheads
+    [-9, 9].forEach((x) => {
+      const bulkhead = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 3.06), mWall);
+      bulkhead.position.set(x, 1.2, 0);
+      const endDoor = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.0, 0.7), mDark);
+      endDoor.position.set(x, 1.35, 0);
+      this.carGroup.add(bulkhead, endDoor);
+    });
+
+    // Windows hit detection panes and decal anomalies
+    const decalSticker = this.textureGen.createDecalTexture('sticker');
+    const decalStain = this.textureGen.createDecalTexture('stain');
+
+    this.panes = [-7.6, -1.9, 0, 1.9, 7.6].map((x, i) => {
+      const hit = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.8), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.set(x, 1.325, -1.47);
+      this.carGroup.add(hit);
+
+      const tid = `win:${i}`;
+      this.registerTarget(hit, tid, 'a window', () => true);
+
+      // Anomaly decal
+      const decal = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.28, 0.28),
+        new THREE.MeshBasicMaterial({
+          map: decalSticker,
+          transparent: true,
+          alphaTest: 0.04,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2,
+        })
+      );
+      decal.position.set(x + (Math.random() - 0.5) * 0.8, 1.25 + Math.random() * 0.3, -1.505);
+      decal.visible = false;
+      decal.userData.tid = tid;
+      this.carGroup.add(decal);
+
+      return {
+        x,
+        tid,
+        decal,
+        decalTexSticker: decalSticker,
+        decalTexStain: decalStain,
+      };
+    });
+  }
+
+  private buildAds() {
+    // Across ads (far wall, upper panel)
+    const acrossXs = [-7, -2.6, 0, 2.6, 7];
+    this.acrossAds = ACROSS_ADS.map((def, i) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 200;
+      this.textureGen.drawAdOnCanvas(canvas, def, def.h);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = this.textureGen['aniso'];
+
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.3, 0.406),
+        new THREE.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+      );
+      mesh.position.set(acrossXs[i], 2.07, -1.47);
+      this.carGroup.add(mesh);
+
+      // Ad frame
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.46, 0.012), new THREE.MeshLambertMaterial({ color: 0x363936 }));
+      frame.position.set(acrossXs[i], 2.07, -1.488);
+      this.carGroup.add(frame);
+
+      const ad: AdObject = { def, canvas, tex, mesh, tid: 'ad:' + def.h };
+      this.registerTarget(mesh, ad.tid, `the ${def.h.toLowerCase()} ad`);
+      return ad;
+    });
+
+    // Near ads (wall behind player)
+    const nearXs = [-7, -2.6, 2.6, 7];
+    this.nearAds = NEAR_ADS.map((def, i) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 200;
+      this.textureGen.drawAdOnCanvas(canvas, def, def.h);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = this.textureGen['aniso'];
+
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.3, 0.406),
+        new THREE.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+      );
+      mesh.position.set(nearXs[i], 2.07, 1.47);
+      mesh.rotation.y = Math.PI;
+      this.carGroup.add(mesh);
+
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.46, 0.012), new THREE.MeshLambertMaterial({ color: 0x363936 }));
+      frame.position.set(nearXs[i], 2.07, 1.488);
+      this.carGroup.add(frame);
+
+      const ad: AdObject = { def, canvas, tex, mesh, tid: 'ad:' + def.h };
+      this.registerTarget(mesh, ad.tid, `the ${def.h.toLowerCase()} ad`);
+      return ad;
+    });
+  }
+
+  private buildRouteMaps() {
+    [-4.5, 4.5].forEach((x, i) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 160;
+      this.textureGen.drawRouteMap(canvas, 'normal');
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = this.textureGen['aniso'];
+
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.22, 0.31),
+        new THREE.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+      );
+      mesh.position.set(x, 2.12, -1.475);
+      this.carGroup.add(mesh);
+
+      const mapObj: RouteMapObject = { canvas, tex, mesh, tid: 'map:' + i };
+      this.maps.push(mapObj);
+      this.registerTarget(mesh, mapObj.tid, 'the route map');
+    });
+  }
+
+  private buildPassengers() {
+    // Mom (sitting across on left)
+    const mom = this.charBuilder.createPerson({
+      tid: 'mom',
+      label: 'Mom',
+      x: -0.95,
+      z: -1.3,
+      skin: 0xc68e6c,
+      shirt: 0x7a4a5e,
+      pants: 0x2c3140,
+      hair: 0x2a1c16,
+      longHair: true,
+      phone: true,
+    });
+    mom.i = 0;
+    this.parents.push(mom);
+    this.carGroup.add(mom.g);
+    this.registerTarget(mom.g, 'mom', 'Mom');
+
+    // Dad (sitting next to Mom)
+    const dad = this.charBuilder.createPerson({
+      tid: 'dad',
+      label: 'Dad',
+      x: -0.3,
+      z: -1.3,
+      skin: 0xb98062,
+      shirt: 0x3e5a6e,
+      pants: 0x3a3a36,
+      hair: 0x1c1a18,
+      glasses: true,
+      phone: true,
+    });
+    dad.i = 1;
+    this.parents.push(dad);
+    this.carGroup.add(dad.g);
+    this.registerTarget(dad.g, 'dad', 'Dad');
+
+    // Strangers
+    // s1: The man across the aisle
+    const s1 = this.charBuilder.createPerson({
+      tid: 's1',
+      label: 'the man across the aisle',
+      x: 2.35,
+      z: -1.3,
+      hp: 0.35,
+      skin: 0x8a5a3c,
+      shirt: 0x5b6b3a,
+      pants: 0x222222,
+      hair: 0x111111,
+    });
+    // s2: The woman on your bench
+    const s2 = this.charBuilder.createPerson({
+      tid: 's2',
+      label: 'the woman on your bench',
+      x: -2.6,
+      z: 1.3,
+      ry: Math.PI,
+      hp: 0.25,
+      skin: 0xe0b89a,
+      shirt: 0x9a9a90,
+      pants: 0x40404a,
+      hair: 0x8a6a3a,
+      longHair: true,
+    });
+    // s3: The standing commuter
+    const s3 = this.charBuilder.createPerson({
+      tid: 's3',
+      label: 'the standing passenger',
+      x: 5.0,
+      z: 0.55,
+      ry: -Math.PI / 2,
+      hy: 0.2,
+      standing: true,
+      skin: 0xa47050,
+      shirt: 0x2d2d33,
+      pants: 0x51514a,
+      hair: 0x191512,
+    });
+
+    this.strangers = [s1, s2, s3];
+    this.strangers.forEach((s) => {
+      this.carGroup.add(s.g);
+      this.registerTarget(s.g, s.tid, s.label);
+    });
+
+    // Mystery extra passenger (spawned at far seat during anomaly)
+    this.extraPerson = this.charBuilder.createPerson({
+      tid: 'seat6',
+      label: 'the seat at the far end',
+      x: 6.4,
+      z: -1.3,
+      hp: 0.1,
+      skin: 0xd9c2a8,
+      shirt: 0x1c1c1c,
+      pants: 0x1c1c1c,
+      hair: 0x0c0c0c,
+    });
+    this.extraPerson.g.visible = false;
+    this.carGroup.add(this.extraPerson.g);
+    this.registerTarget(this.extraPerson.g, this.extraPerson.tid, this.extraPerson.label);
+
+    // Crowd (for crowded stops 7 and 8)
+    this.crowd = [
+      this.charBuilder.createPerson({ tid: 'c1', label: 'a passenger in the aisle', x: 3.0, z: 0.5, ry: -Math.PI / 2, standing: true, hy: -0.3, skin: 0x9b6a4a, shirt: 0x6b2f2f, pants: 0x2a2a2a, hair: 0x111111 }),
+      this.charBuilder.createPerson({ tid: 'c2', label: 'a passenger at the end', x: -6.6, z: -1.3, hp: 0.4, skin: 0xe2c4a8, shirt: 0x3d5f8a, pants: 0x2e2e3a, hair: 0x6a4a2a }),
+      this.charBuilder.createPerson({ tid: 'c3', label: 'a passenger behind you', x: 6.0, z: 1.3, ry: Math.PI, hp: 0.3, skin: 0x7a4e34, shirt: 0xc7a64a, pants: 0x2a2a2a, hair: 0x0e0e0e }),
+      this.charBuilder.createPerson({ tid: 'c4', label: 'a passenger by the door', x: -3.2, z: -0.25, ry: Math.PI / 2, standing: true, skin: 0xc99a7a, shirt: 0x4d4d4d, pants: 0x3c3326, hair: 0x2a1a10 }),
+      this.charBuilder.createPerson({ tid: 'c5', label: 'a passenger across', x: 3.15, z: -1.3, hp: 0.5, skin: 0xb07a58, shirt: 0x7a7a3a, pants: 0x262626, hair: 0x1a1a1a }),
+    ];
+    this.crowd.forEach((c) => {
+      c.g.visible = false;
+      this.carGroup.add(c.g);
+      this.registerTarget(c.g, c.tid, c.label, () => c.g.visible);
+    });
+  }
+
+  private buildTunnel() {
+    const mTunnelWall = new THREE.MeshLambertMaterial({ color: 0x181a18 });
+    const mTunnelColumn = new THREE.MeshLambertMaterial({ color: 0x242724 });
+    const mTunnelLight = new THREE.MeshBasicMaterial({ color: 0xffd896 });
+
+    [-1, 1].forEach((s) => {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(400, 3.4, 0.1), mTunnelWall);
+      wall.position.set(0, 1.1, s * 2.55);
+      this.tunnelGroup.add(wall);
+
+      // Tunnel incandescent lights
+      for (let i = 0; i < 12; i++) {
+        const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.1, 0.06), mTunnelLight);
+        fixture.position.set(0, 1.78, s * 2.36);
+        this.tunnelGroup.add(fixture);
+        this.tunnelItems.push({ m: fixture, base: i * 7 + (s > 0 ? 3.5 : 0), s, light: true });
+      }
+
+      // Concrete tunnel support piers
+      for (let i = 0; i < 28; i++) {
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.3, 0.2), mTunnelColumn);
+        pier.position.set(0, 1.1, s * 2.4);
+        this.tunnelGroup.add(pier);
+        this.tunnelItems.push({ m: pier, base: i * 3 + (s > 0 ? 1.5 : 0), s });
+      }
+    });
+  }
+
+  private buildStationPlatform(): StationObject {
+    const g = new THREE.Group();
+    this.worldGroup.add(g);
+
+    // Platform tiled wall
+    const tileTex = this.textureGen.createStationTileTexture(72, 5);
+    const tileMat = new THREE.MeshLambertMaterial({ map: tileTex, emissive: 0x22211c });
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(44, 3.2, 0.1), tileMat);
+    wall.position.set(0, 1.3, -2.28);
+    g.add(wall);
+
+    // Decorative G-line green mosaic trim band
+    const greenTrim = new THREE.Mesh(new THREE.BoxGeometry(44, 0.16, 0.02), new THREE.MeshLambertMaterial({ color: 0x3f7a52, emissive: 0x0c1a10 }));
+    greenTrim.position.set(0, 2.3, -2.225);
+    g.add(greenTrim);
+
+    // Platform concrete floor
+    const platform = new THREE.Mesh(new THREE.BoxGeometry(44, 0.14, 0.8), new THREE.MeshLambertMaterial({ color: 0x8d8a82 }));
+    platform.position.set(0, -0.07, -1.95);
+    g.add(platform);
+
+    // Yellow platform safety edge line
+    const yellowEdge = new THREE.Mesh(new THREE.BoxGeometry(44, 0.01, 0.12), new THREE.MeshLambertMaterial({ color: 0xe3c341, emissive: 0x332a08 }));
+    yellowEdge.position.set(0, 0.005, -1.62);
+    g.add(yellowEdge);
+
+    // Structural steel I-beam columns
+    const colMat = new THREE.MeshLambertMaterial({ color: 0x2d4838 });
+    for (let x = -20; x <= 20; x += 5) {
+      const col = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.0, 0.18), colMat);
+      col.position.set(x, 1.5, -1.9);
+      g.add(col);
+    }
+
+    // Station name tablets
+    const { texture: signTex, canvas: signCanvas } = this.textureGen.createStationSignTexture(STOPS[1]);
+    for (let x = -15; x <= 15; x += 10) {
+      const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.35), new THREE.MeshBasicMaterial({ map: signTex }));
+      signMesh.position.set(x + 2.5, 1.75, -2.2);
+      g.add(signMesh);
+    }
+
+    // Station ceiling lamps
+    const stationLightMat = new THREE.MeshBasicMaterial({ color: 0xfff5e0 });
+    for (let x = -20; x <= 20; x += 4) {
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.12), stationLightMat);
+      lamp.position.set(x, 2.8, -1.95);
+      g.add(lamp);
+    }
+
+    const stationObj: StationObject = {
+      g,
+      baseX: 0,
+      setName: (name: string) => {
+        this.textureGen.drawStationSign(signCanvas.getContext('2d')!, name);
+        signTex.needsUpdate = true;
+      },
+    };
+
+    return stationObj;
+  }
+}
