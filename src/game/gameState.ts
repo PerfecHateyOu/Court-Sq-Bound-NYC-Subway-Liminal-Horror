@@ -1223,7 +1223,11 @@ export class GameEngine {
     if (this.phase !== 'menu' && this.phase !== 'end') {
       const tier = tierOf(this.san);
       if (tier !== this.tier) {
+        const oldTier = this.tier;
         this.tier = tier;
+        if (tier > oldTier) {
+          audioEngine.tierTransitionWhisper(tier);
+        }
         this.notifyUI();
       }
       this.updateHeart(dt);
@@ -1585,7 +1589,7 @@ export class GameEngine {
       this.whisperT -= dt;
       if (this.whisperT <= 0) {
         this.whisperT = 14 + Math.random() * 12;
-        audioEngine.whisper(2.2);
+        audioEngine.whisper(2.4, { tier: this.tier, distant: true });
       }
     }
     if (this.phase === 'ride' && this.seg) this.updateIntercom(dt, this.seg);

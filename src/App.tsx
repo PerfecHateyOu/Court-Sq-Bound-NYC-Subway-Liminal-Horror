@@ -344,7 +344,7 @@ export default function App() {
         if (e.code !== 'KeyM') return;
       }
 
-      if (e.code === 'KeyP' && G.phase !== 'menu' && G.phase !== 'end') {
+      if ((e.code === 'KeyP' || e.code === 'Escape') && G.phase !== 'menu' && G.phase !== 'end') {
         if (G.paused) resumeGame();
         else pauseGame();
         return;
@@ -364,6 +364,23 @@ export default function App() {
       }
 
       if (G.paused || G.phase === 'menu' || G.phase === 'end') return;
+
+      // Keyboard Look controls (Arrow keys / WASD) for accessible navigation
+      const limit = G.phase === 'trial' ? 1.2 : 1.75;
+      const step = 0.08;
+      if (e.code === 'ArrowLeft' || (e.code === 'KeyA' && !G.choice && !G.restraint)) {
+        G.ty = Math.max(-limit, Math.min(limit, G.ty + step));
+        triggerUpdate();
+      } else if (e.code === 'ArrowRight' || (e.code === 'KeyD' && !G.choice && !G.restraint)) {
+        G.ty = Math.max(-limit, Math.min(limit, G.ty - step));
+        triggerUpdate();
+      } else if (e.code === 'ArrowUp' || (e.code === 'KeyW' && !G.choice && !G.restraint)) {
+        G.tp = Math.max(-0.6, Math.min(0.72, G.tp + step * 0.7));
+        triggerUpdate();
+      } else if (e.code === 'ArrowDown' || (e.code === 'KeyS' && !G.choice && !G.restraint)) {
+        G.tp = Math.max(-0.6, Math.min(0.72, G.tp - step * 0.7));
+        triggerUpdate();
+      }
 
       // Flagging / Restraint holding
       if ((e.code === 'KeyF' || e.code === 'Space') && !e.repeat) {

@@ -1,9 +1,6 @@
-/**
- * Start Screen / Title Experience for Court Sq-Bound
- * Authentic NYC subway mosaic plaque and station briefing
- */
 import React from 'react';
-import { Smartphone, HelpCircle, Settings as SettingsIcon } from 'lucide-react';
+import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X } from 'lucide-react';
+import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '../game/psychLog';
 
 interface StartScreenProps {
   onStart: (muted: boolean, debug: boolean) => void;
@@ -14,6 +11,10 @@ interface StartScreenProps {
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, isTouch }) => {
   const [startMuted, setStartMuted] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
+  const [showLog, setShowLog] = React.useState(false);
+
+  const archive = React.useMemo(() => loadArchive(), [showLog]);
+  const documentedCount = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 sm:p-6 bg-black/80 backdrop-blur-md">
@@ -70,7 +71,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
             <span>
               {isTouch
                 ? 'Drag screen to look. Hold the round FLAG button. Tap choices when asked. Play in landscape for the best field of view.'
-                : 'Click inside the train to lock mouse. Move to look. Hold F to flag. Press 1, 2, or 3 to choose. Hold Space during restraint. P pauses, M mutes.'}
+                : 'Click inside the train to lock mouse (or use Arrows / WASD). Hold F to flag. Press 1, 2, or 3 to choose. Hold Space during restraint. Esc or P pauses, M mutes.'}
             </span>
           </div>
 
@@ -94,8 +95,16 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#9a9684]">
             <button
-              onClick={onOpenSettings}
+              onClick={() => setShowLog(true)}
               className="flex items-center gap-1.5 py-1.5 px-2.5 -ml-2.5 sm:ml-0 rounded border border-transparent hover:border-white/20 text-[#ece6d3] font-semibold transition-colors"
+            >
+              <BookOpen className="w-4 h-4 text-[#6cbe45]" />
+              Case Files ({documentedCount}/13)
+            </button>
+
+            <button
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 py-1.5 px-2.5 rounded border border-transparent hover:border-white/20 text-[#ece6d3] font-semibold transition-colors"
             >
               <SettingsIcon className="w-4 h-4" />
               Settings
@@ -111,7 +120,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
               Start muted
             </label>
 
-
             <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
               <input
                 type="checkbox"
@@ -123,6 +131,98 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
             </label>
           </div>
         </div>
+
+        {/* Case Files Dossier Modal */}
+        {showLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md">
+            <div className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded shadow-2xl border border-[#9f9883]">
+              <div className="flex items-start justify-between border-b-2 border-[#1b1d18] pb-3 mb-4">
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">Psychological Case Files</h2>
+                  <p className="text-xs text-[#55574c] mt-0.5">
+                    {documentedCount} of 13 cataloged anomaly types documented on this device.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowLog(false)}
+                  className="p-1 rounded hover:bg-black/10 text-[#1b1d18] transition-colors"
+                  aria-label="Close Case Files"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <ul className="divide-y divide-[#c4bda7] text-xs">
+                {PSYCH_IDS.map((id) => {
+                  const def = PSYCH_ENTRIES[id];
+                  const state = entryState(archive[id]);
+                  const rec = archive[id];
+
+                  return (
+                    <li key={id} className="py-2.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-mono font-bold text-[10px] text-[#55574c] uppercase tracking-wider">
+                          Class {PSYCH_CLASS[def.tier]}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {state === 'documented' && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#6cbe45]/30 text-[#204a18]">
+                              DOCUMENTED
+                            </span>
+                          )}
+                          {state === 'unconfirmed' && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#e3a83a]/30 text-[#6d4b0f]">
+                              UNCONFIRMED
+                            </span>
+                          )}
+                          {state === 'redacted' && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-black/10 text-[#55574c]">
+                              REDACTED
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {state === 'documented' && (
+                        <div className="mt-1">
+                          <strong className="font-extrabold text-[#1b1d18] text-sm">{def.title}</strong>
+                          <p className="mt-0.5 text-[#3a3b34] leading-relaxed">{def.note}</p>
+                          <div className="mt-1 text-[10px] text-[#55574c]">
+                            Encountered {rec.seen} time{rec.seen === 1 ? '' : 's'}, caught {rec.caught}.
+                          </div>
+                        </div>
+                      )}
+
+                      {state === 'unconfirmed' && (
+                        <div className="mt-1">
+                          <strong className="font-extrabold text-[#1b1d18] text-sm">{def.title}</strong>
+                          <p className="mt-0.5 italic text-[#55574c] leading-relaxed">
+                            Manifested before your eyes, but you failed to flag it in time. Notice what changes next time.
+                          </p>
+                        </div>
+                      )}
+
+                      {state === 'redacted' && (
+                        <div className="mt-1 italic text-[#777468]">
+                          [Anomaly parameters not yet witnessed]
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-5 pt-3 border-t border-[#9f9883] flex justify-end">
+                <button
+                  onClick={() => setShowLog(false)}
+                  className="px-4 py-2 bg-[#1b1d18] hover:bg-[#2e312b] text-[#ece6d3] text-xs font-bold rounded transition-colors"
+                >
+                  Return to Briefing
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

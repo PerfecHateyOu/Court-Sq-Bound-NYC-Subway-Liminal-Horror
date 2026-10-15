@@ -266,7 +266,7 @@ export class AudioEngine {
   public flagRegistered() {
     if (!this.ac || !this.masterGain) return;
     const t = this.ac.currentTime;
-    const variation = Math.floor(Math.random() * 3);
+    const variation = Math.floor(Math.random() * 5);
     const pan = Math.random() * 1.6 - 0.8;
 
     switch (variation) {
@@ -313,8 +313,7 @@ export class AudioEngine {
         osc.stop(t + 0.3);
         break;
       }
-      case 2:
-      default: {
+      case 2: {
         // Metallic Resonant Subway Scrape / Shiver
         if (this.whiteBuffer) {
           const s = this.ac.createBufferSource();
@@ -348,6 +347,21 @@ export class AudioEngine {
         this.tone(1202, t, 0.4, 0.03, 'sine');
         break;
       }
+      case 3: {
+        // Fluorescent Ballast Surge & Resonant Metal Ping
+        this.noiseHit(t, 0.025, 3200, 20, 0.05, pan);
+        this.tone(120, t, 0.22, 0.04, 'sawtooth');
+        this.tone(2140, t, 0.5, 0.03, 'sine');
+        break;
+      }
+      case 4:
+      default: {
+        // Mechanical Relay Snap & Damped Steel Ring
+        this.noiseHit(t, 0.015, 1600, 5, 0.08, pan);
+        this.tone(880 + Math.random() * 80, t + 0.01, 0.35, 0.035, 'triangle');
+        this.tone(1760 + Math.random() * 160, t + 0.01, 0.2, 0.02, 'sine');
+        break;
+      }
     }
   }
 
@@ -377,40 +391,98 @@ export class AudioEngine {
     src.stop(t + duration + 0.1);
   }
 
-  public whisper(duration: number) {
+  /**
+   * Procedural whispering synthesizer. Supports low-pass filtering,
+   * tier-specific formant shaping, and distant spatial placement.
+   */
+  public whisper(
+    duration: number,
+    options?: { lowpass?: boolean; cutoff?: number; tier?: number; distant?: boolean }
+  ) {
     if (!this.ac || !this.whiteBuffer || !this.masterGain) return;
     const t = this.ac.currentTime;
     const src = this.ac.createBufferSource();
     src.buffer = this.whiteBuffer;
     src.loop = true;
 
+    const tier = options?.tier ?? 2;
+    const distant = options?.distant ?? (tier <= 2);
+    const useLowpass = options?.lowpass ?? distant;
+
+    // Resonant bandpass formant simulating vocal sibilance
     const filter = this.ac.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.Q.value = 7;
+    filter.Q.value = distant ? 9 : 6;
     for (let k = 0; k < duration * 6; k++) {
-      filter.frequency.setValueAtTime(900 + Math.random() * 1700, t + k / 6);
+      const baseFreq = distant ? 750 + Math.random() * 850 : 900 + Math.random() * 1700;
+      filter.frequency.setValueAtTime(baseFreq, t + k / 6);
     }
 
     const gain = this.ac.createGain();
     gain.gain.setValueAtTime(0.0001, t);
+    const gainMax = distant ? 0.035 + tier * 0.015 : 0.06;
     for (let k = 0; k < duration * 5; k++) {
-      gain.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.07, t + k / 5 + 0.06);
-      gain.gain.linearRampToValueAtTime(0.004, t + k / 5 + 0.17);
+      gain.gain.linearRampToValueAtTime(0.01 + Math.random() * gainMax, t + k / 5 + 0.06);
+      gain.gain.linearRampToValueAtTime(0.002, t + k / 5 + 0.17);
     }
     gain.gain.linearRampToValueAtTime(0.0001, t + duration);
+
+    let chainNode: AudioNode = filter;
+
+    // Low-pass filter for distant / muffled acoustic illusion
+    if (useLowpass) {
+      const lp = this.ac.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(options?.cutoff ?? (tier >= 3 ? 1100 : 700), t);
+      lp.Q.value = 2.5;
+      chainNode.connect(lp);
+      chainNode = lp;
+    }
+
+    chainNode.connect(gain);
 
     let output: AudioNode = gain;
     if (this.ac.createStereoPanner) {
       const panner = this.ac.createStereoPanner();
-      panner.pan.value = (Math.random() * 1.6) - 0.8;
+      const panStart = (Math.random() * 1.6) - 0.8;
+      panner.pan.setValueAtTime(panStart, t);
+      panner.pan.linearRampToValueAtTime(-panStart * 0.7, t + duration);
       output = gain.connect(panner);
     }
 
-    src.connect(filter);
-    filter.connect(gain);
     output.connect(this.masterGain);
+    src.connect(filter);
     src.start(t);
     src.stop(t + duration + 0.1);
+  }
+
+  /**
+   * Distant low-pass filtered whispering triggered when entering a higher sanity tier.
+   * Produces a subtle, uneasy murmur in the background that shifts across the stereo spectrum.
+   */
+  public tierTransitionWhisper(newTier: number) {
+    if (!this.ac || !this.masterGain || newTier <= 0) return;
+    const t = this.ac.currentTime;
+
+    // Distant whisper burst
+    const dur = 2.6 + newTier * 0.6;
+    this.whisper(dur, { lowpass: true, cutoff: 550 + newTier * 150, tier: newTier, distant: true });
+
+    // Faint sub-rumble swell accompanying the perceptual drop
+    const sub = this.ac.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(54 - newTier * 4, t);
+    sub.frequency.exponentialRampToValueAtTime(42, t + dur);
+
+    const subGain = this.ac.createGain();
+    subGain.gain.setValueAtTime(0.0001, t);
+    subGain.gain.linearRampToValueAtTime(0.035 * Math.min(1, newTier * 0.4), t + 0.8);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    sub.connect(subGain);
+    subGain.connect(this.masterGain);
+    sub.start(t);
+    sub.stop(t + dur + 0.05);
   }
 
   private noiseHit(t: number, dur: number, freq: number, q: number, gainLevel: number, pan?: number) {
