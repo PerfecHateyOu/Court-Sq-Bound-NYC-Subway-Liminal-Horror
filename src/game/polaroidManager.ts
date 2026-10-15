@@ -7,9 +7,12 @@ import * as THREE from 'three';
 import { PolaroidPhoto } from '../types';
 import { audioEngine } from '../audio/audioEngine';
 
+/** Film loaded at the start of every ride. */
+export const STARTING_FILM = 8;
+
 export class PolaroidManager {
   public isViewfinderOpen: boolean = false;
-  public remainingFilm: number = 8;
+  public remainingFilm: number = STARTING_FILM;
   public maxFilm: number = 10;
   public photos: PolaroidPhoto[] = [];
   public lastCapturedPhoto: PolaroidPhoto | null = null;
@@ -22,8 +25,28 @@ export class PolaroidManager {
   private projScreenMatrix = new THREE.Matrix4();
   private tempVec = new THREE.Vector3();
 
+  private developTimer: ReturnType<typeof setTimeout> | null = null;
+  private flashTimer: ReturnType<typeof setTimeout> | null = null;
+
   public onStateChanged?: () => void;
   public onPhotoSnapped?: (photo: PolaroidPhoto) => void;
+
+  /** A new ride: fresh film, empty album, camera lowered. */
+  public reset() {
+    if (this.developTimer) clearTimeout(this.developTimer);
+    if (this.flashTimer) clearTimeout(this.flashTimer);
+    this.developTimer = null;
+    this.flashTimer = null;
+    this.isViewfinderOpen = false;
+    this.isAlbumOpen = false;
+    this.remainingFilm = STARTING_FILM;
+    this.photos = [];
+    this.lastCapturedPhoto = null;
+    this.isDeveloping = false;
+    this.flashActive = false;
+    this.flashUntil = 0;
+    this.notify();
+  }
 
   public toggleViewfinder(): boolean {
     this.isViewfinderOpen = !this.isViewfinderOpen;
@@ -72,6 +95,7 @@ export class PolaroidManager {
    * 4. Triggers flash burst and chemical development
    */
   public snapPhoto(
+    scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
     renderer: THREE.WebGLRenderer,
     activeAnomalies: Array<{ id: string; desc: string; obj: THREE.Object3D | null; at: number | null }>,
@@ -136,6 +160,9 @@ export class PolaroidManager {
       const ctx = offscreen.getContext('2d');
 
       if (ctx) {
+        // The renderer doesn't preserve its drawing buffer, so between frames the canvas
+        // reads back blank. Render now and copy in the same tick, before it's cleared.
+        renderer.render(scene, camera);
         const minDim = Math.min(canvas.width, canvas.height);
         const sx = (canvas.width - minDim) / 2;
         const sy = (canvas.height - minDim) / 2;
@@ -149,6 +176,7 @@ export class PolaroidManager {
 
         dataUrl = offscreen.toDataURL('image/jpeg', 0.82);
       } else {
+        renderer.render(scene, camera);
         dataUrl = canvas.toDataURL('image/jpeg', 0.6);
       }
     } catch (e) {
@@ -179,13 +207,17 @@ export class PolaroidManager {
     this.isDeveloping = true;
 
     // Reset developing state after chemical development completes (4.0s)
-    setTimeout(() => {
+    if (this.developTimer) clearTimeout(this.developTimer);
+    this.developTimer = setTimeout(() => {
+      this.developTimer = null;
       this.isDeveloping = false;
       this.notify();
     }, 4200);
 
     // End flash
-    setTimeout(() => {
+    if (this.flashTimer) clearTimeout(this.flashTimer);
+    this.flashTimer = setTimeout(() => {
+      this.flashTimer = null;
       this.flashActive = false;
       this.notify();
     }, 220);

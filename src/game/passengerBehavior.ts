@@ -27,7 +27,8 @@ export class PassengerBehaviorManager {
     sanityTier: number,
     hasActiveAnomaly: boolean,
     gameTime: number,
-    dt: number
+    dt: number,
+    skip: readonly PersonObject[] = []
   ) {
     // Check if synchronized chorus should trigger
     if (sanityTier >= 2 && Math.random() < 0.003 && gameTime > this.chorusUntil) {
@@ -39,6 +40,8 @@ export class PassengerBehaviorManager {
 
     passengers.forEach((p, idx) => {
       if (!p.g || !p.head || !p.g.visible) return;
+      // Skipped figures (the parents) keep the head and yaw/pitch their own logic sets.
+      if (skip.includes(p)) return;
 
       p.g.getWorldPosition(this.passengerWorldPos);
       const distToPlayer = this.passengerWorldPos.distanceTo(playerPos);
