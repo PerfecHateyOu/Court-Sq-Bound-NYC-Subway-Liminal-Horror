@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
 import { settings } from './settings';
+import { KeyLook } from './input/keyLook';
+import { shakeCoverScale, SHAKE_BLEED_PX } from './graphics/shakeCover';
 import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
 import { HUD } from './components/HUD';
@@ -62,12 +64,21 @@ export default function App() {
   settingsOpenRef.current = settingsOpen;
   const [routeSelectorOpen, setRouteSelectorOpen] = useState(false);
 
+  // Held arrow keys; the render loop turns the view while they're down.
+  const keyLookRef = useRef(new KeyLook());
   const keysDownRef = useRef<{ w: boolean; a: boolean; s: boolean; d: boolean }>({
     w: false,
     a: false,
     s: false,
     d: false,
   });
+  // Forget held look and movement keys (pause, lost focus): their key-ups may never arrive.
+  const releaseHeldKeys = useCallback(() => {
+    keyLookRef.current.clear();
+    keysDownRef.current = { w: false, a: false, s: false, d: false };
+    engineRef.current?.setMoveInput(0, 0);
+  }, []);
+
 
   useEffect(() => {
     if (phase !== 'menu' && !paused) {
@@ -131,6 +142,7 @@ export default function App() {
     G.pause();
     if (!G.paused) return; // menu or report: nothing to pause
     haptics.stop();
+    releaseHeldKeys();
     if (document.hidden) {
       // Tab switched away: silence everything; music starts when the player comes back.
       audioEngine.suspend();
@@ -142,7 +154,7 @@ export default function App() {
     if (document.pointerLockElement) document.exitPointerLock();
     if (containerRef.current) containerRef.current.style.transform = '';
     triggerUpdate();
-  }, [triggerUpdate]);
+  }, [triggerUpdate, releaseHeldKeys]);
 
   const resumeGame = useCallback(() => {
     const G = engineRef.current;
@@ -207,7 +219,7 @@ export default function App() {
     // Test builds only (vite build --mode test): expose internals to the Playwright suite.
     // MODE is replaced at build time, so production bundles don't contain this.
     if (import.meta.env.MODE === 'test') {
-      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass } });
+      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale });
     }
 
     engine.onStateChange = () => triggerUpdate();
@@ -223,6 +235,7 @@ export default function App() {
     let hudAcc = 0;
     let hudWasLive = false;
 
+    let shakeZoom = 1; // current screen-shake cover zoom (see shakeCoverScale)
     let animId: number;
     const animate = (currentTime: number) => {
       animId = requestAnimationFrame(animate);
@@ -248,6 +261,9 @@ export default function App() {
       }
 
       if (!engine.paused) {
+        if (engine.phase !== 'menu' && engine.phase !== 'end') {
+          keyLookRef.current.apply(engine, dt, settings.get().lookSensitivity);
+        }
         engine.update(dt);
       }
 
@@ -283,9 +299,15 @@ export default function App() {
         const shake = engine.getScreenShake();
         if (containerRef.current) {
           if (shake.intensity > 0.001) {
-            containerRef.current.style.transform = `translate3d(${shake.x.toFixed(2)}px, ${shake.y.toFixed(2)}px, 0px) rotate(${shake.rot.toFixed(3)}deg)`;
+            // Zoom in just enough that the shifted, rotated view still covers every screen
+            // corner (the container only bleeds 8 px past the edges). Zoom in at once when more
+            // is needed, ease back out slowly, so it reads as a steady zoom, not a pulse.
+            const need = shakeCoverScale(window.innerWidth, window.innerHeight, SHAKE_BLEED_PX, shake);
+            shakeZoom = need > shakeZoom ? need : shakeZoom + (need - shakeZoom) * (1 - Math.exp(-dt / 0.6));
+            containerRef.current.style.transform = `translate3d(${shake.x.toFixed(2)}px, ${shake.y.toFixed(2)}px, 0px) rotate(${shake.rot.toFixed(3)}deg) scale(${shakeZoom.toFixed(4)})`;
           } else if (containerRef.current.style.transform) {
             containerRef.current.style.transform = '';
+            shakeZoom = 1;
           }
         }
       } else if (containerRef.current?.style.transform) {
@@ -397,9 +419,10 @@ export default function App() {
       const G = engineRef.current;
       if (!G) return;
 
-      // With Settings open, Esc or P closes it (and leaves the game paused).
+      // With Settings open, P closes it (and leaves the game paused). Esc is handled by the
+      // panel itself (see ui/escape.ts), so a confirmation inside it closes first.
       if (settingsOpenRef.current) {
-        if (e.code === 'Escape' || e.code === 'KeyP') {
+        if (e.code === 'KeyP') {
           e.preventDefault();
           setSettingsOpen(false);
         }
@@ -474,21 +497,11 @@ export default function App() {
         }
       }
 
-      // Keyboard Look controls (Arrow keys) for accessible navigation
-      const limit = G.phase === 'trial' ? 1.2 : 1.75;
-      const step = 0.08;
-      if (e.code === 'ArrowLeft') {
-        G.ty = Math.max(-limit, Math.min(limit, G.ty + step));
-        triggerUpdate();
-      } else if (e.code === 'ArrowRight') {
-        G.ty = Math.max(-limit, Math.min(limit, G.ty - step));
-        triggerUpdate();
-      } else if (e.code === 'ArrowUp') {
-        G.tp = Math.max(-0.6, Math.min(0.72, G.tp + step * 0.7));
-        triggerUpdate();
-      } else if (e.code === 'ArrowDown') {
-        G.tp = Math.max(-0.6, Math.min(0.72, G.tp - step * 0.7));
-        triggerUpdate();
+      // Keyboard look (arrow keys): held keys turn the view smoothly in the render loop.
+      if (KeyLook.isLookKey(e.code)) {
+        e.preventDefault();
+        keyLookRef.current.press(e.code);
+        return;
       }
 
       // Flagging / Restraint holding
@@ -512,6 +525,7 @@ export default function App() {
     const handleKeyUp = (e: KeyboardEvent) => {
       const G = engineRef.current;
       if (!G) return;
+      keyLookRef.current.release(e.code);
 
       // WASD key release
       if (e.code === 'KeyW') keysDownRef.current.w = false;
@@ -546,6 +560,7 @@ export default function App() {
     // Alt-tab or clicking another window: the key-up never arrives, so release held
     // inputs here. During the restraint this starts the grace period instead of failing it.
     const handleBlur = () => {
+      releaseHeldKeys();
       const G = engineRef.current;
       if (!G) return;
       G.interruptInputs();
@@ -563,7 +578,7 @@ export default function App() {
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [triggerUpdate, pauseGame, resumeGame]);
+  }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys]);
 
   const handleStartGame = (startMuted: boolean, showDebug: boolean) => {
     audioEngine.init(startMuted);

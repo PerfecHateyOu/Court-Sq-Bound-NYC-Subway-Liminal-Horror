@@ -136,7 +136,7 @@ test.describe('settings with reduced motion on the device', () => {
     const game = await board(page);
     await page.evaluate(() => (window as any).__S.set({ screenEffects: 'full' }));
     const r = await game(`ride(0); toTier(5, 3); const gp = R.glitchPass; let n = 0; const o = gp.render.bind(gp);
-      gp.render = (...a) => { n++; o(...a); }; G.triggerGlitch('anomaly'); await sleep(900); gp.render = o; return n;`);
+      gp.render = (...a) => { n++; o(...a); }; G.glitch = null; G.triggerGlitch('anomaly'); await waitGT(G.glitch.duration * 0.6); await sleep(100); gp.render = o; return n;`);
     expect(r).toBeGreaterThan(0);
   });
 });

@@ -18,7 +18,7 @@ test.describe('keyboard look', () => {
     expect(rate1).toBeGreaterThan(1.4);
     expect(rate1).toBeLessThan(2.0); // ≈1.8 rad/s
     await page.evaluate(() => (window as any).__S.set({ lookSensitivity: 2 }));
-    const r2 = await hold(page, game, 'KeyA', 0.4);
+    const r2 = await hold(page, game, 'ArrowLeft', 0.4);
     expect(r2.dty / r2.dgt / rate1).toBeGreaterThan(1.7); // ≈2x
     expect(r2.dty / r2.dgt).toBeLessThan(5.5); // still under the head-whip threshold
     const still = await game(`const a = G.ty; await sleep(400); return G.ty - a;`);
@@ -28,13 +28,28 @@ test.describe('keyboard look', () => {
     expect(up.dty).toBe(0);
   });
 
-  test('WASD is ignored during an answer prompt; arrows still work', async ({ page, game }) => {
+  test('arrows turn the view during an answer prompt; WASD walks instead of turning', async ({ page, game }) => {
     await game(`ride(0); G.choice = { items: [{ txt: 'a', val: 0 }], window: 1e9, left: 1e9, gT: 0, glitch: 0, keyMap: [0], onPick: () => {} };`);
-    const wasd = await hold(page, game, 'KeyA', 0.3);
-    expect(wasd.dty).toBe(0);
     const arrow = await hold(page, game, 'ArrowLeft', 0.3);
     expect(arrow.dty).toBeGreaterThan(0.2);
     await game(`G.choice = null;`);
+    const wasd = await hold(page, game, 'KeyA', 0.3);
+    expect(wasd.dty).toBe(0);
+  });
+
+  test('losing window focus stops walking and turning', async ({ page, game }) => {
+    await game(`ride(0);`);
+    await page.keyboard.down('KeyW');
+    await page.keyboard.down('ArrowLeft');
+    const walking = await game(`await sleep(100); return G.moveFwd;`);
+    expect(walking).toBe(1);
+    await page.evaluate(() => window.dispatchEvent(new Event('blur'))); // the key-ups never arrive
+    const after = await game(`await sleep(50); const ty = G.ty; await waitGT(0.3); return { fwd: G.moveFwd, turned: G.ty - ty };`);
+    expect(after).toEqual({ fwd: 0, turned: 0 });
+    // A later key press must not resume the stale W.
+    await page.keyboard.down('KeyD');
+    expect(await game(`await sleep(100); return [G.moveFwd, G.moveRight];`)).toEqual([0, 1]);
+    for (const k of ['KeyD', 'KeyW', 'ArrowLeft']) await page.keyboard.up(k);
   });
 
   test('pausing forgets held keys', async ({ page, game }) => {

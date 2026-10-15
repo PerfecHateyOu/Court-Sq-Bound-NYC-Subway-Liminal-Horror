@@ -51,7 +51,12 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 
 | Action | Desktop | Touch |
 |---|---|---|
-| Look | Mouse (click to capture), or arrow keys / WASD | Drag |
+| Look | Mouse (click to capture), or arrow keys | Drag |
+| Walk between cars | WASD | — |
+| Open a gangway door | E or click it | Tap it |
+| Polaroid camera | C to raise, click / Space / Enter to shoot | Camera button, then the shutter |
+| Evidence album | Tab | Album button |
+| Route lines | — | Route button |
 | Flag | Hold F | Hold the Flag button |
 | Answer / choose | 1, 2, 3 or click | Tap |
 | Hold during the restraint moment | Hold Space | Hold the Hold button |

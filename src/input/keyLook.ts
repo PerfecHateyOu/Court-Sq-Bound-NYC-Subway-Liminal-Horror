@@ -1,6 +1,5 @@
 /**
- * Keyboard look: arrow keys always, WASD except during answer prompts and the restraint
- * (when those keys are easy to hit by accident).
+ * Keyboard look with the arrow keys. (WASD walks between cars; see App.tsx.)
  *
  * Keys are tracked while held and the view turns every frame at a steady rate, scaled by the
  * Look speed setting, instead of stepping on each OS key-repeat. At 2x look speed the fastest
@@ -17,12 +16,7 @@ const DIRS: Record<string, [number, number]> = {
   ArrowRight: [-1, 0],
   ArrowUp: [0, 1],
   ArrowDown: [0, -1],
-  KeyA: [1, 0],
-  KeyD: [-1, 0],
-  KeyW: [0, 1],
-  KeyS: [0, -1],
 };
-const WASD = new Set(['KeyA', 'KeyD', 'KeyW', 'KeyS']);
 
 export class KeyLook {
   private held = new Set<string>();
@@ -51,15 +45,13 @@ export class KeyLook {
   /** Turn the view for this frame. */
   public apply(G: GameEngine, dt: number, lookSpeed: number) {
     if (!this.held.size) return;
-    const wasdOff = !!G.choice || !!G.restraint;
     let x = 0;
     let y = 0;
     for (const code of this.held) {
-      if (wasdOff && WASD.has(code)) continue;
       x += DIRS[code][0];
       y += DIRS[code][1];
     }
-    // Arrow + matching WASD key together shouldn't double the speed.
+    // Opposite arrows cancel out.
     x = Math.max(-1, Math.min(1, x));
     y = Math.max(-1, Math.min(1, y));
     if (!x && !y) return;
