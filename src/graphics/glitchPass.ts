@@ -74,6 +74,8 @@ export class GlitchPass {
       type: THREE.HalfFloatType, // keep HDR for tone mapping in the final pass
       samples: 4, // match the antialiased direct render
     });
+    // Allocate up front so the first tear doesn't stall on a large allocation.
+    this.syncSize();
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: this.target.texture },
@@ -95,13 +97,19 @@ export class GlitchPass {
     this.quadScene.add(tri);
   }
 
+  /** Match the target to the renderer's drawing buffer. Call after the renderer is resized. */
+  public syncSize() {
+    this.renderer.getDrawingBufferSize(this.size);
+    if (this.target.width !== this.size.x || this.target.height !== this.size.y) {
+      this.target.setSize(this.size.x, this.size.y); // frees the old GPU buffers
+    }
+    this.renderer.initRenderTarget(this.target); // allocates now, not on the next tear; no-op once allocated
+  }
+
   /** Render the scene through the glitch. amount 0..1, time = seconds since the glitch began. */
   public render(scene: THREE.Scene, camera: THREE.Camera, amount: number, time: number, seed: number) {
     const r = this.renderer;
-    r.getDrawingBufferSize(this.size);
-    if (this.target.width !== this.size.x || this.target.height !== this.size.y) {
-      this.target.setSize(this.size.x, this.size.y);
-    }
+    this.syncSize(); // no-op unless the size changed since the last resize
     const u = this.material.uniforms;
     u.uAmt.value = amount;
     u.uTime.value = time;

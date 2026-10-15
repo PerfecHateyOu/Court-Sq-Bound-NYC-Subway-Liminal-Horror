@@ -51,6 +51,14 @@ export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ en
     let last = performance.now();
     let drawnTier = -1;
     let wasStill: boolean | null = null;
+    // Gradient and color strings are rebuilt only when the rounded color they encode changes
+    // (while easing toward a new tier), not every frame.
+    let grad: CanvasGradient | null = null;
+    let rgbKey = -1;
+    let alphaKey = -1;
+    let rgbStr = '';
+    let dotKey = -1;
+    let dotStyle = '';
 
     const draw = (now: number) => {
       raf = requestAnimationFrame(draw);
@@ -84,9 +92,19 @@ export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ en
       const [r, g, b, a] = color;
 
       // The line fades toward the older (left) end, like a monitor sweep.
-      const grad = ctx.createLinearGradient(0, 0, W, 0);
-      grad.addColorStop(0, `rgba(${r | 0},${g | 0},${b | 0},${(a * 0.12).toFixed(3)})`);
-      grad.addColorStop(1, `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`);
+      const rk = ((r | 0) << 16) | ((g | 0) << 8) | (b | 0);
+      const ak = Math.round(a * 1000);
+      if (!grad || rk !== rgbKey || ak !== alphaKey) {
+        if (rk !== rgbKey) {
+          rgbKey = rk;
+          rgbStr = `${r | 0},${g | 0},${b | 0}`;
+          dotKey = -1;
+        }
+        alphaKey = ak;
+        grad = ctx.createLinearGradient(0, 0, W, 0);
+        grad.addColorStop(0, `rgba(${rgbStr},${(a * 0.12).toFixed(3)})`);
+        grad.addColorStop(1, `rgba(${rgbStr},${a.toFixed(3)})`);
+      }
       ctx.strokeStyle = grad;
       ctx.lineWidth = 1.25;
       ctx.lineJoin = 'round';
@@ -110,7 +128,13 @@ export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ en
       // Leading dot flares briefly on each beat.
       const lastBeat = beats.length ? beats[beats.length - 1] : -9;
       const flare = still ? 0 : Math.max(0, 1 - (t1 - lastBeat) / 0.25);
-      ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${Math.min(1, a + flare * 0.4).toFixed(3)})`;
+      const dotA = Math.min(1, a + flare * 0.4);
+      const dk = Math.round(dotA * 1000);
+      if (dk !== dotKey) {
+        dotKey = dk;
+        dotStyle = `rgba(${rgbStr},${dotA.toFixed(3)})`;
+      }
+      ctx.fillStyle = dotStyle;
       ctx.beginPath();
       ctx.arc(W - 1.8, base, 1.4 + flare * 0.9, 0, Math.PI * 2);
       ctx.fill();
