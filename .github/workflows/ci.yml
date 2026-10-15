@@ -16,7 +16,34 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
+      - name: Check bun.lock matches package.json
+        run: |
+          if bun install --frozen-lockfile; then
+            exit 0
+          fi
+          bun install
+          diff=$(git diff -U0 bun.lock)
+          pkgs() { echo "$diff" | sed -nE "s/^[$1]        \"([^\"]+)\": \".*/\1/p" | sort -u; }
+          removed=$(comm -23 <(pkgs -) <(pkgs +))
+          added=$(comm -13 <(pkgs -) <(pkgs +))
+          msg="bun.lock doesn't match package.json (this usually happens after an AI Studio export). To fix it, run 'bun install' and commit the updated bun.lock, or ask Tab to open a fix PR."
+          echo "::error title=bun.lock is out of date::$msg"
+          {
+            echo "## bun.lock is out of date"
+            echo
+            echo "$msg"
+            echo
+            echo "Packages in bun.lock that are not in package.json (would be removed):"
+            echo "${removed:-none}" | sed 's/^/- /'
+            echo
+            echo "Packages in package.json that are missing from bun.lock (would be added):"
+            echo "${added:-none}" | sed 's/^/- /'
+            echo
+            echo '```'
+            git diff --stat bun.lock
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
       - run: bun run lint
       - run: bun run build
       - name: Production build has no test hooks
@@ -24,6 +51,7 @@ jobs:
 
   e2e:
     name: Browser tests
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
