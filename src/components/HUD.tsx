@@ -9,6 +9,7 @@ import { GameEngine } from '../game/gameState';
 import { STOPS, TIER_NAMES, CFG } from '../constants';
 import { Volume2, VolumeX, Pause, Camera, Image as ImageIcon, DoorOpen, GitBranch } from 'lucide-react';
 import { HeartbeatTrace } from './HeartbeatTrace';
+import { MoveStick } from './MoveStick';
 import { routeManager } from '../game/routeManager';
 import { polaroidManager } from '../game/polaroidManager';
 
@@ -261,7 +262,18 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
-      {/* Bottom Controls / Key Hints Bar (Left) */}
+      {/* Touch: walking stick (bottom left), where the keyboard hints sit on desktop. Hidden at
+          the same times WASD is ignored: answer prompts and the restraint. */}
+      {G.isTouch &&
+        !showChoices &&
+        !isRestraint &&
+        !G.paused &&
+        (G.phase === 'ride' || G.phase === 'stop' || G.phase === 'haven' || G.phase === 'intro') && (
+          <MoveStick engine={G} />
+        )}
+
+      {/* Bottom Controls / Key Hints Bar (Left) — keyboard only */}
+      {!G.isTouch && (
       <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-[11px] text-[#9a9684] font-mono bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded border border-white/10">
         <span>[W][A][S][D] WALK</span>
         <span className="text-white/30">•</span>
@@ -271,6 +283,7 @@ export const HUD: React.FC<HUDProps> = ({
         <span className="text-white/30">•</span>
         <span>[E] GANGWAY DOOR</span>
       </div>
+      )}
 
       {/* Hold / Flag Button (Bottom Right) */}
       {!showChoices && (

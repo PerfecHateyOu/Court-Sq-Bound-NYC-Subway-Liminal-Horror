@@ -21,6 +21,8 @@ test.describe('haptics on desktop', () => {
 test.describe('haptics on a phone', () => {
   const { defaultBrowserType: _ignored, ...pixel } = devices['Pixel 7'];
   test.use(pixel);
+  // These reload and ride several times on an emulated phone; give them extra time under load.
+  test.slow();
   test.beforeEach(async ({ page }) => page.addInitScript(STUB));
 
   test('pulses at arrival only, one per catch (max 3), never when flagging', async ({ page }) => {

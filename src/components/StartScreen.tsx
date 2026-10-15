@@ -79,7 +79,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
             <HelpCircle className="w-4 h-4 text-[#9a9684] shrink-0 mt-0.5" />
             <span>
               {isTouch
-                ? 'Drag screen to look. Hold the round FLAG button. Tap choices when asked. Play in landscape for the best field of view.'
+                ? 'Drag the screen to look. Use the WALK stick (bottom left) to move between cars. Hold the round FLAG button. Tap choices when asked. Play in landscape for the best field of view.'
                 : 'Click inside the train to lock mouse (or use Arrows / WASD). Hold F to flag. Press 1, 2, or 3 to choose. Hold Space during restraint. Esc or P pauses, M mutes.'}
             </span>
           </div>
