@@ -1,6 +1,12 @@
+/**
+ * Start Screen / Title Experience for Court Sq-Bound
+ * Authentic NYC subway mosaic plaque and station briefing, plus the Case Files dossier.
+ */
 import React from 'react';
 import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X } from 'lucide-react';
 import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '../game/psychLog';
+import { useProgressEpoch } from '../settings';
+import { useEscape } from '../ui/escape';
 
 interface StartScreenProps {
   onStart: (muted: boolean, debug: boolean) => void;
@@ -13,7 +19,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   const [showDebug, setShowDebug] = React.useState(false);
   const [showLog, setShowLog] = React.useState(false);
 
-  const archive = React.useMemo(() => loadArchive(), [showLog]);
+  // Re-read when the Case Files open and after saved progress is erased in Settings.
+  const progressEpoch = useProgressEpoch();
+  const archive = React.useMemo(() => loadArchive(), [showLog, progressEpoch]);
+  useEscape(() => setShowLog(false), showLog);
   const documentedCount = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
 
   return (
@@ -134,11 +143,21 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
 
         {/* Case Files Dossier Modal */}
         {showLog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md">
-            <div className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded shadow-2xl border border-[#9f9883]">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md"
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) setShowLog(false);
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="case-files-title"
+              className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded shadow-2xl border border-[#9f9883]"
+            >
               <div className="flex items-start justify-between border-b-2 border-[#1b1d18] pb-3 mb-4">
                 <div>
-                  <h2 className="text-2xl font-black uppercase tracking-tight">Psychological Case Files</h2>
+                  <h2 id="case-files-title" className="text-2xl font-black uppercase tracking-tight">Psychological Case Files</h2>
                   <p className="text-xs text-[#55574c] mt-0.5">
                     {documentedCount} of 13 cataloged anomaly types documented on this device.
                   </p>
@@ -166,17 +185,17 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
                         </span>
                         <div className="flex items-center gap-1.5">
                           {state === 'documented' && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#6cbe45]/30 text-[#204a18]">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#6cbe45]/30 text-[#204a18]">
                               DOCUMENTED
                             </span>
                           )}
                           {state === 'unconfirmed' && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#e3a83a]/30 text-[#6d4b0f]">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#e3a83a]/30 text-[#6d4b0f]">
                               UNCONFIRMED
                             </span>
                           )}
                           {state === 'redacted' && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-black/10 text-[#55574c]">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/10 text-[#55574c]">
                               REDACTED
                             </span>
                           )}

@@ -51,12 +51,13 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 
 | Action | Desktop | Touch |
 |---|---|---|
-| Look | Mouse (click to capture) | Drag |
+| Look | Mouse (click to capture), or arrow keys / WASD | Drag |
 | Flag | Hold F | Hold the Flag button |
 | Answer / choose | 1, 2, 3 or click | Tap |
 | Hold during the restraint moment | Hold Space | Hold the Hold button |
 | Pause | P or Esc | Pause button |
 | Mute | M | Sound button |
+| Close a dialog or confirmation | Esc | Close / Cancel button |
 | Debug overlay (spoilers) | Backquote | Start-screen checkbox |
 
 ## Project layout
