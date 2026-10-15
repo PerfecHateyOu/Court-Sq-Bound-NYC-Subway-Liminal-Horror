@@ -56,6 +56,8 @@ class SettingsStore {
   private value: Settings;
   private listeners = new Set<() => void>();
   private systemReduced = false;
+  /** Bumped when saved progress is erased, so screens showing it can re-read. */
+  private progressEpoch = 0;
 
   constructor() {
     let raw: unknown = null;
@@ -114,7 +116,11 @@ class SettingsStore {
         /* ignore */
       }
     }
+    this.progressEpoch++;
+    this.emit();
   }
+
+  public getProgressEpoch = (): number => this.progressEpoch;
 
   private emit() {
     this.listeners.forEach((fn) => fn());
@@ -126,4 +132,9 @@ export const settings = new SettingsStore();
 /** React hook: current settings, re-rendering when they change. */
 export function useSettings(): Settings {
   return useSyncExternalStore(settings.subscribe, settings.get, settings.get);
+}
+
+/** React hook: changes whenever saved progress is erased. */
+export function useProgressEpoch(): number {
+  return useSyncExternalStore(settings.subscribe, settings.getProgressEpoch, settings.getProgressEpoch);
 }

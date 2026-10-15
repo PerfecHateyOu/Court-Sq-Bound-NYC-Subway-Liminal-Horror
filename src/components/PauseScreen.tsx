@@ -5,6 +5,7 @@ import React from 'react';
 import { Play, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
 import { STOPS } from '../constants';
 import { GameEngine } from '../game/gameState';
+import { useEscape } from '../ui/escape';
 
 interface PauseScreenProps {
   engine: GameEngine;
@@ -17,6 +18,8 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
   const nextStop = engine.seg ? STOPS[engine.seg.stop] : STOPS[2];
   // Restarting throws away the current ride, so it takes a second, explicit click.
   const [confirmRestart, setConfirmRestart] = React.useState(false);
+  // Esc on the confirmation cancels it (rather than resuming the ride).
+  useEscape(() => setConfirmRestart(false), confirmRestart);
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">

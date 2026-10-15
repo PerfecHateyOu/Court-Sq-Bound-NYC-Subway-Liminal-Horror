@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
 import { settings } from './settings';
+import { KeyLook } from './input/keyLook';
 import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
 import { HUD } from './components/HUD';
@@ -54,6 +55,8 @@ export default function App() {
   // Settings panel (over the start screen or the pause menu). The ref lets the key handler see it.
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsOpenRef = useRef(false);
+  // Held arrow/WASD keys; the render loop turns the view while they're down.
+  const keyLookRef = useRef(new KeyLook());
   settingsOpenRef.current = settingsOpen;
   useEffect(() => {
     if (phase !== 'menu' && !paused) setSettingsOpen(false);
@@ -105,6 +108,7 @@ export default function App() {
     G.pause();
     if (!G.paused) return; // menu or report: nothing to pause
     haptics.stop();
+    keyLookRef.current.clear();
     if (document.hidden) {
       // Tab switched away: silence everything; music starts when the player comes back.
       audioEngine.suspend();
@@ -221,6 +225,9 @@ export default function App() {
       }
 
       if (!engine.paused) {
+        if (engine.phase !== 'menu' && engine.phase !== 'end') {
+          keyLookRef.current.apply(engine, dt, settings.get().lookSensitivity);
+        }
         engine.update(dt);
       }
 
@@ -340,9 +347,10 @@ export default function App() {
       const G = engineRef.current;
       if (!G) return;
 
-      // With Settings open, Esc or P closes it (and leaves the game paused).
+      // With Settings open, P closes it (and leaves the game paused). Esc is handled by the
+      // panel itself (see ui/escape.ts), so a confirmation inside it closes first.
       if (settingsOpenRef.current) {
-        if (e.code === 'Escape' || e.code === 'KeyP') {
+        if (e.code === 'KeyP') {
           e.preventDefault();
           setSettingsOpen(false);
         }
@@ -370,21 +378,11 @@ export default function App() {
 
       if (G.paused || G.phase === 'menu' || G.phase === 'end') return;
 
-      // Keyboard Look controls (Arrow keys / WASD) for accessible navigation
-      const limit = G.phase === 'trial' ? 1.2 : 1.75;
-      const step = 0.08;
-      if (e.code === 'ArrowLeft' || (e.code === 'KeyA' && !G.choice && !G.restraint)) {
-        G.ty = Math.max(-limit, Math.min(limit, G.ty + step));
-        triggerUpdate();
-      } else if (e.code === 'ArrowRight' || (e.code === 'KeyD' && !G.choice && !G.restraint)) {
-        G.ty = Math.max(-limit, Math.min(limit, G.ty - step));
-        triggerUpdate();
-      } else if (e.code === 'ArrowUp' || (e.code === 'KeyW' && !G.choice && !G.restraint)) {
-        G.tp = Math.max(-0.6, Math.min(0.72, G.tp + step * 0.7));
-        triggerUpdate();
-      } else if (e.code === 'ArrowDown' || (e.code === 'KeyS' && !G.choice && !G.restraint)) {
-        G.tp = Math.max(-0.6, Math.min(0.72, G.tp - step * 0.7));
-        triggerUpdate();
+      // Keyboard look (arrows / WASD): held keys turn the view smoothly in the render loop.
+      if (KeyLook.isLookKey(e.code)) {
+        if (e.code.startsWith('Arrow')) e.preventDefault();
+        keyLookRef.current.press(e.code);
+        return;
       }
 
       // Flagging / Restraint holding
@@ -408,6 +406,7 @@ export default function App() {
     const handleKeyUp = (e: KeyboardEvent) => {
       const G = engineRef.current;
       if (!G) return;
+      keyLookRef.current.release(e.code);
       if (e.code === 'KeyF' || e.code === 'Space') {
         G.flagHeld = false;
         triggerUpdate();
@@ -430,6 +429,7 @@ export default function App() {
     // inputs here. During the restraint this starts the grace period instead of failing it.
     const handleBlur = () => {
       const G = engineRef.current;
+      keyLookRef.current.clear(); // keyups are lost while the window is unfocused
       if (!G) return;
       G.interruptInputs();
       triggerUpdate();

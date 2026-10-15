@@ -7,6 +7,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { settings, useSettings, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
 import { haptics } from '../game/haptics';
+import { useEscape } from '../ui/escape';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -84,6 +85,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
   const [confirmErase, setConfirmErase] = React.useState(false);
   const [erased, setErased] = React.useState(false);
   const canVibrate = isTouch && haptics.supported;
+  // Esc closes the panel, or first cancels the erase confirmation if it's open.
+  useEscape(onClose);
+  useEscape(() => setConfirmErase(false), confirmErase);
   const pct = (v: number) => `${Math.round(v * 100)}%`;
 
   const effectsNote =
