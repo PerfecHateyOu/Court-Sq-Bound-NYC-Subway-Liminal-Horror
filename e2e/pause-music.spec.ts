@@ -47,11 +47,10 @@ test.describe('pause music', () => {
     expect(tiers[1].detune).toBeLessThanOrEqual(10.01);
     expect(tiers[1].wrong).toBe(0);
     expect(tiers[2].detune).toBeGreaterThan(tiers[1].detune);
-    expect(tiers[3].perSec).toBeLessThan(tiers[0].perSec);
     expect(tiers[3].detune).toBeGreaterThan(tiers[2].detune);
   });
 
-  test('wrong notes only at Critical (30 s offline render per tier)', async ({ game }) => {
+  test('wrong notes only at Critical, and Critical is slower (30 s offline render per tier)', async ({ game }) => {
     const wrong = await M(game, `const out = [];
       for (let t = 0; t < 4; t++) {
         const oc = new OfflineAudioContext(1, 44100 * 30, 44100); const m = new (M.constructor)(oc, oc.destination);
@@ -63,6 +62,8 @@ test.describe('pause music', () => {
     expect(wrong.slice(0, 3).map((x: any) => x.wrong)).toEqual([0, 0, 0]);
     expect(wrong[3].notes).toBeGreaterThan(30);
     expect(wrong[3].wrong).toBeGreaterThan(0);
+    // Tempo from the offline render too: live note counts wobble when the CPU is busy.
+    expect(wrong[3].notes).toBeLessThan(wrong[0].notes);
   });
 
   test('tab switches, restart, and the report screen', async ({ page, game }) => {

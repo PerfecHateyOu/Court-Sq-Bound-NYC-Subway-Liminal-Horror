@@ -272,6 +272,7 @@ export class GameEngine {
    */
   public interruptInputs() {
     this.flagHeld = false;
+    this.setMoveInput(0, 0); // stop walking: the key-ups may never arrive
     if (this.restraint) {
       this.restraint.grace = Math.max(this.restraint.grace, RESTRAINT_GRACE);
     }
@@ -1498,8 +1499,11 @@ export class GameEngine {
     else if (this.tier === 2) tierMult = 2.15;
     else if (this.tier === 3) tierMult = 3.25;
 
+    // Reduced screen effects: no shake at all, only the gentle bob the ride always had.
     const reduced = settings.effectsReduced();
-    const motionScale = reduced ? 0.25 : 1.0;
+    const motionScale = reduced ? 0 : 1.0;
+    const gentleBobY = reduced ? (Math.sin(this.GT * 9.3) * 0.0035 + Math.sin(this.GT * 1.7) * 0.004) * sf : 0;
+    const gentleRoll = reduced ? Math.sin(this.GT * 0.9) * 0.006 * sf : 0;
 
     // Vibration component synthesis
     const railBounce = Math.sin(this.GT * 14.5) * 0.0032 * sf;
@@ -1527,7 +1531,7 @@ export class GameEngine {
       const pxX = (totalShakeX * 420 + Math.sin(this.GT * 23.4) * 1.5 * sf * tierMult) * motionScale;
       const pxY = (totalShakeY * 540 + Math.sin(this.GT * 18.2) * 2.0 * sf * tierMult) * motionScale;
       const degRot = (rollSway * 18 + (this.tier >= 2 ? Math.sin(this.GT * 12.0) * 0.4 * sf : 0)) * motionScale;
-      const rawIntensity = Math.min(1, Math.max(0, sf * (0.35 + 0.18 * this.tier + 0.25 * brakeJolt)));
+      const rawIntensity = Math.min(1, Math.max(0, sf * (0.35 + 0.18 * this.tier + 0.25 * brakeJolt))) * motionScale;
 
       const sk = 1 - Math.exp(-24 * dt);
       this.screenShake.x += (pxX - this.screenShake.x) * sk;
@@ -1624,13 +1628,13 @@ export class GameEngine {
     const breathe = this.tier >= 2 ? Math.sin(this.GT * 0.5) * 0.01 * (this.tier - 1) : 0;
     this.camera.position.set(
       this.eyePos.x + totalShakeX,
-      this.eyePos.y + totalShakeY,
+      this.eyePos.y + totalShakeY + gentleBobY,
       this.eyePos.z + totalShakeZ
     );
     this.camera.rotation.set(
       this.pitch + pitchJerk,
       this.yaw + yawTwitch,
-      rollSway + breathe
+      rollSway + gentleRoll + breathe
     );
     this.camera.updateMatrixWorld();
 
