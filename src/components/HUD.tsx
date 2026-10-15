@@ -73,7 +73,7 @@ export const HUD: React.FC<HUDProps> = ({
       )}
 
       {/* Top Bar: Next Station Indicator */}
-      <div className="absolute left-4 top-4 flex items-center gap-2.5 px-3 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-xs sm:text-sm">
+      <div className="absolute left-4 top-4 flex items-center gap-2.5 px-3 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-xs sm:text-sm transit-sign-flicker-subtle">
         <span className="w-6 h-6 rounded-full bg-[#6cbe45] text-black font-extrabold flex items-center justify-center text-xs">
           G
         </span>
@@ -107,15 +107,16 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Subway PA Announcement LED Display */}
       {G.paText && (
-        <div className="absolute left-1/2 top-16 -translate-x-1/2 max-w-[min(90vw,640px)] px-4 py-2 rounded bg-[#120d05] border border-[#3a2a10] text-[#e3a83a] text-center font-bold text-sm sm:text-base tracking-wide shadow-lg animate-in fade-in duration-300">
+        <div className="absolute left-1/2 top-16 -translate-x-1/2 max-w-[min(90vw,640px)] px-4 py-2 rounded bg-[#120d05] border border-[#e3a83a]/60 text-[#e3a83a] text-center font-bold text-sm sm:text-base tracking-wide shadow-[0_0_18px_rgba(227,168,58,0.25)] transit-sign-flicker relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-30" />
           <span className="inline-block w-2 h-2 rounded-full bg-[#e3a83a] mr-2 animate-ping" />
-          {G.paText}
+          <span className="relative z-10">{G.paText}</span>
         </div>
       )}
 
       {/* Contextual Hint */}
       {G.hintText && G.GT < G.hintUntil && (
-        <div className="absolute left-1/2 top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/75 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md">
+        <div className="absolute left-1/2 top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/75 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
           {G.hintText}
         </div>
       )}
@@ -123,7 +124,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* Subtitles (Conversations, Parent Reactions) */}
       {G.subHtml && (
         <div
-          className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/75 backdrop-blur-md border border-white/10 text-center text-sm sm:text-base text-[#ece6d3] leading-relaxed shadow-lg transition-all duration-300 ${
+          className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/75 backdrop-blur-md border border-white/10 text-center text-sm sm:text-base text-[#ece6d3] leading-relaxed shadow-lg transit-sign-flicker-subtle transition-all duration-300 ${
             showChoices ? 'bottom-28' : isRestraint ? 'bottom-32' : 'bottom-16'
           }`}
           dangerouslySetInnerHTML={{ __html: G.subHtml }}
@@ -132,7 +133,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Choice Buttons Bar (Doors & Mask Checks) */}
       {showChoices && choice && (
-        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100vw-32px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 backdrop-blur-md border border-white/15 shadow-2xl">
+        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100vw-32px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 backdrop-blur-md border border-white/15 shadow-2xl transit-sign-flicker">
           {/* Progress Time Bar */}
           {isFinite(choice.window) && (
             <div className="w-full h-1 bg-white/15 rounded-full overflow-hidden mb-1">

@@ -114,6 +114,7 @@ export default function App() {
     }
     // Free the cursor so the Resume button can be clicked.
     if (document.pointerLockElement) document.exitPointerLock();
+    if (containerRef.current) containerRef.current.style.transform = '';
     triggerUpdate();
   }, [triggerUpdate]);
 
@@ -250,6 +251,20 @@ export default function App() {
       } else {
         renderer.render(scene, camera);
       }
+
+      // Subway train motion screen-shake (linked to ride phase and sanity tier)
+      if (engine.phase !== 'menu' && !engine.paused) {
+        const shake = engine.getScreenShake();
+        if (containerRef.current) {
+          if (shake.intensity > 0.001) {
+            containerRef.current.style.transform = `translate3d(${shake.x.toFixed(2)}px, ${shake.y.toFixed(2)}px, 0px) rotate(${shake.rot.toFixed(3)}deg)`;
+          } else if (containerRef.current.style.transform) {
+            containerRef.current.style.transform = '';
+          }
+        }
+      } else if (containerRef.current?.style.transform) {
+        containerRef.current.style.transform = '';
+      }
     };
     animId = requestAnimationFrame(animate);
 
@@ -259,6 +274,7 @@ export default function App() {
       window.removeEventListener('resize', fitGlitch);
       glitchPass.dispose();
       renderer.dispose();
+      if (containerRef.current) containerRef.current.style.transform = '';
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
     };
   }, [isTouch, triggerUpdate]);
@@ -511,7 +527,7 @@ export default function App() {
       {/* 3D Canvas Stage */}
       <div
         ref={containerRef}
-        className="absolute inset-0 z-0 touch-none"
+        className="absolute -inset-2 z-0 touch-none will-change-transform"
         style={{ filter: tierStyle.filter, transition: 'filter 2s ease' }}
       />
 

@@ -39,6 +39,7 @@ import { SubwayCarBuilder } from '../graphics/subwayCarBuilder';
 import { TrialBuilder } from '../graphics/trialBuilder';
 import { AnomalyManager } from './anomalyManager';
 import { haptics } from './haptics';
+import { settings } from '../settings';
 
 const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
 import {
@@ -160,6 +161,16 @@ export class GameEngine {
   public heartNextAt: number = 0;
   public heartBeats: number[] = []; // GT of recent beats, newest last
   public isTouch: boolean = false;
+
+  // Subway train motion and screen shake
+  public screenShake: { x: number; y: number; rot: number; intensity: number } = {
+    x: 0,
+    y: 0,
+    rot: 0,
+    intensity: 0,
+  };
+  private railClackT: number = 1.0;
+  private railImpulse: number = 0;
 
   // 3D Scene Components
   public scene: THREE.Scene;
@@ -1356,6 +1367,15 @@ export class GameEngine {
     return g.strength * env;
   }
 
+  /**
+   * Screen-shake triggered by the subway train's physical motion, with intensity
+   * linked to the ride phase (acceleration jolt, cruising rail clatter, braking shudder)
+   * and scaled by the current sanity tier.
+   */
+  public getScreenShake(): { x: number; y: number; rot: number; intensity: number } {
+    return this.screenShake;
+  }
+
   /** Decoy glitches at Low and Critical, at random during rides. */
   private updateGlitchDecoys(dt: number) {
     if (this.glitch && this.GT - this.glitch.start >= this.glitch.duration) this.glitch = null;
@@ -1413,19 +1433,114 @@ export class GameEngine {
     this.speed = speed;
     const sf = speed / V;
 
+    // Train motion & screen shake calculation linked to ride phase and sanity tier
+    const isRide = this.phase === 'ride' && !!seg;
+    const L = seg ? this.segLen(seg) : 37;
+
+    let phaseShakeMult = 0;
+    let accelJolt = 0;
+    let brakeJolt = 0;
+
+    if (isRide && sf > 0.001) {
+      if (this.ts < TA) {
+        // 1. Acceleration phase: high torque inertial pull back and motor hum build-up
+        const u = Math.min(1, Math.max(0, this.ts / TA));
+        accelJolt = Math.sin(u * Math.PI);
+        phaseShakeMult = 0.85 + 0.35 * accelJolt;
+      } else if (this.ts < L - TD) {
+        // 2. Cruising phase: sustained 45 mph through liminal tunnels, rail rumble
+        phaseShakeMult = 1.0;
+      } else {
+        // 3. Deceleration / braking phase: wheel friction chatter, pitch dip, grinding steel
+        const u = Math.min(1, Math.max(0, (this.ts - (L - TD)) / TD));
+        brakeJolt = Math.sin(u * Math.PI);
+        phaseShakeMult = 1.15 + 0.85 * brakeJolt;
+      }
+
+      // Track joint clatter ("clack-clack" over rail seams every ~1.2s at speed)
+      this.railClackT -= dt * (speed / 13);
+      if (this.railClackT <= 0) {
+        this.railImpulse = 1.0;
+        this.railClackT = 1.0 + Math.random() * 0.6;
+      }
+    } else {
+      phaseShakeMult = 0;
+      this.railImpulse = 0;
+    }
+
+    this.railImpulse *= Math.exp(-9 * dt);
+
+    // Sanity tier scaling:
+    // Tier 0 (High): Grounded, realistic MTA subway ride
+    // Tier 1 (Medium): Sharper track vibration and tension
+    // Tier 2 (Low): Unsettling rail twitches, erratic chassis jitter
+    // Tier 3 (Critical): Violent liminal shuddering, nightmare rail resonance
+    let tierMult = 1.0;
+    if (this.tier === 1) tierMult = 1.45;
+    else if (this.tier === 2) tierMult = 2.15;
+    else if (this.tier === 3) tierMult = 3.25;
+
+    const reduced = settings.effectsReduced();
+    const motionScale = reduced ? 0.25 : 1.0;
+
+    // Vibration component synthesis
+    const railBounce = Math.sin(this.GT * 14.5) * 0.0032 * sf;
+    const trackClatter = Math.sin(this.GT * 27.8) * 0.002 * sf;
+    const brakeChatter = Math.sin(this.GT * 34.0) * 0.0035 * brakeJolt * sf;
+    const jointBump = this.railImpulse * 0.006 * sf;
+    const bogieSway = Math.sin(this.GT * 1.7) * 0.006 * sf;
+    const lateralBuzz = Math.sin(this.GT * 21.3) * 0.0022 * sf;
+
+    // High tier liminal distortions
+    const sanityTremorX = this.tier >= 2 ? Math.sin(this.GT * 39.5) * 0.0028 * (this.tier - 1) * sf : 0;
+    const sanityTremorY = this.tier >= 2 ? Math.sin(this.GT * 47.1) * 0.0032 * (this.tier - 1) * sf : 0;
+    const sanityTremorRot = this.tier >= 2 ? Math.sin(this.GT * 18.4) * 0.004 * (this.tier - 1) * sf : 0;
+
+    const totalShakeY = (railBounce + trackClatter + brakeChatter + jointBump + sanityTremorY) * phaseShakeMult * tierMult * motionScale;
+    const totalShakeX = (bogieSway + lateralBuzz + sanityTremorX) * phaseShakeMult * tierMult * motionScale;
+    const totalShakeZ = (accelJolt * -0.003 + brakeJolt * 0.005) * sf * motionScale;
+
+    const pitchJerk = (accelJolt * 0.004 - brakeJolt * 0.008 + jointBump * 0.5) * sf * motionScale;
+    const rollSway = (Math.sin(this.GT * 0.9) * 0.007 * sf + sanityTremorRot) * phaseShakeMult * tierMult * motionScale;
+    const yawTwitch = (this.tier === 3 ? Math.sin(this.GT * 31.0) * 0.003 * sf : 0) * motionScale;
+
+    // Update 2D screen shake (in pixels and degrees for viewport transform)
+    if (isRide && sf > 0.01) {
+      const pxX = (totalShakeX * 420 + Math.sin(this.GT * 23.4) * 1.5 * sf * tierMult) * motionScale;
+      const pxY = (totalShakeY * 540 + Math.sin(this.GT * 18.2) * 2.0 * sf * tierMult) * motionScale;
+      const degRot = (rollSway * 18 + (this.tier >= 2 ? Math.sin(this.GT * 12.0) * 0.4 * sf : 0)) * motionScale;
+      const rawIntensity = Math.min(1, Math.max(0, sf * (0.35 + 0.18 * this.tier + 0.25 * brakeJolt)));
+
+      const sk = 1 - Math.exp(-24 * dt);
+      this.screenShake.x += (pxX - this.screenShake.x) * sk;
+      this.screenShake.y += (pxY - this.screenShake.y) * sk;
+      this.screenShake.rot += (degRot - this.screenShake.rot) * sk;
+      this.screenShake.intensity += (rawIntensity - this.screenShake.intensity) * sk;
+    } else {
+      const sk = 1 - Math.exp(-12 * dt);
+      this.screenShake.x += (0 - this.screenShake.x) * sk;
+      this.screenShake.y += (0 - this.screenShake.y) * sk;
+      this.screenShake.rot += (0 - this.screenShake.rot) * sk;
+      this.screenShake.intensity += (0 - this.screenShake.intensity) * sk;
+    }
+
     // Camera look interpolation
     const k = 1 - Math.exp(-22 * dt);
     this.yaw += (this.ty - this.yaw) * k;
     this.pitch += (this.tp - this.pitch) * k;
 
-    // Train physical bounce and breathing
+    // Train physical bounce, motion shake, and breathing
     const breathe = this.tier >= 2 ? Math.sin(this.GT * 0.5) * 0.01 * (this.tier - 1) : 0;
     this.camera.position.set(
-      this.eyePos.x,
-      this.eyePos.y + Math.sin(this.GT * 9.3) * 0.0035 * sf + Math.sin(this.GT * 1.7) * 0.004 * sf,
-      this.eyePos.z
+      this.eyePos.x + totalShakeX,
+      this.eyePos.y + totalShakeY,
+      this.eyePos.z + totalShakeZ
     );
-    this.camera.rotation.set(this.pitch, this.yaw, Math.sin(this.GT * 0.9) * 0.006 * sf + breathe);
+    this.camera.rotation.set(
+      this.pitch + pitchJerk,
+      this.yaw + yawTwitch,
+      rollSway + breathe
+    );
     this.camera.updateMatrixWorld();
 
     this.camera.getWorldDirection(this.dirVec);

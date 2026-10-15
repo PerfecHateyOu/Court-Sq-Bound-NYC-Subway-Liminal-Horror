@@ -66,19 +66,36 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
   return (
     <div className="fixed inset-0 z-30 flex justify-center overflow-y-auto p-3 sm:p-6 bg-black/85 backdrop-blur-md">
       <div className="w-full max-w-xl my-auto py-4">
-        {/* Paper Receipt / Travel Report Slip */}
-        <article className="ticket-slip bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded-sm shadow-2xl border border-[#9f9883]">
-          <div className="border-b-2 border-[#1b1d18] pb-3 mb-4">
-            <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-none">
-              Travel Report
-            </h2>
-            <p className="text-xs sm:text-sm text-[#55574c] mt-1 font-semibold">
-              G train, Hoyt–Schermerhorn to Court Sq. Ride #{runs.length}.
-            </p>
+        {/* Paper Receipt / Travel Report Slip with flickering transit signage appearance */}
+        <article className="ticket-slip bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded-sm shadow-2xl border border-[#9f9883] transit-sign-flicker relative overflow-hidden">
+          {/* Subtle raster scanline overlay */}
+          <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-25" />
+
+          <div className="border-b-2 border-[#1b1d18] pb-3 mb-4 flex items-start justify-between gap-3 relative z-10">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#1b1d18] text-[#ece6d3] text-[10px] font-mono font-bold tracking-wider mb-1.5">
+                <span className="w-3.5 h-3.5 rounded-full bg-[#6cbe45] text-[#1b1d18] font-black inline-flex items-center justify-center text-[9px]">
+                  G
+                </span>
+                MTA NYCT OFFICIAL RIDE RECORD
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-none text-[#1b1d18]">
+                Travel Report
+              </h2>
+              <p className="text-xs sm:text-sm text-[#55574c] mt-1 font-semibold">
+                G train, Hoyt–Schermerhorn to Court Sq. Ride #{runs.length}.
+              </p>
+            </div>
+            <div className="text-right hidden sm:block">
+              <span className="font-mono text-[11px] font-bold text-[#55574c] uppercase tracking-widest block">
+                STATUS: FILED
+              </span>
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#6cbe45] mt-1 shadow-[0_0_8px_rgba(108,190,69,0.8)]" />
+            </div>
           </div>
 
           {/* Narrative Outcome */}
-          <div className="mb-5 p-3.5 rounded bg-black/5 border-l-4 border-[#6cbe45] text-sm sm:text-base font-semibold leading-relaxed">
+          <div className="mb-5 p-3.5 rounded bg-black/5 border-l-4 border-[#6cbe45] text-sm sm:text-base font-semibold leading-relaxed relative z-10">
             {ending}
           </div>
 
