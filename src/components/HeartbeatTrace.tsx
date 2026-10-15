@@ -2,11 +2,13 @@
  * Heartbeat trace: a tiny ECG line in the HUD, a non-verbal read of the player's state.
  * It draws from the engine's heart clock (the same clock as the Critical-tier thump), so it
  * pauses with the game and speeds up, brightens and turns irregular as sanity tier worsens.
- * Decorative only: aria-hidden, and static under prefers-reduced-motion.
+ * Decorative only: aria-hidden, and static when screen effects are reduced (the setting, or
+ * the device's reduced-motion preference).
  */
 import React, { useEffect, useRef } from 'react';
 import { GameEngine } from '../game/gameState';
 import { HEART_BPM } from '../constants';
+import { settings } from '../settings';
 
 const W = 56; // CSS px
 const H = 18;
@@ -30,8 +32,6 @@ function ecg(dt: number): number {
   return 0;
 }
 
-const reducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ engine }) => {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -46,16 +46,22 @@ export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ en
     canvas.height = Math.round(H * dpr);
     ctx.scale(dpr, dpr);
 
-    const still = reducedMotion();
     const color = [...TIER_STYLE[0].rgb, TIER_STYLE[0].alpha];
     let raf = 0;
     let last = performance.now();
     let drawnTier = -1;
+    let wasStill: boolean | null = null;
 
     const draw = (now: number) => {
       raf = requestAnimationFrame(draw);
       const G = engine;
       const tier = Math.max(0, Math.min(3, G.tier));
+      // Read each frame so changing the setting mid-ride takes effect at once.
+      const still = settings.effectsReduced();
+      if (still !== wasStill) {
+        wasStill = still;
+        drawnTier = -1;
+      }
       // Reduced motion: a static trace, redrawn only when the tier changes.
       if (still && tier === drawnTier) return;
       drawnTier = tier;

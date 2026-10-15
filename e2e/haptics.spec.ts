@@ -5,11 +5,15 @@ import { test, expect, board } from './game';
 const STUB = `(() => { window.__vib = []; navigator.vibrate = function (p) {
   window.__vib.push({ p: JSON.stringify(p), gt: window.__G ? window.__G.GT : null }); return true; }; })();`;
 const TOGGLE = 'label:has-text("Vibrate for catches") input';
+// The toggle lives in Settings.
+const openSettings = (page: import('@playwright/test').Page) => page.getByRole('button', { name: 'Settings' }).click();
 
 test.describe('haptics on desktop', () => {
   test('no vibration toggle', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=/Board the train/i')).toBeVisible();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.locator('[role=dialog]')).toBeVisible();
     await expect(page.locator('text=/Vibrate for catches/i')).toHaveCount(0);
   });
 });
@@ -21,6 +25,7 @@ test.describe('haptics on a phone', () => {
 
   test('pulses at arrival only, one per catch (max 3), never when flagging', async ({ page }) => {
     await page.goto('/');
+    await openSettings(page);
     await expect(page.locator(TOGGLE)).toBeChecked();
     const game = await board(page);
     const two = await game(`G.Q = []; G.startSegment(6); advance(0.3);
@@ -51,9 +56,12 @@ test.describe('haptics on a phone', () => {
 
   test('turning it off is remembered and silences it', async ({ page }) => {
     await page.goto('/');
+    await openSettings(page);
     await page.locator(TOGGLE).click();
     await page.reload();
+    await openSettings(page);
     await expect(page.locator(TOGGLE)).not.toBeChecked();
+    await page.keyboard.press('Escape');
     const game = await board(page, { keepStorage: true });
     const calls = await game(`G.Q = []; G.startSegment(6); advance(0.3); G.active.forEach((a) => { a.apply(); a.at = G.GT; });
       window.__vib = []; G.active.forEach((a) => flag(a.tids[0])); G.arrive(); advance(1.6); return window.__vib.filter((c) => c.p !== '0');`);

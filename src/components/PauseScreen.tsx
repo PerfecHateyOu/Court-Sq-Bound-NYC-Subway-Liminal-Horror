@@ -2,7 +2,7 @@
  * Pause Screen Overlay for Court Sq-Bound
  */
 import React from 'react';
-import { Play, RotateCcw } from 'lucide-react';
+import { Play, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
 import { STOPS } from '../constants';
 import { GameEngine } from '../game/gameState';
 
@@ -10,9 +10,10 @@ interface PauseScreenProps {
   engine: GameEngine;
   onResume: () => void;
   onRestart: () => void;
+  onOpenSettings: () => void;
 }
 
-export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRestart }) => {
+export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRestart, onOpenSettings }) => {
   const nextStop = engine.seg ? STOPS[engine.seg.stop] : STOPS[2];
   // Restarting throws away the current ride, so it takes a second, explicit click.
   const [confirmRestart, setConfirmRestart] = React.useState(false);
@@ -32,6 +33,14 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
           >
             <Play className="w-4 h-4 fill-current" />
             Resume Ride
+          </button>
+
+          <button
+            onClick={onOpenSettings}
+            className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-[#ece6d3] font-bold text-base tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <SettingsIcon className="w-4 h-4" />
+            Settings
           </button>
 
           {!confirmRestart ? (

@@ -41,9 +41,11 @@ GitHub Actions runs the type-check, the build, and the full browser suite on eve
 2. **Don't show it.** Staring at something wrong, or whipping your head around, while a parent is looking at you raises their suspicion. When they talk to you, answer like nothing is wrong.
 3. **Read the doors.** At every stop you can stay on or step off. Stepping off is usually a trap.
 
-On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" on the start screen). iPhones don't support web vibration.
+On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" in Settings). iPhones don't support web vibration.
 
 A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy, plus a Psychological Log: a case file of the 13 anomaly types that fills in across rides.
+
+**Settings** (from the start screen or the pause menu): look speed, invert vertical look, game and pause-music volume, screen effects (match your device's reduced-motion setting, always on, or reduced), vibration, and erasing saved progress. Settings are saved on the device.
 
 ### Controls
 
@@ -70,5 +72,6 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/glitchPass.ts` | Brief screen tearing and chromatic aberration, used for Critical anomalies and for decoy glitches at low sanity |
-| `src/components/` | React HUD, start, pause, and report screens |
+| `src/settings.ts` | Player settings store (saved on the device) |
+| `src/components/` | React HUD, start, pause, settings, and report screens |
 | `e2e/` | Playwright browser tests; `e2e/game.ts` has the shared setup and helpers |
