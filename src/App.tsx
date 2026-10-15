@@ -172,6 +172,9 @@ export default function App() {
     // Create Engine instance
     const engine = new GameEngine(scene, camera, renderer, isTouch);
     const glitchPass = new GlitchPass(renderer);
+    // Registered after fit, so the renderer has its new size when the glitch target follows it.
+    const fitGlitch = () => glitchPass.syncSize();
+    window.addEventListener('resize', fitGlitch);
     engineRef.current = engine;
 
     // Test builds only (vite build --mode test): expose internals to the Playwright suite.
@@ -212,6 +215,7 @@ export default function App() {
             pixelRatio = Math.max(1, pixelRatio - 0.25);
             renderer.setPixelRatio(pixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
+            glitchPass.syncSize();
           }
         }
       }
@@ -252,6 +256,7 @@ export default function App() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', fit);
+      window.removeEventListener('resize', fitGlitch);
       glitchPass.dispose();
       renderer.dispose();
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
