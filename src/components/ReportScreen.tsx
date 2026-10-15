@@ -7,8 +7,9 @@ import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
 import { RESTRAINT_RAISE } from '../constants';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Camera, Sparkles } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
+import { polaroidManager } from '../game/polaroidManager';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -371,6 +372,39 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
               })}
             </ul>
           </section>
+
+          {/* Polaroid Photographic Evidence Section */}
+          {polaroidManager.photos.length > 0 && (
+            <section aria-labelledby="polaroid-evidence-h" className="mt-5 border-t-2 border-[#1b1d18] pt-3">
+              <div className="flex items-baseline justify-between gap-3 mb-2">
+                <h3 id="polaroid-evidence-h" className="font-black text-xs sm:text-sm uppercase tracking-wide flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-[#1b1d18]" />
+                  Photographic Evidence ({polaroidManager.photos.length})
+                </h3>
+                <span className="font-mono text-[11px] text-[#264a22] font-bold">
+                  {polaroidManager.photos.filter((p) => p.hasAnomalyInFrustum).length} Anomalies Verified
+                </span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {polaroidManager.photos.slice(0, 8).map((photo) => (
+                  <div key={photo.id} className="bg-white p-1.5 pb-2 rounded shadow-sm border border-[#9f9883] text-[9px]">
+                    <div className="aspect-square bg-black rounded-xs overflow-hidden relative">
+                      <img src={photo.dataUrl} alt="Polaroid print" className="w-full h-full object-cover" />
+                      {photo.hasAnomalyInFrustum && (
+                        <div className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[7px] font-mono px-1 rounded-xs flex items-center gap-0.5">
+                          <Sparkles className="w-2 h-2" />
+                          <span>ANOM</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-1 truncate font-mono font-bold text-gray-800 text-[8px] text-center">
+                      {photo.anomalyName || 'Baseline'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Historical Stats */}
           <div className="mt-4 pt-3 border-t border-[#9f9883] text-[11px] sm:text-xs text-[#55574c]">

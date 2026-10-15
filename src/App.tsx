@@ -8,7 +8,6 @@ import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
 import { settings } from './settings';
-import { KeyLook } from './input/keyLook';
 import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
 import { HUD } from './components/HUD';
@@ -16,6 +15,11 @@ import { StartScreen } from './components/StartScreen';
 import { ReportScreen } from './components/ReportScreen';
 import { SettingsPanel } from './components/SettingsPanel';
 import { PauseScreen } from './components/PauseScreen';
+import { PolaroidViewfinder } from './components/PolaroidViewfinder';
+import { PolaroidAlbum } from './components/PolaroidAlbum';
+import { RouteSelector } from './components/RouteSelector';
+import { polaroidManager } from './game/polaroidManager';
+import { routeManager } from './game/routeManager';
 import { RunHistoryRecord } from './types';
 
 // Touch = the primary pointer is coarse. Touchscreen laptops report touch points too,
@@ -55,12 +59,31 @@ export default function App() {
   // Settings panel (over the start screen or the pause menu). The ref lets the key handler see it.
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsOpenRef = useRef(false);
-  // Held arrow/WASD keys; the render loop turns the view while they're down.
-  const keyLookRef = useRef(new KeyLook());
   settingsOpenRef.current = settingsOpen;
+  const [routeSelectorOpen, setRouteSelectorOpen] = useState(false);
+
+  const keysDownRef = useRef<{ w: boolean; a: boolean; s: boolean; d: boolean }>({
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+  });
+
   useEffect(() => {
-    if (phase !== 'menu' && !paused) setSettingsOpen(false);
+    if (phase !== 'menu' && !paused) {
+      setSettingsOpen(false);
+      setRouteSelectorOpen(false);
+    }
   }, [phase, paused]);
+
+  useEffect(() => {
+    polaroidManager.onStateChanged = () => {
+      setTick((t) => t + 1);
+    };
+    return () => {
+      polaroidManager.onStateChanged = undefined;
+    };
+  }, []);
 
   // Tier visual filter values
   const [tierStyle, setTierStyle] = useState({
@@ -108,7 +131,6 @@ export default function App() {
     G.pause();
     if (!G.paused) return; // menu or report: nothing to pause
     haptics.stop();
-    keyLookRef.current.clear();
     if (document.hidden) {
       // Tab switched away: silence everything; music starts when the player comes back.
       audioEngine.suspend();
@@ -226,9 +248,6 @@ export default function App() {
       }
 
       if (!engine.paused) {
-        if (engine.phase !== 'menu' && engine.phase !== 'end') {
-          keyLookRef.current.apply(engine, dt, settings.get().lookSensitivity);
-        }
         engine.update(dt);
       }
 
@@ -302,6 +321,21 @@ export default function App() {
       audioEngine.wake();
       if (e.pointerType === 'mouse') requestLock();
 
+      // Camera snapshot if viewfinder is raised
+      if (polaroidManager.isViewfinderOpen && e.button === 0) {
+        G.takePolaroidPhoto();
+        triggerUpdate();
+        return;
+      }
+
+      // Gangway door click interaction
+      if (G.nearGangwayDoor || G.gazeTid?.startsWith('gangway:')) {
+        if (G.interactGangwayDoor()) {
+          triggerUpdate();
+          return;
+        }
+      }
+
       if (dragId === null) {
         dragId = e.pointerId;
         lx = e.clientX;
@@ -363,10 +397,9 @@ export default function App() {
       const G = engineRef.current;
       if (!G) return;
 
-      // With Settings open, P closes it (and leaves the game paused). Esc is handled by the
-      // panel itself (see ui/escape.ts), so a confirmation inside it closes first.
+      // With Settings open, Esc or P closes it (and leaves the game paused).
       if (settingsOpenRef.current) {
-        if (e.code === 'KeyP') {
+        if (e.code === 'Escape' || e.code === 'KeyP') {
           e.preventDefault();
           setSettingsOpen(false);
         }
@@ -394,11 +427,68 @@ export default function App() {
 
       if (G.paused || G.phase === 'menu' || G.phase === 'end') return;
 
-      // Keyboard look (arrows / WASD): held keys turn the view smoothly in the render loop.
-      if (KeyLook.isLookKey(e.code)) {
-        if (e.code.startsWith('Arrow')) e.preventDefault();
-        keyLookRef.current.press(e.code);
+      // Polaroid Album [TAB] toggle
+      if (e.code === 'Tab') {
+        e.preventDefault();
+        polaroidManager.toggleAlbum();
+        triggerUpdate();
         return;
+      }
+
+      // Polaroid Viewfinder [C] toggle
+      if (e.code === 'KeyC') {
+        e.preventDefault();
+        polaroidManager.toggleViewfinder();
+        triggerUpdate();
+        return;
+      }
+
+      // Inter-Car Gangway Door [E] interaction
+      if (e.code === 'KeyE') {
+        e.preventDefault();
+        if (G.interactGangwayDoor()) {
+          triggerUpdate();
+        }
+        return;
+      }
+
+      // Snap photo if viewfinder is active
+      if (polaroidManager.isViewfinderOpen && (e.code === 'Space' || e.code === 'Enter')) {
+        e.preventDefault();
+        G.takePolaroidPhoto();
+        triggerUpdate();
+        return;
+      }
+
+      // Player Movement (WASD) across connected subway cars
+      if (!G.choice && !G.restraint) {
+        if (e.code === 'KeyW') keysDownRef.current.w = true;
+        if (e.code === 'KeyS') keysDownRef.current.s = true;
+        if (e.code === 'KeyA') keysDownRef.current.a = true;
+        if (e.code === 'KeyD') keysDownRef.current.d = true;
+
+        if (['KeyW', 'KeyS', 'KeyA', 'KeyD'].includes(e.code)) {
+          const fwd = (keysDownRef.current.w ? 1 : 0) - (keysDownRef.current.s ? 1 : 0);
+          const right = (keysDownRef.current.d ? 1 : 0) - (keysDownRef.current.a ? 1 : 0);
+          G.setMoveInput(fwd, right);
+        }
+      }
+
+      // Keyboard Look controls (Arrow keys) for accessible navigation
+      const limit = G.phase === 'trial' ? 1.2 : 1.75;
+      const step = 0.08;
+      if (e.code === 'ArrowLeft') {
+        G.ty = Math.max(-limit, Math.min(limit, G.ty + step));
+        triggerUpdate();
+      } else if (e.code === 'ArrowRight') {
+        G.ty = Math.max(-limit, Math.min(limit, G.ty - step));
+        triggerUpdate();
+      } else if (e.code === 'ArrowUp') {
+        G.tp = Math.max(-0.6, Math.min(0.72, G.tp + step * 0.7));
+        triggerUpdate();
+      } else if (e.code === 'ArrowDown') {
+        G.tp = Math.max(-0.6, Math.min(0.72, G.tp - step * 0.7));
+        triggerUpdate();
       }
 
       // Flagging / Restraint holding
@@ -422,7 +512,19 @@ export default function App() {
     const handleKeyUp = (e: KeyboardEvent) => {
       const G = engineRef.current;
       if (!G) return;
-      keyLookRef.current.release(e.code);
+
+      // WASD key release
+      if (e.code === 'KeyW') keysDownRef.current.w = false;
+      if (e.code === 'KeyS') keysDownRef.current.s = false;
+      if (e.code === 'KeyA') keysDownRef.current.a = false;
+      if (e.code === 'KeyD') keysDownRef.current.d = false;
+
+      if (['KeyW', 'KeyS', 'KeyA', 'KeyD'].includes(e.code)) {
+        const fwd = (keysDownRef.current.w ? 1 : 0) - (keysDownRef.current.s ? 1 : 0);
+        const right = (keysDownRef.current.d ? 1 : 0) - (keysDownRef.current.a ? 1 : 0);
+        G.setMoveInput(fwd, right);
+      }
+
       if (e.code === 'KeyF' || e.code === 'Space') {
         G.flagHeld = false;
         triggerUpdate();
@@ -445,7 +547,6 @@ export default function App() {
     // inputs here. During the restraint this starts the grace period instead of failing it.
     const handleBlur = () => {
       const G = engineRef.current;
-      keyLookRef.current.clear(); // keyups are lost while the window is unfocused
       if (!G) return;
       G.interruptInputs();
       triggerUpdate();
@@ -550,6 +651,53 @@ export default function App() {
           isMuted={isMuted}
           onFlagDown={handleFlagDown}
           onFlagUp={handleFlagUp}
+          onToggleCamera={() => {
+            polaroidManager.toggleViewfinder();
+            triggerUpdate();
+          }}
+          onToggleAlbum={() => {
+            polaroidManager.toggleAlbum();
+            triggerUpdate();
+          }}
+          onOpenRouteSelector={() => setRouteSelectorOpen(true)}
+        />
+      )}
+
+      {/* Vintage Polaroid 600 Viewfinder & Flash */}
+      {engineRef.current && (
+        <PolaroidViewfinder
+          engine={engineRef.current}
+          onClose={() => {
+            polaroidManager.setViewfinder(false);
+            triggerUpdate();
+          }}
+          onOpenAlbum={() => {
+            polaroidManager.setAlbum(true);
+            triggerUpdate();
+          }}
+        />
+      )}
+
+      {/* Polaroid Evidence Photo Album Drawer */}
+      {polaroidManager.isAlbumOpen && (
+        <PolaroidAlbum
+          onClose={() => {
+            polaroidManager.setAlbum(false);
+            triggerUpdate();
+          }}
+        />
+      )}
+
+      {/* Branching Transit Route Line Selector */}
+      {routeSelectorOpen && (
+        <RouteSelector
+          onClose={() => setRouteSelectorOpen(false)}
+          onSelectRoute={(route) => {
+            if (engineRef.current) {
+              engineRef.current.setHint(`SWITCHED TRACK ROUTING TO ${route.name.toUpperCase()}`, 4.5);
+              triggerUpdate();
+            }
+          }}
         />
       )}
 

@@ -1,15 +1,16 @@
 /**
  * HUD Component for Court Sq-Bound
  * Authentic NYC subway graphic aesthetic: reticle with flag progress ring,
- * G-bullet station indicator, LED PA banner, subtitles, glitching dialogue options,
- * and debug overlay.
+ * dynamic MTA route bullet, car consist position, gangway door prompt,
+ * Polaroid camera & album buttons, PA banner, and subtitles.
  */
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { STOPS, TIER_NAMES, CFG } from '../constants';
-import { Volume2, VolumeX, Pause } from 'lucide-react';
-import { audioEngine } from '../audio/audioEngine';
+import { Volume2, VolumeX, Pause, Camera, Image as ImageIcon, DoorOpen, GitBranch } from 'lucide-react';
 import { HeartbeatTrace } from './HeartbeatTrace';
+import { routeManager } from '../game/routeManager';
+import { polaroidManager } from '../game/polaroidManager';
 
 interface HUDProps {
   engine: GameEngine;
@@ -18,6 +19,9 @@ interface HUDProps {
   isMuted: boolean;
   onFlagDown: () => void;
   onFlagUp: () => void;
+  onToggleCamera?: () => void;
+  onToggleAlbum?: () => void;
+  onOpenRouteSelector?: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -27,11 +31,20 @@ export const HUD: React.FC<HUDProps> = ({
   isMuted,
   onFlagDown,
   onFlagUp,
+  onToggleCamera,
+  onToggleAlbum,
+  onOpenRouteSelector,
 }) => {
   const G = engine;
   if (G.phase === 'menu' || G.phase === 'end') return null;
 
-  const nextStopName = G.seg ? (G.seg.b ? STOPS[6] : STOPS[G.seg.stop]) : STOPS[2];
+  const currentRoute = routeManager.activeRoute;
+  const nextStopName = G.seg
+    ? G.seg.b
+      ? routeManager.getStopName(6)
+      : routeManager.getStopName(G.seg.stop)
+    : routeManager.getStopName(2);
+
   const isRestraint = !!G.restraint;
   const isTrial = G.phase === 'trial';
 
@@ -46,10 +59,20 @@ export const HUD: React.FC<HUDProps> = ({
 
   const b = G.getBand(G.bandStop);
 
+  // Consist Car Label
+  const carName =
+    G.isCrossingGangway
+      ? 'GANGWAY COUPLING'
+      : G.currentCarIndex === 0
+      ? 'CAR 1 (LEAD)'
+      : G.currentCarIndex === 2
+      ? 'CAR 3 (REAR)'
+      : 'CAR 2 (MID)';
+
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-20">
       {/* Central Reticle */}
-      {!isTrial && (
+      {!isTrial && !polaroidManager.isViewfinderOpen && (
         <div
           className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[38px] h-[38px] transition-opacity duration-300 ${
             isNoted ? 'scale-110' : ''
@@ -61,7 +84,7 @@ export const HUD: React.FC<HUDProps> = ({
               cy="19"
               r="14"
               fill="none"
-              stroke={isNoted ? '#ffffff' : '#6cbe45'}
+              stroke={isNoted ? '#ffffff' : currentRoute.bulletColor}
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeDasharray="88"
@@ -72,19 +95,81 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
-      {/* Top Bar: Next Station Indicator */}
-      <div className="absolute left-4 top-4 flex items-center gap-2.5 px-3 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-xs sm:text-sm transit-sign-flicker-subtle">
-        <span className="w-6 h-6 rounded-full bg-[#6cbe45] text-black font-extrabold flex items-center justify-center text-xs">
-          G
-        </span>
-        <span className="text-[#9a9684]">Next:</span>
-        <b className="text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
-        <span className="w-px h-4 bg-white/15" aria-hidden="true" />
-        <HeartbeatTrace engine={G} />
+      {/* Top Left Bar: Route Bullet, Next Station, Consist Location */}
+      <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2 pointer-events-auto">
+        <div
+          onClick={onOpenRouteSelector}
+          title="Click to Switch Route Line"
+          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/75 backdrop-blur-sm border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle"
+        >
+          <span
+            className="w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
+            style={{ backgroundColor: currentRoute.bulletColor, color: currentRoute.bulletTextColor }}
+          >
+            {currentRoute.id}
+          </span>
+          <span className="text-[#9a9684]">Next:</span>
+          <b className="text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
+          <span className="w-px h-4 bg-white/15" aria-hidden="true" />
+          <HeartbeatTrace engine={G} />
+        </div>
+
+        {/* Consist Car Badge */}
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />
+          <span>{carName}</span>
+        </div>
       </div>
 
-      {/* Top Right Controls: Mute and Pause */}
+      {/* Top Right Controls: Camera, Album, Mute and Pause */}
       <div className="absolute right-4 top-4 flex items-center gap-2 pointer-events-auto">
+        {/* Polaroid Camera Viewfinder Trigger Button */}
+        <button
+          onClick={onToggleCamera}
+          title="Equip Polaroid Camera [C]"
+          aria-label="Polaroid Camera"
+          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold backdrop-blur-sm transition-all active:scale-95 ${
+            polaroidManager.isViewfinderOpen
+              ? 'bg-red-600 text-white border-red-400'
+              : 'bg-black/60 border-white/15 text-[#ece6d3] hover:bg-black/80'
+          }`}
+        >
+          <Camera className="w-4 h-4 text-[#e3a83a]" />
+          <span className="hidden sm:inline">Camera</span>
+          <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden sm:inline">
+            C
+          </span>
+        </button>
+
+        {/* Polaroid Evidence Album Trigger Button */}
+        <button
+          onClick={onToggleAlbum}
+          title="Evidence Album [TAB]"
+          aria-label="Evidence Album"
+          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold backdrop-blur-sm transition-all active:scale-95 ${
+            polaroidManager.isAlbumOpen
+              ? 'bg-amber-600 text-white border-amber-400'
+              : 'bg-black/60 border-white/15 text-[#ece6d3] hover:bg-black/80'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
+          <span className="hidden sm:inline">Album</span>
+          <span className="text-[10px] text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
+            {polaroidManager.photos.length}
+          </span>
+        </button>
+
+        {/* Route Selector Button */}
+        <button
+          onClick={onOpenRouteSelector}
+          title="Branching Line Selector"
+          aria-label="Route Lines"
+          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/60 text-[#ece6d3] backdrop-blur-sm hover:bg-black/80 transition-colors"
+        >
+          <GitBranch className="w-4 h-4 text-[#9a9684]" />
+        </button>
+
+        {/* Mute Button */}
         <button
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute' : 'Mute'}
@@ -93,9 +178,10 @@ export const HUD: React.FC<HUDProps> = ({
           }`}
         >
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Sound on'}</span>
+          <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Sound'}</span>
         </button>
 
+        {/* Pause Button */}
         <button
           onClick={onPause}
           aria-label="Pause"
@@ -104,6 +190,22 @@ export const HUD: React.FC<HUDProps> = ({
           <Pause className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Inter-Car Gangway Door Open Prompt */}
+      {G.nearGangwayDoor && (
+        <div className="absolute left-1/2 top-44 -translate-x-1/2 pointer-events-auto">
+          <button
+            onClick={() => G.interactGangwayDoor()}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/85 border border-[#6cbe45] text-[#ece6d3] font-bold text-xs sm:text-sm tracking-wide shadow-2xl hover:bg-black transition-all active:scale-95 animate-bounce"
+          >
+            <DoorOpen className="w-4 h-4 text-[#6cbe45]" />
+            <span>PUSH GANGWAY DOOR</span>
+            <span className="text-[10px] bg-[#6cbe45]/30 text-[#6cbe45] px-1.5 py-0.5 rounded font-mono">
+              [E]
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Subway PA Announcement LED Display */}
       {G.paText && (
@@ -159,6 +261,17 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
+      {/* Bottom Controls / Key Hints Bar (Left) */}
+      <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-[11px] text-[#9a9684] font-mono bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded border border-white/10">
+        <span>[W][A][S][D] WALK</span>
+        <span className="text-white/30">•</span>
+        <span>[C] CAMERA</span>
+        <span className="text-white/30">•</span>
+        <span>[TAB] ALBUM</span>
+        <span className="text-white/30">•</span>
+        <span>[E] GANGWAY DOOR</span>
+      </div>
+
       {/* Hold / Flag Button (Bottom Right) */}
       {!showChoices && (
         <div className="absolute right-4 bottom-5 pointer-events-auto">
@@ -194,33 +307,13 @@ export const HUD: React.FC<HUDProps> = ({
           <div className="font-bold border-b border-white/10 pb-1 mb-1 text-white">
             DEBUG: Stop {G.seg ? `${G.seg.stop}${G.seg.b ? 'b' : ''}` : '1'} ({G.phase}) | TS: {G.ts.toFixed(1)}s
           </div>
+          <div>Line: {currentRoute.name} [{currentRoute.id}]</div>
+          <div>Car: {carName} | Pos: ({G.eyePos.x.toFixed(1)}, {G.eyePos.z.toFixed(1)})</div>
           <div>Sanity: {G.san.toFixed(0)} (Band: {b[0]}–{b[1]}) | Tier: {TIER_NAMES[G.tier]}</div>
           <div>Suspicion: {G.sus} (Peak: {G.peak})</div>
           <div>Gaze: {G.gazeTid || '—'} ({G.dwell.toFixed(1)}s)</div>
-          <div>AngVel: {G.angVel.toFixed(1)} / {G.snapThresh} (Arc: {G.snapArc.toFixed(2)} / {G.snapArcMin})</div>
-          <div>
-            Parents: {G.carBuilder.parents.map((p) => `${p.label}:${p.frozen ? 'FROZEN' : p.facing ? 'WATCHING' : p.mode}`).join(' | ')}
-          </div>
-          <div className="mt-1 font-semibold text-white">Active Anomalies:</div>
-          {G.active.map((a, i) => (
-            <div key={i} className="pl-2">
-              • {a.id} {a.at !== null ? '[LIVE]' : `@${a.trigger.toFixed(0)}s`} [{a.tids[0]}]
-            </div>
-          ))}
-          <div className="mt-1">
-            Flags: {G.segFlags.length ? G.segFlags.map((f) => f.tid).join(', ') : '—'}
-          </div>
-          <div>Acc: ✓{G.acc.correct} | ✗{G.acc.miss} | FP:{G.acc.fp}</div>
-          <div>
-            Heart: {G.heartBpm.toFixed(0)} bpm | Intercom: next {Math.max(0, G.intercomT).toFixed(0)}s ({G.intercomCount} played)
-          </div>
-          <div>
-            Glitch: decoy in {Math.max(0, G.glitchDecoyT).toFixed(0)}s | {G.glitchLog.filter((g) => g.reason === 'anomaly').length} real,{' '}
-            {G.glitchLog.filter((g) => g.reason === 'decoy').length} decoy
-          </div>
-          <div>
-            Breath: {G.breathDepth < 0.005 ? 'calm' : `${G.breathBpm.toFixed(0)}/min, ${G.breathDepth.toFixed(2)}° deep`}
-          </div>
+          <div>Photos: {polaroidManager.photos.length} prints ({polaroidManager.remainingFilm} film left)</div>
+          <div>Active Anomalies: {G.active.filter(a => a.at !== null).length} / {G.active.length}</div>
         </div>
       )}
     </div>

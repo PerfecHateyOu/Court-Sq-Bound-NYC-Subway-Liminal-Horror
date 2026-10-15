@@ -59,10 +59,23 @@ export interface StationObject {
 export class SubwayCarBuilder {
   public scene: THREE.Scene;
   public worldGroup: THREE.Group;
-  public carGroup: THREE.Group;
+  public carGroup: THREE.Group; // Car B (Mid/Center)
+  public carAGroup: THREE.Group; // Car A (Lead)
+  public carCGroup: THREE.Group; // Car C (Rear)
+  public gangwayGroup: THREE.Group;
   public tunnelGroup: THREE.Group;
   public textureGen: TextureGenerator;
   public charBuilder: CharacterBuilder;
+
+  // Gangway Doors & Consist Traversal
+  public gangwayDoors = {
+    frontAngle: 0,
+    frontTarget: 0,
+    frontGroup: null as THREE.Group | null,
+    rearAngle: 0,
+    rearTarget: 0,
+    rearGroup: null as THREE.Group | null,
+  };
 
   // Game world elements
   public carLights: THREE.PointLight[] = [];
@@ -86,6 +99,8 @@ export class SubwayCarBuilder {
   public strangers: PersonObject[] = [];
   public extraPerson!: PersonObject;
   public crowd: PersonObject[] = [];
+  public carAPassengers: PersonObject[] = [];
+  public carCPassengers: PersonObject[] = [];
 
   // Target registry for gaze & flagging
   public registry: TargetEntry[] = [];
@@ -97,10 +112,16 @@ export class SubwayCarBuilder {
     this.charBuilder = new CharacterBuilder();
     this.worldGroup = new THREE.Group();
     this.carGroup = new THREE.Group();
+    this.carAGroup = new THREE.Group();
+    this.carCGroup = new THREE.Group();
+    this.gangwayGroup = new THREE.Group();
     this.tunnelGroup = new THREE.Group();
 
     this.scene.add(this.worldGroup);
     this.worldGroup.add(this.carGroup);
+    this.worldGroup.add(this.carAGroup);
+    this.worldGroup.add(this.carCGroup);
+    this.worldGroup.add(this.gangwayGroup);
     this.worldGroup.add(this.tunnelGroup);
   }
 
@@ -129,6 +150,8 @@ export class SubwayCarBuilder {
   public buildScene() {
     this.setupLighting();
     this.buildCar();
+    this.buildAdjacentCars();
+    this.buildGangways();
     this.buildAds();
     this.buildRouteMaps();
     this.buildPassengers();
@@ -312,13 +335,58 @@ export class SubwayCarBuilder {
       });
     });
 
-    // End car bulkheads
-    [-9, 9].forEach((x) => {
-      const bulkhead = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 3.06), mWall);
-      bulkhead.position.set(x, 1.2, 0);
-      const endDoor = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.0, 0.7), mDark);
-      endDoor.position.set(x, 1.35, 0);
-      this.carGroup.add(bulkhead, endDoor);
+    // End car bulkheads with open inter-car gangway doorways
+    [-9, 9].forEach((x, endIdx) => {
+      // Left bulkhead wall panel
+      const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 1.05), mWall);
+      wallLeft.position.set(x, 1.2, -0.98);
+
+      // Right bulkhead wall panel
+      const wallRight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 1.05), mWall);
+      wallRight.position.set(x, 1.2, 0.98);
+
+      // Top doorway header lintel
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.96), mWall);
+      lintel.position.set(x, 2.22, 0);
+
+      this.carGroup.add(wallLeft, wallRight, lintel);
+
+      // Gangway door frame
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x3a3c3a, metalness: 0.6, roughness: 0.4 });
+      const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.05, 0.94), frameMat);
+      doorFrame.position.set(x, 1.025, 0);
+      this.carGroup.add(doorFrame);
+
+      // Interactive swinging gangway door
+      const doorPivot = new THREE.Group();
+      doorPivot.position.set(x, 0, -0.44);
+      this.carGroup.add(doorPivot);
+
+      const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.0, 0.88), mDoor);
+      doorMesh.position.set(0, 1.0, 0.44);
+
+      // Wire-reinforced transit safety window
+      const doorWin = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.78, 0.32),
+        new THREE.MeshBasicMaterial({ color: 0x44554e, transparent: true, opacity: 0.35 })
+      );
+      doorWin.position.set(0, 1.28, 0.44);
+
+      // Heavy transit pull handle
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.36, 8), mSteel);
+      handle.position.set(0.04, 1.0, 0.78);
+
+      doorPivot.add(doorMesh, doorWin, handle);
+
+      if (endIdx === 0) {
+        // Front door (to Car A)
+        this.gangwayDoors.frontGroup = doorPivot;
+        this.registerTarget(doorMesh, 'gangway:front', 'the gangway door to Car A');
+      } else {
+        // Rear door (to Car C)
+        this.gangwayDoors.rearGroup = doorPivot;
+        this.registerTarget(doorMesh, 'gangway:rear', 'the gangway door to Car C');
+      }
     });
 
     // Windows hit detection panes and decal anomalies
@@ -648,5 +716,304 @@ export class SubwayCarBuilder {
     };
 
     return stationObj;
+  }
+
+  /**
+   * Builds Car A (Lead car at x = -19.5) and Car C (Rear car at x = +19.5)
+   */
+  private buildAdjacentCars() {
+    const mWall = new THREE.MeshLambertMaterial({ color: 0xc9ccc4 });
+    const mLow = new THREE.MeshLambertMaterial({ color: 0x9fa49e });
+    const mSeatOrange = new THREE.MeshLambertMaterial({ color: 0xd8782e });
+    const mSeatYellow = new THREE.MeshLambertMaterial({ color: 0xdf9c32 });
+    const mBase = new THREE.MeshLambertMaterial({ color: 0x4a4d4f });
+    const mDark = new THREE.MeshBasicMaterial({ color: 0x060809 });
+    const mSteel = new THREE.MeshStandardMaterial({ color: 0xdcdede, metalness: 0.85, roughness: 0.22 });
+    const floorTex = this.textureGen.createFloorTexture();
+    const floorMat = new THREE.MeshLambertMaterial({ map: floorTex });
+
+    // CAR A (Lead Consist Car, centered at x = -19.5, length 18m)
+    const floorA = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 3.06), floorMat);
+    floorA.position.set(-19.5, -0.03, 0);
+    const ceilA = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 3.06), new THREE.MeshLambertMaterial({ color: 0xe6e4db }));
+    ceilA.position.set(-19.5, 2.43, 0);
+    this.carAGroup.add(floorA, ceilA);
+
+    // Car A lights
+    [-25.5, -21.5, -17.5, -13.5].forEach((x) => {
+      const pl = new THREE.PointLight(0xfff0d4, 0.5, 9.0, 1.6);
+      pl.position.set(x, 2.2, 0);
+      this.carAGroup.add(pl);
+      this.carLights.push(pl);
+    });
+
+    // Car A walls, benches, and poles
+    [-1, 1].forEach((s) => {
+      const z = s * 1.53;
+      const lowWall = new THREE.Mesh(new THREE.BoxGeometry(18, 0.9, 0.06), mLow);
+      lowWall.position.set(-19.5, 0.45, z);
+      const upWall = new THREE.Mesh(new THREE.BoxGeometry(18, 0.68, 0.06), mWall);
+      upWall.position.set(-19.5, 2.06, z);
+      this.carAGroup.add(lowWall, upWall);
+
+      // Benches in Car A
+      [[-27.5, -23.5], [-22.5, -16.5], [-15.5, -11.5]].forEach(([a, b], bIdx) => {
+        const L = b - a;
+        const cx = (a + b) / 2;
+        const seatMat = bIdx % 2 === 0 ? mSeatOrange : mSeatYellow;
+        const baseCushion = new THREE.Mesh(new THREE.BoxGeometry(L, 0.09, 0.46), seatMat);
+        baseCushion.position.set(cx, 0.455, s * 1.25);
+        const backrest = new THREE.Mesh(new THREE.BoxGeometry(L, 0.5, 0.07), seatMat);
+        backrest.position.set(cx, 0.76, s * 1.47);
+        const under = new THREE.Mesh(new THREE.BoxGeometry(L, 0.41, 0.36), mBase);
+        under.position.set(cx, 0.205, s * 1.3);
+        this.carAGroup.add(baseCushion, backrest, under);
+      });
+
+      // Grab bar and poles
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 17.6, 10), mSteel);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(-19.5, 2.02, s * 0.98);
+      this.carAGroup.add(bar);
+
+      [-24.0, -15.0].forEach((x) => {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 2.42, 10), mSteel);
+        pole.position.set(x, 1.21, s * 0.98);
+        this.carAGroup.add(pole);
+      });
+    });
+
+    // Car A Lead Cab Bulkhead (x = -28.5)
+    const cabWallA = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 3.06), mWall);
+    cabWallA.position.set(-28.5, 1.2, 0);
+    const cabDoorA = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.8, 0.8), mDark);
+    cabDoorA.position.set(-28.5, 1.0, 0);
+    this.carAGroup.add(cabWallA, cabDoorA);
+
+    // Car A Rear Gangway Doorway (x = -10.5)
+    const wallLeftA = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 1.05), mWall);
+    wallLeftA.position.set(-10.5, 1.2, -0.98);
+    const wallRightA = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 1.05), mWall);
+    wallRightA.position.set(-10.5, 1.2, 0.98);
+    const lintelA = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.96), mWall);
+    lintelA.position.set(-10.5, 2.22, 0);
+    this.carAGroup.add(wallLeftA, wallRightA, lintelA);
+
+    // Car A Passengers
+    const pa1 = this.charBuilder.createPerson({
+      tid: 'pa1',
+      label: 'the commuter reading in Car A',
+      x: -18.5,
+      z: -1.3,
+      hp: 0.3,
+      skin: 0xd2a679,
+      shirt: 0x4a5d4e,
+      pants: 0x222629,
+      hair: 0x1c1a17,
+      phone: true,
+    });
+    const pa2 = this.charBuilder.createPerson({
+      tid: 'pa2',
+      label: 'the commuter staring ahead in Car A',
+      x: -22.0,
+      z: 1.3,
+      ry: Math.PI,
+      hp: 0.15,
+      skin: 0xa67458,
+      shirt: 0x8c5e38,
+      pants: 0x333333,
+      hair: 0x090909,
+    });
+    this.carAPassengers = [pa1, pa2];
+    this.carAPassengers.forEach((p) => {
+      this.carAGroup.add(p.g);
+      this.registerTarget(p.g, p.tid, p.label);
+    });
+
+    // CAR C (Rear Consist Car, centered at x = +19.5, length 18m)
+    const floorC = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 3.06), floorMat);
+    floorC.position.set(19.5, -0.03, 0);
+    const ceilC = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 3.06), new THREE.MeshLambertMaterial({ color: 0xe6e4db }));
+    ceilC.position.set(19.5, 2.43, 0);
+    this.carCGroup.add(floorC, ceilC);
+
+    // Car C lights
+    [13.5, 17.5, 21.5, 25.5].forEach((x) => {
+      const pl = new THREE.PointLight(0xfff0d4, 0.5, 9.0, 1.6);
+      pl.position.set(x, 2.2, 0);
+      this.carCGroup.add(pl);
+      this.carLights.push(pl);
+    });
+
+    // Car C walls, benches, and poles
+    [-1, 1].forEach((s) => {
+      const z = s * 1.53;
+      const lowWall = new THREE.Mesh(new THREE.BoxGeometry(18, 0.9, 0.06), mLow);
+      lowWall.position.set(19.5, 0.45, z);
+      const upWall = new THREE.Mesh(new THREE.BoxGeometry(18, 0.68, 0.06), mWall);
+      upWall.position.set(19.5, 2.06, z);
+      this.carCGroup.add(lowWall, upWall);
+
+      // Benches in Car C
+      [[11.5, 15.5], [16.5, 22.5], [23.5, 27.5]].forEach(([a, b], bIdx) => {
+        const L = b - a;
+        const cx = (a + b) / 2;
+        const seatMat = bIdx % 2 === 0 ? mSeatOrange : mSeatYellow;
+        const baseCushion = new THREE.Mesh(new THREE.BoxGeometry(L, 0.09, 0.46), seatMat);
+        baseCushion.position.set(cx, 0.455, s * 1.25);
+        const backrest = new THREE.Mesh(new THREE.BoxGeometry(L, 0.5, 0.07), seatMat);
+        backrest.position.set(cx, 0.76, s * 1.47);
+        const under = new THREE.Mesh(new THREE.BoxGeometry(L, 0.41, 0.36), mBase);
+        under.position.set(cx, 0.205, s * 1.3);
+        this.carCGroup.add(baseCushion, backrest, under);
+      });
+
+      // Grab bar and poles
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 17.6, 10), mSteel);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(19.5, 2.02, s * 0.98);
+      this.carCGroup.add(bar);
+
+      [15.0, 24.0].forEach((x) => {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 2.42, 10), mSteel);
+        pole.position.set(x, 1.21, s * 0.98);
+        this.carCGroup.add(pole);
+      });
+    });
+
+    // Car C Front Gangway Doorway (x = +10.5)
+    const wallLeftC = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 1.05), mWall);
+    wallLeftC.position.set(10.5, 1.2, -0.98);
+    const wallRightC = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 1.05), mWall);
+    wallRightC.position.set(10.5, 1.2, 0.98);
+    const lintelC = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.96), mWall);
+    lintelC.position.set(10.5, 2.22, 0);
+    this.carCGroup.add(wallLeftC, wallRightC, lintelC);
+
+    // Car C Rear Cab Bulkhead (x = +28.5)
+    const cabWallC = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.46, 3.06), mWall);
+    cabWallC.position.set(28.5, 1.2, 0);
+    const cabDoorC = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.8, 0.8), mDark);
+    cabDoorC.position.set(28.5, 1.0, 0);
+    this.carCGroup.add(cabWallC, cabDoorC);
+
+    // Car C Passengers
+    const pc1 = this.charBuilder.createPerson({
+      tid: 'pc1',
+      label: 'the passenger holding the pole in Car C',
+      x: 17.0,
+      z: 0.55,
+      ry: -Math.PI / 2,
+      standing: true,
+      skin: 0xbf8050,
+      shirt: 0x2e3b52,
+      pants: 0x1f2022,
+      hair: 0x181512,
+    });
+    const pc2 = this.charBuilder.createPerson({
+      tid: 'pc2',
+      label: 'the hooded passenger in Car C',
+      x: 23.5,
+      z: -1.3,
+      hp: 0.4,
+      skin: 0xe6c2a5,
+      shirt: 0x1f1f24,
+      pants: 0x2d2d33,
+      hair: 0x0a0a0c,
+    });
+    this.carCPassengers = [pc1, pc2];
+    this.carCPassengers.forEach((p) => {
+      this.carCGroup.add(p.g);
+      this.registerTarget(p.g, p.tid, p.label);
+    });
+  }
+
+  /**
+   * Builds the inter-car gangways connecting Car A to Car B, and Car B to Car C
+   */
+  private buildGangways() {
+    const mTreadplate = new THREE.MeshStandardMaterial({ color: 0x444648, metalness: 0.9, roughness: 0.4 });
+    const mBellows = new THREE.MeshLambertMaterial({ color: 0x161819 });
+    const mChain = new THREE.MeshStandardMaterial({ color: 0x999a9c, metalness: 0.85, roughness: 0.3 });
+
+    // Gangway 1 (between Car A rear x = -10.5 and Car B front x = -9.0)
+    // Floor treadplate
+    const plate1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 1.02), mTreadplate);
+    plate1.position.set(-9.75, -0.02, 0);
+    const roof1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 1.08), mBellows);
+    roof1.position.set(-9.75, 2.22, 0);
+    this.gangwayGroup.add(plate1, roof1);
+
+    // Accordion pleated bellows walls on left and right
+    [-0.54, 0.54].forEach((z) => {
+      for (let i = 0; i < 7; i++) {
+        const pleat = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.2, 0.05), mBellows);
+        pleat.position.set(-10.35 + i * 0.2, 1.1, z);
+        this.gangwayGroup.add(pleat);
+      }
+      // Safety handrails/chains
+      const chainTop = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.48, 8), mChain);
+      chainTop.rotation.z = Math.PI / 2;
+      chainTop.position.set(-9.75, 1.0, z * 0.9);
+      const chainBot = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.48, 8), mChain);
+      chainBot.rotation.z = Math.PI / 2;
+      chainBot.position.set(-9.75, 0.55, z * 0.9);
+      this.gangwayGroup.add(chainTop, chainBot);
+    });
+
+    // Gangway 2 (between Car B rear x = +9.0 and Car C front x = +10.5)
+    // Floor treadplate
+    const plate2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 1.02), mTreadplate);
+    plate2.position.set(9.75, -0.02, 0);
+    const roof2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 1.08), mBellows);
+    roof2.position.set(9.75, 2.22, 0);
+    this.gangwayGroup.add(plate2, roof2);
+
+    [-0.54, 0.54].forEach((z) => {
+      for (let i = 0; i < 7; i++) {
+        const pleat = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.2, 0.05), mBellows);
+        pleat.position.set(9.15 + i * 0.2, 1.1, z);
+        this.gangwayGroup.add(pleat);
+      }
+      const chainTop = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.48, 8), mChain);
+      chainTop.rotation.z = Math.PI / 2;
+      chainTop.position.set(9.75, 1.0, z * 0.9);
+      const chainBot = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.48, 8), mChain);
+      chainBot.rotation.z = Math.PI / 2;
+      chainBot.position.set(9.75, 0.55, z * 0.9);
+      this.gangwayGroup.add(chainTop, chainBot);
+    });
+  }
+
+  public toggleFrontDoor() {
+    this.gangwayDoors.frontTarget = this.gangwayDoors.frontTarget === 0 ? 1.35 : 0;
+  }
+
+  public toggleRearDoor() {
+    this.gangwayDoors.rearTarget = this.gangwayDoors.rearTarget === 0 ? -1.35 : 0;
+  }
+
+  public updateDoors(dt: number) {
+    const k = 1 - Math.exp(-9 * dt);
+    this.gangwayDoors.frontAngle += (this.gangwayDoors.frontTarget - this.gangwayDoors.frontAngle) * k;
+    this.gangwayDoors.rearAngle += (this.gangwayDoors.rearTarget - this.gangwayDoors.rearAngle) * k;
+
+    if (this.gangwayDoors.frontGroup) {
+      this.gangwayDoors.frontGroup.rotation.y = this.gangwayDoors.frontAngle;
+    }
+    if (this.gangwayDoors.rearGroup) {
+      this.gangwayDoors.rearGroup.rotation.y = this.gangwayDoors.rearAngle;
+    }
+  }
+
+  public getAllPassengers(): PersonObject[] {
+    return [
+      ...this.parents,
+      ...this.strangers,
+      this.extraPerson,
+      ...this.crowd,
+      ...this.carAPassengers,
+      ...this.carCPassengers,
+    ];
   }
 }

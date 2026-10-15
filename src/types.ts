@@ -163,6 +163,38 @@ export interface RunHistoryRecord {
   trials: number;
 }
 
+export interface PolaroidPhoto {
+  id: string;
+  timestamp: number;
+  dataUrl: string;
+  carIndex: number;
+  routeId: 'G' | 'L' | '7';
+  hasAnomalyInFrustum: boolean;
+  anomalyName?: string;
+  exposureQuality: number;
+  description?: string;
+}
+
+export interface TransitLineRoute {
+  id: 'G' | 'L' | '7';
+  name: string;
+  bulletColor: string;
+  bulletTextColor: string;
+  accentHex: number;
+  anomalyFrequency: number;
+  soundtrackProfile: string;
+  description: string;
+  stops: string[];
+}
+
+export interface ConsistState {
+  currentCarIndex: number; // 0: Car A (Lead), 1: Car B (Center), 2: Car C (Rear)
+  isCrossingGangway: boolean;
+  gangwayProgress: number; // 0..1
+  doorAOpen: boolean;
+  doorBOpen: boolean;
+}
+
 export interface PersonObject {
   g: THREE.Group;
   head: THREE.Group;
@@ -174,6 +206,7 @@ export interface PersonObject {
   label: string;
   home: THREE.Vector3;
   pose: [number, number];
+  carIndex?: number;
   mode?: 'phone' | 'other' | 'player' | 'down';
   until?: number;
   holdUntil?: number;
@@ -186,4 +219,8 @@ export interface PersonObject {
   downSide?: number;
   stare?: boolean;
   twist?: boolean;
+  twitchTimer?: number;
+  flashReactionUntil?: number;
+  syncChorus?: boolean;
+  uncannyAvert?: boolean;
 }

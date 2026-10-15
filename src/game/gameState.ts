@@ -40,6 +40,9 @@ import { TrialBuilder } from '../graphics/trialBuilder';
 import { AnomalyManager } from './anomalyManager';
 import { haptics } from './haptics';
 import { settings } from '../settings';
+import { polaroidManager } from './polaroidManager';
+import { passengerBehavior } from './passengerBehavior';
+import { routeManager } from './routeManager';
 
 const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
 import {
@@ -72,6 +75,14 @@ export class GameEngine {
   public odo: number = 0;
   public speed: number = 0;
   public bandStop: number = 1;
+
+  // Multi-Car Consist & Player Movement
+  public moveFwd: number = 0;
+  public moveRight: number = 0;
+  public currentCarIndex: number = 1; // 0: Car A (Lead), 1: Car B (Center), 2: Car C (Rear)
+  public isCrossingGangway: boolean = false;
+  public nearGangwayDoor: 'front' | 'rear' | null = null;
+  public stepTimer: number = 0;
 
   // Sanity & Suspicion
   public san: number = 100;
@@ -187,7 +198,7 @@ export class GameEngine {
   private dirVec = new THREE.Vector3();
   private tmpVec1 = new THREE.Vector3();
   private tmpVec2 = new THREE.Vector3();
-  private eyePos = new THREE.Vector3(0, 1.18, 1.08);
+  public eyePos = new THREE.Vector3(0, 1.18, 0.4);
   private trialEyePos = new THREE.Vector3(0, 1.6, 2.2);
   private idleTime: number = 0;
 
@@ -362,6 +373,13 @@ export class GameEngine {
     this.flagTid = null;
     this.flagLock = false;
     this.notedT = -9;
+    this.eyePos.set(0, 1.18, 0.4);
+    this.currentCarIndex = 1;
+    this.moveFwd = 0;
+    this.moveRight = 0;
+    this.isCrossingGangway = false;
+    this.nearGangwayDoor = null;
+    this.stepTimer = 0;
     this.gazeTid = null;
     this.dwell = 0;
     this.dwellReacted = false;
@@ -1529,6 +1547,79 @@ export class GameEngine {
     this.yaw += (this.ty - this.yaw) * k;
     this.pitch += (this.tp - this.pitch) * k;
 
+    // Player movement kinematics (WASD / Arrows) across connected cars & gangways
+    if (this.phase === 'ride' || this.phase === 'stop' || this.phase === 'haven' || this.phase === 'intro') {
+      if (this.moveFwd !== 0 || this.moveRight !== 0) {
+        const cosY = Math.cos(this.yaw);
+        const sinY = Math.sin(this.yaw);
+        const fwdX = -sinY;
+        const fwdZ = -cosY;
+        const rgtX = cosY;
+        const rgtZ = -sinY;
+
+        const moveSpeed = 2.4;
+        let dx = (fwdX * this.moveFwd + rgtX * this.moveRight) * moveSpeed * dt;
+        let dz = (fwdZ * this.moveFwd + rgtZ * this.moveRight) * moveSpeed * dt;
+
+        let nextX = this.eyePos.x + dx;
+        let nextZ = this.eyePos.z + dz;
+
+        // Front gangway door collision (x = -9.0)
+        const frontDoorClosed = this.carBuilder.gangwayDoors.frontAngle < 0.45;
+        if (frontDoorClosed) {
+          if (this.eyePos.x >= -8.9 && nextX < -8.9) nextX = -8.9;
+          if (this.eyePos.x <= -9.1 && nextX > -9.1) nextX = -9.1;
+        }
+
+        // Rear gangway door collision (x = +9.0)
+        const rearDoorClosed = Math.abs(this.carBuilder.gangwayDoors.rearAngle) < 0.45;
+        if (rearDoorClosed) {
+          if (this.eyePos.x <= 8.9 && nextX > 8.9) nextX = 8.9;
+          if (this.eyePos.x >= 9.1 && nextX < 9.1) nextX = 9.1;
+        }
+
+        // Aisle width bounds
+        const inGangway1 = nextX <= -8.9 && nextX >= -10.6;
+        const inGangway2 = nextX >= 8.9 && nextX <= 10.6;
+        const maxZ = (inGangway1 || inGangway2) ? 0.38 : 0.72;
+        nextZ = Math.max(-maxZ, Math.min(maxZ, nextZ));
+
+        // Train consist length limits
+        nextX = Math.max(-27.0, Math.min(27.0, nextX));
+
+        this.eyePos.x = nextX;
+        this.eyePos.z = nextZ;
+
+        // Footsteps
+        this.stepTimer -= dt;
+        if (this.stepTimer <= 0) {
+          audioEngine.step();
+          this.stepTimer = 0.44;
+        }
+      }
+
+      // Check gangway door proximity
+      if (this.eyePos.x < -7.6 && this.eyePos.x > -10.4) {
+        this.nearGangwayDoor = 'front';
+      } else if (this.eyePos.x > 7.6 && this.eyePos.x < 10.4) {
+        this.nearGangwayDoor = 'rear';
+      } else {
+        this.nearGangwayDoor = null;
+      }
+
+      // Current car index
+      if (this.eyePos.x < -10.2) {
+        this.currentCarIndex = 0; // Car A
+      } else if (this.eyePos.x > 10.2) {
+        this.currentCarIndex = 2; // Car C
+      } else {
+        this.currentCarIndex = 1; // Car B (Mid)
+      }
+
+      this.isCrossingGangway = (this.eyePos.x >= -10.6 && this.eyePos.x <= -8.8) || (this.eyePos.x >= 8.8 && this.eyePos.x <= 10.6);
+      audioEngine.gangwayWind(this.isCrossingGangway ? 1.0 : (this.nearGangwayDoor ? 0.4 : 0.0));
+    }
+
     // Train physical bounce, motion shake, and breathing
     const breathe = this.tier >= 2 ? Math.sin(this.GT * 0.5) * 0.01 * (this.tier - 1) : 0;
     this.camera.position.set(
@@ -1577,6 +1668,17 @@ export class GameEngine {
 
     this.updateParents(dt, this.phase === 'ride' || this.phase === 'stop');
     this.updateStrangers();
+
+    this.carBuilder.updateDoors(dt);
+    passengerBehavior.updatePassengers(
+      this.carBuilder.getAllPassengers(),
+      this.camera.position,
+      this.dirVec,
+      this.tier,
+      this.active.some((a) => a.at !== null),
+      this.GT,
+      dt
+    );
 
     const watcher = this.carBuilder.parents.find((p) => p.facing);
 
@@ -1891,5 +1993,49 @@ export class GameEngine {
   private smooth(x: number): number {
     x = Math.max(0, Math.min(1, x));
     return x * x * (3 - 2 * x);
+  }
+
+  public setMoveInput(fwd: number, right: number) {
+    this.moveFwd = fwd;
+    this.moveRight = right;
+  }
+
+  public interactGangwayDoor(): boolean {
+    if (this.nearGangwayDoor === 'front' || this.gazeTid === 'gangway:front') {
+      this.carBuilder.toggleFrontDoor();
+      audioEngine.doorGangway();
+      this.notifyUI();
+      return true;
+    }
+    if (this.nearGangwayDoor === 'rear' || this.gazeTid === 'gangway:rear') {
+      this.carBuilder.toggleRearDoor();
+      audioEngine.doorGangway();
+      this.notifyUI();
+      return true;
+    }
+    return false;
+  }
+
+  public takePolaroidPhoto() {
+    const photo = polaroidManager.snapPhoto(
+      this.camera,
+      this.renderer,
+      this.active,
+      this.currentCarIndex,
+      routeManager.routeId,
+      this.GT
+    );
+    if (!photo) return null;
+
+    passengerBehavior.handleCameraFlash(this.carBuilder.getAllPassengers(), this.camera.position, this.GT);
+
+    if (photo.hasAnomalyInFrustum) {
+      this.addSanity(4, `Polaroid documented anomaly: ${photo.anomalyName || 'anomaly'}`);
+      this.setHint(`EVIDENCE LOGGED: ${photo.anomalyName || 'Anomalous Phenomenon'}`, 4.0);
+    } else {
+      this.setHint('Polaroid capture developed - Standard transit scene', 2.8);
+    }
+    this.notifyUI();
+    return photo;
   }
 }
