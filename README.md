@@ -20,8 +20,20 @@ Other scripts:
 | `build` | Production build into `dist/` |
 | `preview` | Serve the production build |
 | `lint` | Type-check with `tsc --noEmit` |
+| `test` | Browser tests (Playwright); `test:ui` opens them interactively |
 
 No environment variables are required.
+
+### Tests
+
+The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
+
+```bash
+npx playwright install chromium   # once
+bun run test                      # or: npm test
+```
+
+GitHub Actions runs the type-check, the build, and the full browser suite on every pull request and push to `main`. If a test fails, its Playwright trace is attached to the run.
 
 ## How to play
 
@@ -59,3 +71,4 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/glitchPass.ts` | Brief screen tearing and chromatic aberration, used for Critical anomalies and for decoy glitches at low sanity |
 | `src/components/` | React HUD, start, pause, and report screens |
+| `e2e/` | Playwright browser tests; `e2e/game.ts` has the shared setup and helpers |

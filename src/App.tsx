@@ -167,6 +167,12 @@ export default function App() {
     const glitchPass = new GlitchPass(renderer);
     engineRef.current = engine;
 
+    // Test builds only (vite build --mode test): expose internals to the Playwright suite.
+    // MODE is replaced at build time, so production bundles don't contain this.
+    if (import.meta.env.MODE === 'test') {
+      Object.assign(window, { __G: engine, __A: audioEngine, __R: { renderer, scene, camera, glitchPass } });
+    }
+
     engine.onStateChange = () => triggerUpdate();
     engine.onReportReady = (runs) => {
       setRunsHistory(runs);
