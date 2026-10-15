@@ -33,6 +33,11 @@ const IS_TOUCH =
   (matchMedia('(pointer: coarse)').matches ||
     ('ontouchstart' in window && !matchMedia('(pointer: fine)').matches));
 
+// With the viewfinder up on touch: a touch shorter and stiller than this is a tap (snap a
+// photo); anything longer or further is a drag (aim the camera).
+const TAP_MAX_MOVE_PX = 12;
+const TAP_MAX_MS = 350;
+
 // The engine notifies React on discrete events only. These HUD values change every frame,
 // so refresh at ~30 Hz while any of them is on screen.
 const HUD_REFRESH_MS = 33;
@@ -219,7 +224,7 @@ export default function App() {
     // Test builds only (vite build --mode test): expose internals to the Playwright suite.
     // MODE is replaced at build time, so production bundles don't contain this.
     if (import.meta.env.MODE === 'test') {
-      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale });
+      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale, __P: polaroidManager, __RT: routeManager });
     }
 
     engine.onStateChange = () => triggerUpdate();
@@ -335,6 +340,8 @@ export default function App() {
     let dragId: number | null = null;
     let lx = 0;
     let ly = 0;
+    // With the viewfinder up on touch, a quick tap snaps a photo and a drag aims.
+    let tapStart: { id: number; x: number; y: number; t: number } | null = null;
 
     const handlePointerDown = (e: PointerEvent) => {
       const G = engineRef.current;
@@ -343,10 +350,20 @@ export default function App() {
       audioEngine.wake();
       if (e.pointerType === 'mouse') requestLock();
 
-      // Camera snapshot if viewfinder is raised
+      // Camera snapshot if viewfinder is raised. A mouse click snaps at once; a touch
+      // waits for pointerup so a drag can aim first (see handlePointerEnd).
       if (polaroidManager.isViewfinderOpen && e.button === 0) {
-        G.takePolaroidPhoto();
-        triggerUpdate();
+        if (e.pointerType === 'mouse') {
+          G.takePolaroidPhoto();
+          triggerUpdate();
+          return;
+        }
+        if (dragId === null) {
+          tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
+          dragId = e.pointerId;
+          lx = e.clientX;
+          ly = e.clientY;
+        }
         return;
       }
 
@@ -389,6 +406,23 @@ export default function App() {
 
     const handlePointerEnd = (e: PointerEvent) => {
       if (e.pointerId === dragId) dragId = null;
+      if (tapStart && e.pointerId === tapStart.id) {
+        const tap = tapStart;
+        tapStart = null;
+        const moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y);
+        const G = engineRef.current;
+        if (
+          e.type === 'pointerup' &&
+          moved <= TAP_MAX_MOVE_PX &&
+          performance.now() - tap.t <= TAP_MAX_MS &&
+          G &&
+          !G.paused &&
+          polaroidManager.isViewfinderOpen
+        ) {
+          G.takePolaroidPhoto();
+          triggerUpdate();
+        }
+      }
     };
 
     container.addEventListener('pointerdown', handlePointerDown);

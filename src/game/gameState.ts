@@ -475,6 +475,10 @@ export class GameEngine {
 
   public startIntro() {
     this.newGame();
+    // Camera and route are per ride: a restart or Ride again starts with fresh film,
+    // an empty album, the viewfinder down and the G route.
+    polaroidManager.reset();
+    routeManager.reset();
     this.phase = 'intro';
     this.doorOpen = 1;
     this.doorTarget = 1;
@@ -1681,7 +1685,9 @@ export class GameEngine {
       this.tier,
       this.active.some((a) => a.at !== null),
       this.GT,
-      dt
+      dt,
+      // The parents' heads and yaw/pitch belong to updateParents and the watching check.
+      this.carBuilder.parents
     );
 
     const watcher = this.carBuilder.parents.find((p) => p.facing);
@@ -2022,6 +2028,7 @@ export class GameEngine {
 
   public takePolaroidPhoto() {
     const photo = polaroidManager.snapPhoto(
+      this.scene,
       this.camera,
       this.renderer,
       this.active,

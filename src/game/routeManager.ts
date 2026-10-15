@@ -108,6 +108,11 @@ export class RouteManager {
     }
   }
 
+  /** A new ride starts on the G. */
+  public reset() {
+    this.setRoute('G');
+  }
+
   public getStopName(stopIndex: number): string {
     const stops = this.activeRoute.stops;
     if (stopIndex >= 1 && stopIndex < stops.length) {
