@@ -6,16 +6,21 @@
 
 import { PauseMusic } from './pauseMusic';
 import { Intercom } from './intercom';
+import { settings } from '../settings';
 
 /*
  * Signal chain:
- *   game sounds + bed ─► masterGain (game bus: run level, ducked while paused) ─┐
- *   pause music ──────────────────────────────────────────────────────────────┴► outGain (mute) ─► speakers
+ *   game sounds + bed ─► masterGain (game bus: run level, ducked while paused) ─► gameVol ─┐
+ *   pause music ───────────────────────────────────────────────────────────────► musicVol ─┴► outGain (mute) ─► speakers
+ *
+ * gameVol and musicVol are the player's volume settings; they never move otherwise.
  */
 export class AudioEngine {
   private ac: AudioContext | null = null;
   private outGain: GainNode | null = null;
   private masterGain: GainNode | null = null;
+  private gameVol: GainNode | null = null;
+  private musicVol: GainNode | null = null;
   private pauseMusic: PauseMusic | null = null;
   private intercomVoice: Intercom | null = null;
   private ducked: boolean = false;
@@ -39,12 +44,22 @@ export class AudioEngine {
       this.outGain.gain.setValueAtTime(this.isMuted ? 0 : 1, this.ac.currentTime);
       this.outGain.connect(this.ac.destination);
 
+      // Player volume settings
+      const v = settings.get();
+      this.gameVol = this.ac.createGain();
+      this.gameVol.gain.setValueAtTime(v.gameVolume, this.ac.currentTime);
+      this.gameVol.connect(this.outGain);
+      this.musicVol = this.ac.createGain();
+      this.musicVol.gain.setValueAtTime(v.musicVolume, this.ac.currentTime);
+      this.musicVol.connect(this.outGain);
+      settings.subscribe(() => this.applyVolumeSettings());
+
       // Game bus
       this.masterGain = this.ac.createGain();
       this.masterGain.gain.setValueAtTime(this.masterVolume, this.ac.currentTime);
-      this.masterGain.connect(this.outGain);
+      this.masterGain.connect(this.gameVol);
 
-      this.pauseMusic = new PauseMusic(this.ac, this.outGain);
+      this.pauseMusic = new PauseMusic(this.ac, this.musicVol);
 
       // Generate White and Brown noise buffers
       const sr = this.ac.sampleRate;
@@ -135,6 +150,14 @@ export class AudioEngine {
     if (this.ac && this.outGain) {
       this.outGain.gain.setTargetAtTime(muted ? 0 : 1, this.ac.currentTime, 0.05);
     }
+  }
+
+  private applyVolumeSettings() {
+    if (!this.ac || !this.gameVol || !this.musicVol) return;
+    const v = settings.get();
+    // Short ramp so dragging a slider doesn't click.
+    this.gameVol.gain.setTargetAtTime(v.gameVolume, this.ac.currentTime, 0.03);
+    this.musicVol.gain.setTargetAtTime(v.musicVolume, this.ac.currentTime, 0.03);
   }
 
   public getMuted(): boolean {

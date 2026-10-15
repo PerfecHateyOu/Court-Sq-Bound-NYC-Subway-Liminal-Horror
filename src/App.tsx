@@ -7,19 +7,19 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
+import { settings } from './settings';
 import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
 import { HUD } from './components/HUD';
 import { StartScreen } from './components/StartScreen';
 import { ReportScreen } from './components/ReportScreen';
+import { SettingsPanel } from './components/SettingsPanel';
 import { PauseScreen } from './components/PauseScreen';
 import { RunHistoryRecord } from './types';
 
 // Touch = the primary pointer is coarse. Touchscreen laptops report touch points too,
 // but they have a mouse or trackpad and should get pointer lock and desktop tuning.
 // Screen tearing is skipped entirely for players who ask the OS for reduced motion.
-const REDUCED_MOTION =
-  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 const IS_TOUCH =
   typeof window !== 'undefined' &&
@@ -51,6 +51,13 @@ export default function App() {
   const [paused, setPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [runsHistory, setRunsHistory] = useState<RunHistoryRecord[]>([]);
+  // Settings panel (over the start screen or the pause menu). The ref lets the key handler see it.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsOpenRef = useRef(false);
+  settingsOpenRef.current = settingsOpen;
+  useEffect(() => {
+    if (phase !== 'menu' && !paused) setSettingsOpen(false);
+  }, [phase, paused]);
 
   // Tier visual filter values
   const [tierStyle, setTierStyle] = useState({
@@ -170,7 +177,7 @@ export default function App() {
     // Test builds only (vite build --mode test): expose internals to the Playwright suite.
     // MODE is replaced at build time, so production bundles don't contain this.
     if (import.meta.env.MODE === 'test') {
-      Object.assign(window, { __G: engine, __A: audioEngine, __R: { renderer, scene, camera, glitchPass } });
+      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass } });
     }
 
     engine.onStateChange = () => triggerUpdate();
@@ -223,16 +230,17 @@ export default function App() {
         setTick((t) => t + 1);
       }
 
-      // Anxious breathing: a slight FOV pulse during low-sanity rides (off under reduced motion).
+      // Anxious breathing: a slight FOV pulse during low-sanity rides (off when screen effects are reduced).
       // The offset is in degrees at the 68° landscape FOV, so scale it for the wider portrait view.
-      const fov = baseFov * (1 + (REDUCED_MOTION ? 0 : engine.breathFovOffset()) / 68);
+      const reduced = settings.effectsReduced();
+      const fov = baseFov * (1 + (reduced ? 0 : engine.breathFovOffset()) / 68);
       if (Math.abs(camera.fov - fov) > 1e-4) {
         camera.fov = fov;
         camera.updateProjectionMatrix();
       }
 
       // Screen glitch: only route through the shader pass while one is playing.
-      const glitchAmt = REDUCED_MOTION ? 0 : engine.glitchAmount();
+      const glitchAmt = reduced ? 0 : engine.glitchAmount();
       if (glitchAmt > 0.001 && engine.glitch) {
         glitchPass.render(scene, camera, glitchAmt, engine.GT - engine.glitch.start, engine.glitch.seed);
       } else {
@@ -278,16 +286,19 @@ export default function App() {
       if (!G || G.paused || G.phase === 'menu' || G.phase === 'end') return;
 
       const limit = G.phase === 'trial' ? 1.2 : 1.75;
+      // Look speed and vertical direction come from the player's settings.
+      const { lookSensitivity: sens, invertY } = settings.get();
+      const ySign = invertY ? -1 : 1;
       if (e.pointerType === 'mouse' && document.pointerLockElement) {
-        G.ty = Math.max(-limit, Math.min(limit, G.ty - e.movementX * 0.0022));
-        G.tp = Math.max(-0.6, Math.min(0.72, G.tp - e.movementY * 0.0022));
+        G.ty = Math.max(-limit, Math.min(limit, G.ty - e.movementX * 0.0022 * sens));
+        G.tp = Math.max(-0.6, Math.min(0.72, G.tp - ySign * e.movementY * 0.0022 * sens));
         return;
       }
 
       if (e.pointerId !== dragId) return;
-      const k = e.pointerType === 'mouse' ? 0.004 : 0.0055;
+      const k = (e.pointerType === 'mouse' ? 0.004 : 0.0055) * sens;
       G.ty = Math.max(-limit, Math.min(limit, G.ty - (e.clientX - lx) * k));
-      G.tp = Math.max(-0.6, Math.min(0.72, G.tp - (e.clientY - ly) * k));
+      G.tp = Math.max(-0.6, Math.min(0.72, G.tp - ySign * (e.clientY - ly) * k));
       lx = e.clientX;
       ly = e.clientY;
     };
@@ -323,6 +334,15 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const G = engineRef.current;
       if (!G) return;
+
+      // With Settings open, Esc or P closes it (and leaves the game paused).
+      if (settingsOpenRef.current) {
+        if (e.code === 'Escape' || e.code === 'KeyP') {
+          e.preventDefault();
+          setSettingsOpen(false);
+        }
+        if (e.code !== 'KeyM') return;
+      }
 
       if (e.code === 'KeyP' && G.phase !== 'menu' && G.phase !== 'end') {
         if (G.paused) resumeGame();
@@ -497,12 +517,22 @@ export default function App() {
 
       {/* Start / Briefing Screen */}
       {phase === 'menu' && (
-        <StartScreen onStart={handleStartGame} isTouch={isTouch} />
+        <StartScreen onStart={handleStartGame} onOpenSettings={() => setSettingsOpen(true)} isTouch={isTouch} />
       )}
 
       {/* Pause Screen Overlay */}
       {paused && engineRef.current && (
-        <PauseScreen engine={engineRef.current} onResume={handleResume} onRestart={handleRestart} />
+        <PauseScreen
+          engine={engineRef.current}
+          onResume={handleResume}
+          onRestart={handleRestart}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+      )}
+
+      {/* Settings, only from the start screen or the pause menu */}
+      {settingsOpen && (phase === 'menu' || paused) && (
+        <SettingsPanel onClose={() => setSettingsOpen(false)} isTouch={isTouch} />
       )}
 
       {/* End of Ride Psychological Travel Report */}
