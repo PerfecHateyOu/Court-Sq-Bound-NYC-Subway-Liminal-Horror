@@ -5,4 +5,8 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
+
+# Test build and Playwright output
+dist-test/
+test-results/
+playwright-report/
