@@ -41,6 +41,7 @@ import { AnomalyManager } from './anomalyManager';
 import { haptics } from './haptics';
 import { settings } from '../settings';
 import { polaroidManager } from './polaroidManager';
+import { evp } from './evpManager';
 import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
 
@@ -292,6 +293,7 @@ export class GameEngine {
 
   public pause() {
     if (this.paused || this.phase === 'menu' || this.phase === 'end') return;
+    evp.setRecording(false);
     this.paused = true;
     this.interruptInputs();
     this.notifyUI();
@@ -444,6 +446,7 @@ export class GameEngine {
     this.breathBpm = 0;
     this.breathDepth = 0;
     this.psychLog = null;
+    evp.newRun();
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
     // Clear on-screen text too: with its timer zeroed, expiry never clears leftover text.
     this.subHtml = '';
@@ -585,6 +588,9 @@ export class GameEngine {
     cb.stB.setOpenAir(onG && seg.stop === 12 && !seg.b); // arriving at 21 St
 
     cb.crowd.forEach((c) => (c.g.visible = !!seg.crowd));
+    if (!evp.hasRecorder && (seg.stop > 6 || (seg.stop === 6 && seg.b))) {
+      this.sched(6.0, () => this.giveRecorder('train'));
+    }
     this.planAnomalies(seg);
 
     seg._masks = (seg.mask || []).map((t) => ({ t, done: false }));
@@ -835,14 +841,49 @@ export class GameEngine {
     this.sched(2.0, () => audioEngine.setBedLevel(0.18, 2.4));
     this.sched(0.8, () => this.say(0, 'Feels good to stand up, right?', 2.6));
     this.sched(3.5, () => this.say(1, 'Couple more stops after this. Then Court Square.', 2.8));
-    this.sched(6.4, () => {
+    // Dad hands over his old recorder (the EVP recorder, Operation Skyward Phase 2).
+    this.sched(6.4, () => this.giveRecorder('haven'));
+    this.sched(10.4, () => {
       this.addSanity(SAN.haven, 'Safe Haven');
       this.setSub('<em>You get back on with them.</em>', 2.0);
     });
-    this.sched(7.4, () => {
+    this.sched(11.4, () => {
       this.phase = 'stop';
       this.departNext();
     });
+  }
+
+  /** Dad gives you his old microcassette recorder. */
+  private giveRecorder(where: 'haven' | 'train') {
+    if (evp.hasRecorder || this.phase === 'end') return;
+    evp.hasRecorder = true;
+    this.say(
+      1,
+      where === 'haven'
+        ? 'Here. Your grandfather\u2019s. He used it on the night shift. Never could get it to stop picking up the radio.'
+        : 'Here, hold onto this. Your grandfather\u2019s old recorder. Never could get it to stop picking up the radio.',
+      4.2
+    );
+    this.setHint(this.isTouch ? 'Dad gave you a tape recorder. Tap Recorder to raise it.' : 'Dad gave you a tape recorder. Press R to raise it.', 5);
+    this.notifyUI();
+  }
+
+  /** Raise or lower the recorder. Raising lowers the camera; it can't come up during prompts. */
+  public toggleRecorder(): boolean {
+    if (evp.raised) {
+      evp.lower();
+    } else if (
+      evp.hasRecorder &&
+      !this.choice &&
+      !this.restraint &&
+      (this.phase === 'ride' || this.phase === 'stop' || this.phase === 'haven' || this.phase === 'intro')
+    ) {
+      polaroidManager.setViewfinder(false);
+      this.flagHeld = false;
+      evp.raise();
+    }
+    this.notifyUI();
+    return evp.raised;
   }
 
   public startMaskCheck() {
@@ -914,6 +955,7 @@ export class GameEngine {
   }
 
   public startRestraintMoment() {
+    evp.lower();
     this.restraint = {
       t: 0,
       started: false,
@@ -1015,6 +1057,7 @@ export class GameEngine {
 
   // False Stop Trial
   public startTrial() {
+    evp.lower();
     this.phase = 'trial';
     this.trial = {
       depth: 0,
@@ -1233,6 +1276,7 @@ export class GameEngine {
     reshuffle?: boolean;
     onPick: (val: any, rt: number) => void;
   }) {
+    evp.lower(); // you lower the recorder to answer
     this.choice = {
       items: options.items,
       window: options.window,
@@ -1258,6 +1302,7 @@ export class GameEngine {
 
   public endGame() {
     this.phase = 'end';
+    evp.lower();
     this.flagHeld = false;
     audioEngine.setMasterLevel(0.2, 0.8);
     audioEngine.setBedLevel(0.0001, 0.7);
@@ -1754,6 +1799,25 @@ export class GameEngine {
       }
     }
 
+    // EVP recorder: broadcasts only come through while riding. Holding it up where a parent can
+    // see is a visible reaction (charged once per raise).
+    if (evp.raised && watcher && !evp.watchedCharged && (this.phase === 'ride' || this.phase === 'stop')) {
+      this.addSus(SUS.visible, `Held up a tape recorder while ${watcher.label} was watching`, watcher);
+      evp.watchedCharged = true;
+    }
+    const tape = evp.update(dt, this.phase === 'ride' && seg ? seg.stop : null, this.GT, seg ? `${seg.stop}${seg.b ? 'b' : ''}` : '');
+    if (tape) {
+      audioEngine.blip();
+      this.notifyUI();
+    }
+    audioEngine.evpUpdate({
+      raised: evp.raised,
+      recording: evp.recording,
+      meter: evp.meter,
+      lock: evp.locked ? evp.locked.kind : null,
+      voice: evp.locked?.signal?.voice ?? 1,
+    });
+
     // Sliding doors interpolation
     this.doorOpen += (this.doorTarget - this.doorOpen) * (1 - Math.exp(-7 * dt));
     this.carBuilder.farLeaves.forEach((l) => {
@@ -1874,6 +1938,12 @@ export class GameEngine {
   }
 
   private updateFlag(dt: number) {
+    // Hands busy: no flagging while the recorder is up.
+    if (evp.raised) {
+      this.flagProg = 0;
+      this.flagTid = null;
+      return;
+    }
     if (this.flagHeld && !this.flagLock && this.gazeTid) {
       if (this.flagTid !== this.gazeTid) {
         this.flagTid = this.gazeTid;

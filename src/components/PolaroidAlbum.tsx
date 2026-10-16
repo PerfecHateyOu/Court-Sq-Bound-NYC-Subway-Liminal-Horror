@@ -6,8 +6,9 @@
  */
 import React, { useState } from 'react';
 import { polaroidManager } from '../game/polaroidManager';
+import { evp } from '../game/evpManager';
 import { PolaroidPhoto } from '../types';
-import { X, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, ZoomIn } from 'lucide-react';
+import { X, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, ZoomIn, Mic } from 'lucide-react';
 
 interface PolaroidAlbumProps {
   onClose: () => void;
@@ -16,6 +17,8 @@ interface PolaroidAlbumProps {
 export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
   const [filter, setFilter] = useState<'all' | 'anomalies' | 'carA' | 'carB' | 'carC'>('all');
+  const [tab, setTab] = useState<'prints' | 'tapes'>('prints');
+  const tapes = evp.tapes;
 
   const photos = polaroidManager.photos;
   const developed = photos.length > 0 && photos.every((p) => p.developed);
@@ -39,9 +42,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
               <ImageIcon className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base sm:text-lg text-[#ece6d3] tracking-tight">
-                Polaroid Evidence Album
-              </h2>
+              <h2 className="font-bold text-base sm:text-lg text-[#ece6d3] tracking-tight">Evidence Log</h2>
               <p className="text-xs text-[#9a9684]">
                 {developed
                   ? `${photos.length} prints • ${photos.filter((p) => p.hasAnomalyInFrustum).length} caught something`
@@ -61,6 +62,54 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
           </div>
         </div>
 
+        {/* Polaroids / Tapes */}
+        <div role="tablist" aria-label="Evidence" className="px-6 pt-2.5 bg-[#101311] flex gap-1 text-xs font-bold tracking-wider">
+          {(
+            [
+              ['prints', `POLAROIDS (${photos.length})`],
+              ['tapes', `TAPES (${tapes.length})`],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              role="tab"
+              aria-selected={tab === k}
+              onClick={() => setTab(k)}
+              className={`px-3 py-2 rounded-t border-b-2 ${tab === k ? 'text-[#ece6d3] border-[#e3a83a]' : 'text-[#9a9684] border-transparent hover:text-[#ece6d3]'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'tapes' ? (
+          <div className="flex-1 overflow-y-auto p-6 bg-[#101311]" role="tabpanel">
+            {tapes.length === 0 ? (
+              <div className="py-16 text-center text-[#9a9684]">
+                <Mic className="w-8 h-8 mx-auto opacity-40 mb-3" />
+                <p className="text-sm font-medium">No tapes yet.</p>
+                <p className="text-xs text-white/40 mt-1">
+                  {evp.hasRecorder ? 'Raise the recorder, tune slowly, and hold record when something comes through.' : 'You don\u2019t have anything to record with.'}
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {tapes.map((t) => (
+                  <li key={t.signalId} className="p-3 rounded border border-[#3a3328] bg-[#15130f]">
+                    <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-[#8d8371]">
+                      <span className="font-bold text-[#ece6d3] text-xs">{t.title}</span>
+                      <span>
+                        Stop {t.stop} · {t.freq}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm italic text-[#d9d1bd] leading-snug">{t.transcript}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+        <>
         {/* Filter Navigation Bar */}
         <div className="px-6 py-2.5 bg-[#101311] border-b border-white/5 flex flex-wrap gap-2 text-xs">
           <button
@@ -186,6 +235,8 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* Single Photo Inspection Lightbox Modal */}

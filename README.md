@@ -26,7 +26,7 @@ No environment variables are required.
 
 ### Tests
 
-The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
+The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, the tape recorder, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
 
 ```bash
 npx playwright install chromium   # once
@@ -40,6 +40,8 @@ GitHub Actions runs the type-check, the build, and the full browser suite on eve
 1. **Notice.** When something in the car changes, look at it and hold Flag. Flags are private.
 2. **Don't show it.** Staring at something wrong, or whipping your head around, while a parent is looking at you raises their suspicion. When they talk to you, answer like nothing is wrong.
 3. **Read the doors.** At every stop you can stay on or step off. Stepping off is usually a trap.
+
+After the Safe Haven, Dad gives you his old tape recorder. Tune it and you'll pick up voices, and some carriers that are only tones. What it hears has nothing to do with what's wrong in the car, and holding it up where your parents can see is a reaction too.
 
 On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" in Settings). iPhones don't support web vibration.
 
@@ -55,7 +57,8 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | Walk between cars | WASD | WALK stick (bottom left) |
 | Open a gangway door | E or click it | Tap it |
 | Polaroid camera | C to raise, click / Space / Enter to shoot | Camera button, then the shutter |
-| Evidence album | Tab | Album button |
+| Tape recorder (after Stop 6) | R to raise; [ ] or wheel to tune; hold Space to record | Recorder button; drag the tuning strip; hold REC |
+| Evidence log (Polaroids, tapes) | Tab | Album button |
 | Route lines | — | Route button |
 | Flag | Hold F | Hold the Flag button |
 | Answer / choose | 1, 2, 3 or click | Tap |
@@ -76,6 +79,7 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/audioEngine.ts` | WebAudio bed, chimes, screech, whispers |
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
+| `src/game/evpManager.ts`, `src/audio/evpAudio.ts` | EVP tape recorder: broadcasts and decoy carriers per stretch (shuffled every ride), tuning, tapes kept on the device |
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/trestleBuilder.ts` | The Newtown Creek trestle: sky, skyline, rain and steel for the open-air stretch between Greenpoint Av and Court Sq (G route, Critical) |
 | `src/graphics/glitchPass.ts` | Brief screen tearing and chromatic aberration, used for Critical anomalies and for decoy glitches at low sanity |

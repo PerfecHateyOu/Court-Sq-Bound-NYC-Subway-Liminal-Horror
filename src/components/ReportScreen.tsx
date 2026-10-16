@@ -10,6 +10,7 @@ import { RESTRAINT_RAISE } from '../constants';
 import { RotateCcw, Camera, Sparkles } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
+import { evp } from '../game/evpManager';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -403,6 +404,26 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                   </div>
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* Tapes (EVP recorder) */}
+          {evp.tapes.length > 0 && (
+            <section aria-labelledby="tapes-h" className="mt-5 border-t-2 border-[#1b1d18] pt-3">
+              <h3 id="tapes-h" className="font-black text-xs sm:text-sm uppercase tracking-wide mb-2">
+                Tapes ({evp.tapes.length})
+              </h3>
+              <ul className="space-y-1.5 text-xs">
+                {evp.tapes.map((t) => (
+                  <li key={t.signalId} className="grid grid-cols-[3.25rem_1fr] gap-x-2">
+                    <span className="font-mono font-bold text-[11px]">Stop {t.stop}</span>
+                    <span>
+                      <strong>{t.title}</strong> <span className="font-mono text-[10px] text-[#55574c]">{t.freq}</span>
+                      <span className="block italic text-[#55574c] leading-snug">{t.transcript}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

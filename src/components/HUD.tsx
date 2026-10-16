@@ -7,11 +7,13 @@
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { STOPS, TIER_NAMES, CFG } from '../constants';
-import { Volume2, VolumeX, Pause, Camera, Image as ImageIcon, DoorOpen, GitBranch } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Camera, Image as ImageIcon, DoorOpen, GitBranch, Mic } from 'lucide-react';
 import { HeartbeatTrace } from './HeartbeatTrace';
 import { MoveStick } from './MoveStick';
 import { routeManager } from '../game/routeManager';
 import { polaroidManager } from '../game/polaroidManager';
+import { evp } from '../game/evpManager';
+import { EvpRecorder } from './EvpRecorder';
 
 interface HUDProps {
   engine: GameEngine;
@@ -141,6 +143,23 @@ export const HUD: React.FC<HUDProps> = ({
             C
           </span>
         </button>
+
+        {/* Dad's tape recorder (once he's given it to you) */}
+        {evp.hasRecorder && (
+          <button
+            onClick={() => G.toggleRecorder()}
+            title="Tape recorder [R]"
+            aria-label="Recorder"
+            aria-pressed={evp.raised}
+            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold backdrop-blur-sm transition-all active:scale-95 ${
+              evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/60 border-white/15 text-[#ece6d3] hover:bg-black/80'
+            }`}
+          >
+            <Mic className="w-4 h-4 text-[#e8a49a]" />
+            <span className="hidden sm:inline">Recorder</span>
+            <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden sm:inline">R</span>
+          </button>
+        )}
 
         {/* Polaroid Evidence Album Trigger Button */}
         <button
@@ -285,8 +304,11 @@ export const HUD: React.FC<HUDProps> = ({
       </div>
       )}
 
+      {/* The recorder takes the Flag button's place while it's up (hands busy). */}
+      {evp.raised && !showChoices && <EvpRecorder engine={G} />}
+
       {/* Hold / Flag Button (Bottom Right) */}
-      {!showChoices && (
+      {!showChoices && !evp.raised && (
         <div className="absolute right-4 bottom-5 pointer-events-auto">
           <button
             onPointerDown={(e) => {

@@ -9,6 +9,7 @@ import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
 import { settings } from './settings';
 import { KeyLook } from './input/keyLook';
+import { evp } from './game/evpManager';
 import { shakeCoverScale, SHAKE_BLEED_PX } from './graphics/shakeCover';
 import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
@@ -46,6 +47,7 @@ function hudNeedsLiveRefresh(G: GameEngine): boolean {
   return (
     G.flagHeld ||
     G.flagProg > 0 ||
+    evp.raised ||
     !!G.choice ||
     !!G.restraint ||
     G.debug ||
@@ -82,6 +84,7 @@ export default function App() {
     keyLookRef.current.clear();
     keysDownRef.current = { w: false, a: false, s: false, d: false };
     engineRef.current?.setMoveInput(0, 0);
+    evp.setRecording(false);
   }, []);
 
 
@@ -91,6 +94,13 @@ export default function App() {
       setRouteSelectorOpen(false);
     }
   }, [phase, paused]);
+
+  useEffect(() => {
+    evp.onChange = () => setTick((t) => t + 1);
+    return () => {
+      evp.onChange = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     polaroidManager.onStateChanged = () => {
@@ -224,7 +234,7 @@ export default function App() {
     // Test builds only (vite build --mode test): expose internals to the Playwright suite.
     // MODE is replaced at build time, so production bundles don't contain this.
     if (import.meta.env.MODE === 'test') {
-      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale, __P: polaroidManager, __RT: routeManager });
+      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale, __P: polaroidManager, __RT: routeManager, __EVP: evp });
     }
 
     engine.onStateChange = () => triggerUpdate();
@@ -484,6 +494,27 @@ export default function App() {
 
       if (G.paused || G.phase === 'menu' || G.phase === 'end') return;
 
+      // EVP recorder: R raises/lowers; while up, [ ] tune and Space records.
+      if (e.code === 'KeyR' && !e.repeat) {
+        e.preventDefault();
+        G.toggleRecorder();
+        triggerUpdate();
+        return;
+      }
+      if (evp.raised) {
+        if (e.code === 'BracketLeft' || e.code === 'BracketRight') {
+          e.preventDefault();
+          evp.tune((e.code === 'BracketLeft' ? -1 : 1) * (e.shiftKey ? 0.1 : 0.5));
+          triggerUpdate();
+          return;
+        }
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (!e.repeat) evp.setRecording(true);
+          return;
+        }
+      }
+
       // Polaroid Album [TAB] toggle
       if (e.code === 'Tab') {
         e.preventDefault();
@@ -492,9 +523,10 @@ export default function App() {
         return;
       }
 
-      // Polaroid Viewfinder [C] toggle
+      // Polaroid Viewfinder [C] toggle (hands busy: raising the camera lowers the recorder)
       if (e.code === 'KeyC') {
         e.preventDefault();
+        evp.lower();
         polaroidManager.toggleViewfinder();
         triggerUpdate();
         return;
@@ -573,10 +605,19 @@ export default function App() {
         G.setMoveInput(fwd, right);
       }
 
+      if (e.code === 'Space' && evp.recording) evp.setRecording(false);
       if (e.code === 'KeyF' || e.code === 'Space') {
         G.flagHeld = false;
         triggerUpdate();
       }
+    };
+
+    // Mouse wheel tunes the recorder while it's up.
+    const handleWheel = (e: WheelEvent) => {
+      const G = engineRef.current;
+      if (!G || G.paused || !evp.raised || !e.deltaY) return;
+      evp.tune(e.deltaY < 0 ? 0.5 : -0.5);
+      triggerUpdate();
     };
 
     const handleVisibility = () => {
@@ -603,12 +644,14 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('wheel', handleWheel, { passive: true });
     window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
@@ -701,6 +744,7 @@ export default function App() {
           onFlagDown={handleFlagDown}
           onFlagUp={handleFlagUp}
           onToggleCamera={() => {
+            evp.lower();
             polaroidManager.toggleViewfinder();
             triggerUpdate();
           }}

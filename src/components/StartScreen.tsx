@@ -5,6 +5,7 @@
 import React from 'react';
 import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X } from 'lucide-react';
 import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '../game/psychLog';
+import { loadEvpArchive, EVP_SIGNALS } from '../game/evpManager';
 import { useProgressEpoch } from '../settings';
 import { useEscape } from '../ui/escape';
 
@@ -24,6 +25,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   const archive = React.useMemo(() => loadArchive(), [showLog, progressEpoch]);
   useEscape(() => setShowLog(false), showLog);
   const documentedCount = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
+  const tapeCount = React.useMemo(() => Object.keys(loadEvpArchive()).length, [showLog, progressEpoch]);
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 sm:p-6 bg-black/80 backdrop-blur-md">
@@ -160,6 +162,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
                   <h2 id="case-files-title" className="text-2xl font-black uppercase tracking-tight">Psychological Case Files</h2>
                   <p className="text-xs text-[#55574c] mt-0.5">
                     {documentedCount} of 13 cataloged anomaly types documented on this device.
+                  </p>
+                  <p className="text-xs text-[#55574c]" data-testid="case-files-tapes">
+                    Recordings: {tapeCount} of {EVP_SIGNALS.length} broadcasts on tape.
                   </p>
                 </div>
                 <button
