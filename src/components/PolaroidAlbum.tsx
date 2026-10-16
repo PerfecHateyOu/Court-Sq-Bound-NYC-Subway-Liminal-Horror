@@ -1,7 +1,8 @@
 /**
  * Polaroid Evidence Photo Album
- * Slide-out retro photo drawer displaying developed evidentiary snapshots,
- * anomaly inspection analysis, and transit logs.
+ * Slide-out retro photo drawer. During the ride the prints are still developing (blank frames,
+ * no captions), so the album never tells the player what a shot caught. They develop after
+ * the ride; the report shows them.
  */
 import React, { useState } from 'react';
 import { polaroidManager } from '../game/polaroidManager';
@@ -17,6 +18,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
   const [filter, setFilter] = useState<'all' | 'anomalies' | 'carA' | 'carB' | 'carC'>('all');
 
   const photos = polaroidManager.photos;
+  const developed = photos.length > 0 && photos.every((p) => p.developed);
 
   const filteredPhotos = photos.filter((p) => {
     if (filter === 'anomalies') return p.hasAnomalyInFrustum;
@@ -41,7 +43,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
                 Polaroid Evidence Album
               </h2>
               <p className="text-xs text-[#9a9684]">
-                {photos.length} photos collected • {photos.filter((p) => p.hasAnomalyInFrustum).length} anomalies documented
+                {developed
+                  ? `${photos.length} prints • ${photos.filter((p) => p.hasAnomalyInFrustum).length} caught something`
+                  : `${photos.length} print${photos.length === 1 ? '' : 's'} • they develop after the ride`}
               </p>
             </div>
           </div>
@@ -70,6 +74,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
             All Prints ({photos.length})
           </button>
 
+{developed && (
           <button
             onClick={() => setFilter('anomalies')}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors flex items-center gap-1.5 ${
@@ -81,6 +86,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
             <Sparkles className="w-3.5 h-3.5" />
             <span>Anomalies Only ({photos.filter((p) => p.hasAnomalyInFrustum).length})</span>
           </button>
+          )}
 
           <button
             onClick={() => setFilter('carA')}
@@ -138,14 +144,18 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
                 >
                   {/* Square Print Image */}
                   <div className="relative aspect-square w-full bg-[#181816] rounded-sm overflow-hidden border border-black/20">
-                    <img
-                      src={photo.dataUrl}
-                      alt="Polaroid Evidence"
-                      className="w-full h-full object-cover filter contrast-105"
-                    />
+                    {photo.developed ? (
+                      <img
+                        src={photo.dataUrl}
+                        alt="Polaroid Evidence"
+                        className="w-full h-full object-cover filter contrast-105"
+                      />
+                    ) : (
+                      <UndevelopedPrint />
+                    )}
 
-                    {/* Anomaly Badge */}
-                    {photo.hasAnomalyInFrustum ? (
+                    {/* Badge (developed prints only) */}
+                    {!photo.developed ? null : photo.hasAnomalyInFrustum ? (
                       <div className="absolute top-1.5 right-1.5 bg-red-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-0.5">
                         <Sparkles className="w-2.5 h-2.5" />
                         <span>ANOMALY</span>
@@ -165,7 +175,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
                   {/* Caption Strip */}
                   <div className="mt-2 text-center">
                     <div className="text-[11px] font-bold font-mono truncate text-gray-800">
-                      {photo.anomalyName || 'Transit Interior'}
+                      {photo.developed ? photo.anomalyName || 'Nothing out of place' : 'Developing…'}
                     </div>
                     <div className="text-[9px] font-mono text-gray-500">
                       Car {photo.carIndex === 0 ? 'A (Lead)' : photo.carIndex === 2 ? 'C (Rear)' : 'B (Mid)'} • Line {photo.routeId}
@@ -192,19 +202,24 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
 
             {/* Print Photo */}
             <div className="relative aspect-square w-full bg-[#181816] rounded overflow-hidden border border-black/25">
-              <img
-                src={selectedPhoto.dataUrl}
-                alt="Selected Evidence"
-                className="w-full h-full object-cover filter contrast-110"
-              />
+              {selectedPhoto.developed ? (
+                <img
+                  src={selectedPhoto.dataUrl}
+                  alt="Selected Evidence"
+                  className="w-full h-full object-cover filter contrast-110"
+                />
+              ) : (
+                <UndevelopedPrint large />
+              )}
             </div>
 
             {/* Inspection Technical Details */}
             <div className="mt-4 font-mono">
               <div className="flex items-center justify-between pb-2 border-b border-black/15">
                 <span className="font-bold text-sm tracking-tight text-gray-900">
-                  {selectedPhoto.anomalyName || 'STANDARD TRANSIT INTERIOR'}
+                  {selectedPhoto.developed ? selectedPhoto.anomalyName || 'NOTHING OUT OF PLACE' : 'STILL DEVELOPING'}
                 </span>
+                {selectedPhoto.developed && (
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
                     selectedPhoto.hasAnomalyInFrustum
@@ -224,6 +239,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
                     </>
                   )}
                 </span>
+                )}
               </div>
 
               <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs text-gray-700">
@@ -244,7 +260,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
               </div>
 
               <p className="mt-3 text-xs text-gray-600 leading-relaxed bg-black/5 p-2.5 rounded border border-black/10">
-                {selectedPhoto.description || 'Evidentiary photo captured on Polaroid 600 emulsion.'}
+                {selectedPhoto.developed
+                  ? selectedPhoto.description || 'Evidentiary photo captured on Polaroid 600 emulsion.'
+                  : 'Polaroid 600 prints take their time. This one will be ready at the end of the ride.'}
               </p>
             </div>
           </div>
@@ -253,3 +271,14 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
     </div>
   );
 };
+
+/** A print that hasn't developed yet: the grey-green of fresh Polaroid emulsion, nothing else. */
+const UndevelopedPrint: React.FC<{ large?: boolean }> = ({ large }) => (
+  <div
+    className="w-full h-full flex items-center justify-center"
+    style={{ background: 'radial-gradient(circle at 40% 35%, #4a4a42 0%, #34352f 55%, #26272233 100%), #2b2c27' }}
+    aria-label="Undeveloped print"
+  >
+    <span className={`font-mono tracking-[0.3em] text-white/25 ${large ? 'text-xs' : 'text-[8px]'}`}>DEVELOPING</span>
+  </div>
+);

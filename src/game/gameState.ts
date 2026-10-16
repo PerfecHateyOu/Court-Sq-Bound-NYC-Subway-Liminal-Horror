@@ -44,6 +44,8 @@ import { polaroidManager } from './polaroidManager';
 import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
 
+/** Chance a flash makes a parent who wasn't watching turn to look. */
+const FLASH_GLANCE_CHANCE = 0.5;
 const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
 import {
   ActiveAnomaly,
@@ -641,7 +643,10 @@ export class GameEngine {
         a.revert();
         return;
       }
-      const hit = this.segFlags.some((f) => a.tids.includes(f.tid) && f.gt >= a.at!);
+      // A photo that framed it after it appeared counts the same as a held flag.
+      const byFlag = this.segFlags.some((f) => a.tids.includes(f.tid) && f.gt >= a.at!);
+      const byPhoto = polaroidManager.photosCatching(this.segIdx, a.id, a.desc, a.at!).length > 0;
+      const hit = byFlag || byPhoto;
       if (hit) {
         catches++;
         this.acc.correct++;
@@ -650,7 +655,7 @@ export class GameEngine {
         this.acc.miss++;
         dS += SAN.miss;
       }
-      rec.anoms.push({ id: a.id, desc: a.desc, hit });
+      rec.anoms.push({ id: a.id, desc: a.desc, hit, via: hit ? (byFlag && byPhoto ? 'both' : byFlag ? 'flag' : 'photo') : undefined });
       a.revert();
     });
 
@@ -1227,6 +1232,7 @@ export class GameEngine {
     });
     this.saveRuns(runs);
     this.psychLog = recordRide(this.stopLog);
+    polaroidManager.develop(); // prints develop now, after scoring
 
     if (this.onReportReady) {
       this.onReportReady(runs);
@@ -2026,7 +2032,14 @@ export class GameEngine {
     return false;
   }
 
+  /**
+   * Take a Polaroid. The shot is scored with the flags at the next stop and the print develops
+   * after the ride, so nothing here says whether it caught anything (no hint, no sanity change).
+   * The flash is a visible reaction: if a parent is watching it raises Suspicion, and if not,
+   * it can still make one of them look over.
+   */
   public takePolaroidPhoto() {
+    const seg = this.seg;
     const photo = polaroidManager.snapPhoto(
       this.scene,
       this.camera,
@@ -2034,17 +2047,28 @@ export class GameEngine {
       this.active,
       this.currentCarIndex,
       routeManager.routeId,
-      this.GT
+      this.GT,
+      seg && this.phase === 'ride' ? this.segIdx : -1,
+      seg ? `${seg.stop}${seg.b ? 'b' : ''}` : ''
     );
     if (!photo) return null;
 
     passengerBehavior.handleCameraFlash(this.carBuilder.getAllPassengers(), this.camera.position, this.GT);
 
-    if (photo.hasAnomalyInFrustum) {
-      this.addSanity(4, `Polaroid documented anomaly: ${photo.anomalyName || 'anomaly'}`);
-      this.setHint(`EVIDENCE LOGGED: ${photo.anomalyName || 'Anomalous Phenomenon'}`, 4.0);
-    } else {
-      this.setHint('Polaroid capture developed - Standard transit scene', 2.8);
+    if (this.phase === 'ride' || this.phase === 'stop') {
+      const watcher = this.carBuilder.parents.find((p) => p.facing);
+      if (watcher) {
+        this.addSus(SUS.visible, `Took a flash photo while ${watcher.label} was watching`, watcher);
+      } else if (Math.random() < FLASH_GLANCE_CHANCE) {
+        // The flash catches a parent's eye: they turn to look (no Suspicion by itself).
+        const free = this.carBuilder.parents.filter((p) => !p.frozen && !p.force);
+        const p = free[Math.floor(Math.random() * free.length)];
+        if (p) {
+          p.mode = 'player';
+          p.holdUntil = this.GT + 1.8;
+          p.until = this.GT + 1.8;
+        }
+      }
     }
     this.notifyUI();
     return photo;
