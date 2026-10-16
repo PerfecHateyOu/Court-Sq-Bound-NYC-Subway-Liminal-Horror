@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 const PORT = 4190;
 
 export default defineConfig({
-  testDir: 'e2e',
+  testDir: '.',
   // Software WebGL is slow, and several checks listen to a few seconds of audio.
   timeout: 180_000,
   expect: { timeout: 10_000 },
@@ -26,6 +26,7 @@ export default defineConfig({
   },
   // A test-mode build exposes the engine to the tests (see App.tsx); production builds don't.
   webServer: {
+    cwd: '..',
     command: `npx vite build --mode test --outDir dist-test && npx vite preview --outDir dist-test --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
