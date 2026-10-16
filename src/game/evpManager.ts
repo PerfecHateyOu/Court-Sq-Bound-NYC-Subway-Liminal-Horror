@@ -1,0 +1,318 @@
+/**
+ * EVP recorder (Operation Skyward, Phase 2): Dad's old microcassette recorder.
+ *
+ * It carries story and dread. It is never a detector:
+ *  - Broadcasts are authored and tied to stretches of the ride, never to the 13 car anomalies.
+ *  - Each segment also has decoy carriers. The meter and the lock react to decoys exactly as to
+ *    broadcasts, so a lock says nothing about the car.
+ *  - Frequencies are shuffled every run, so tuning is a skill, not memorisation.
+ *
+ * Audio lives in audio/evpAudio.ts; the engine wires suspicion, hands-busy and the handoff.
+ */
+
+export const EVP_MIN_KHZ = 70;
+export const EVP_MAX_KHZ = 180;
+/** Within this many kHz of a carrier, the recorder locks on. */
+export const EVP_LOCK_KHZ = 1.0;
+/** The meter starts to rise this far out (Gaussian width). */
+const METER_WIDTH_KHZ = 4;
+/** Hold a lock while recording this long (game seconds) to save a tape. */
+export const EVP_RECORD_HOLD = 1.5;
+/** Seconds of listening to reveal a whole transcript. */
+const REVEAL_SECONDS = 3;
+const DECOYS_PER_SEGMENT = 2;
+
+export type EvpCategory = 'dispatch' | 'passenger' | 'conductor' | 'warning';
+
+export interface EvpSignalDef {
+  id: string;
+  /** Shown on the tape label and in the log. */
+  title: string;
+  /** Segments (by destination stop) during which it can be picked up. */
+  stops: number[];
+  category: EvpCategory;
+  transcript: string;
+  /** Intercom voice tier (0 clear … 3 broken) used for the garbled speech. */
+  voice: number;
+}
+
+/** About one broadcast per stretch from the Safe Haven on. Chapter 3's sit on the trestle. */
+export const EVP_SIGNALS: EvpSignalDef[] = [
+  {
+    id: 'dispatch-hold',
+    title: 'Dispatch, track 2',
+    stops: [6, 7],
+    category: 'dispatch',
+    transcript: '…G four-forty, hold at Nassau. Hold. Do not open the doors at Nassau…',
+    voice: 1,
+  },
+  {
+    id: 'passenger-hoyt',
+    title: 'A passenger',
+    stops: [7, 8, 9],
+    category: 'passenger',
+    transcript: '…I got on at Hoyt too. I always get on at Hoyt. I always get on at Hoyt…',
+    voice: 1,
+  },
+  {
+    id: 'dispatch-empty',
+    title: 'Dispatch, no train number',
+    stops: [9, 10],
+    category: 'dispatch',
+    transcript: '…there is no train scheduled on this track. Repeat: nothing is scheduled on this track…',
+    voice: 2,
+  },
+  {
+    id: 'passenger-greenpoint',
+    title: 'Someone at the far end',
+    stops: [10, 11],
+    category: 'passenger',
+    transcript: '…first time? It gets easier after Greenpoint. Don’t let them see you looking…',
+    voice: 2,
+  },
+  {
+    id: 'warning-time',
+    title: 'Static, then a time',
+    stops: [11, 12],
+    category: 'warning',
+    transcript: '…6:52… 6:52 a.m.… it was 6:52 the last time, too…',
+    voice: 3,
+  },
+  {
+    id: 'conductor',
+    title: 'The conductor',
+    stops: [12, 13],
+    category: 'conductor',
+    transcript: '…this is your conductor. We are above ground. This train does not go above ground…',
+    voice: 2,
+  },
+  {
+    id: 'mom-voice',
+    title: 'A voice like Mom’s',
+    stops: [12, 13],
+    category: 'passenger',
+    transcript: '…honey, don’t look at the window. Look at me. Look at me…',
+    voice: 0,
+  },
+];
+
+export interface EvpTape {
+  signalId: string;
+  title: string;
+  stop: string;
+  freq: string;
+  transcript: string;
+  gt: number;
+}
+
+export interface EvpCarrier {
+  kind: 'signal' | 'decoy';
+  khz: number;
+  signal?: EvpSignalDef;
+}
+
+const ARCHIVE_KEY = 'gtrain-tapes';
+export type EvpArchive = Record<string, { first: number; count: number }>;
+
+export function loadEvpArchive(): EvpArchive {
+  try {
+    const a = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '{}');
+    return a && typeof a === 'object' ? a : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveEvpArchive(a: EvpArchive) {
+  try {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(a));
+  } catch {
+    /* storage blocked: the tape still shows this ride */
+  }
+}
+
+export class EvpManager {
+  public hasRecorder = false;
+  public raised = false;
+  public recording = false;
+  public khz = 120;
+
+  /** 0..1, same shape for broadcasts and decoys. */
+  public meter = 0;
+  public locked: EvpCarrier | null = null;
+  /** Fraction of the locked broadcast's transcript heard so far (0..1). */
+  public reveal = 0;
+  /** Seconds of the current recording hold. */
+  public recordT = 0;
+  public tapes: EvpTape[] = [];
+  /** The last tape saved and when (wall-clock ms), for the panel's brief "Saved to tape" note. */
+  public lastSaved: { title: string; at: number } | null = null;
+  /** Suspicion is charged at most once per raise. */
+  public watchedCharged = false;
+
+  private signalKhz: Record<string, number> = {};
+  private decoyKhz: Record<number, number[]> = {};
+  private heard: Record<string, number> = {};
+
+  public onChange?: () => void;
+
+  /** A new ride: no recorder yet, fresh frequencies, empty tapes. */
+  public newRun(rand: () => number = Math.random) {
+    this.hasRecorder = false;
+    this.raised = false;
+    this.recording = false;
+    this.khz = 120;
+    this.meter = 0;
+    this.locked = null;
+    this.reveal = 0;
+    this.recordT = 0;
+    this.tapes = [];
+    this.lastSaved = null;
+    this.heard = {};
+    this.watchedCharged = false;
+
+    // Spread the broadcasts at least 8 kHz apart; decoys at least 5 kHz from anything audible
+    // in the same stretch.
+    const taken: number[] = [];
+    const pick = (minGap: number, against: number[]) => {
+      for (let tries = 0; tries < 200; tries++) {
+        const f = Math.round((EVP_MIN_KHZ + 4 + rand() * (EVP_MAX_KHZ - EVP_MIN_KHZ - 8)) * 10) / 10;
+        if (against.every((o) => Math.abs(o - f) >= minGap)) return f;
+      }
+      return Math.round((EVP_MIN_KHZ + rand() * (EVP_MAX_KHZ - EVP_MIN_KHZ)) * 10) / 10;
+    };
+    this.signalKhz = {};
+    for (const s of EVP_SIGNALS) {
+      const f = pick(8, taken);
+      this.signalKhz[s.id] = f;
+      taken.push(f);
+    }
+    this.decoyKhz = {};
+    for (let stop = 6; stop <= 13; stop++) {
+      const near = EVP_SIGNALS.filter((s) => s.stops.includes(stop)).map((s) => this.signalKhz[s.id]);
+      const ds: number[] = [];
+      for (let i = 0; i < DECOYS_PER_SEGMENT; i++) ds.push(pick(5, [...near, ...ds]));
+      this.decoyKhz[stop] = ds;
+    }
+    this.changed();
+  }
+
+  /** Carriers receivable during the ride to `stop` (null = not riding: nothing). */
+  public carriers(stop: number | null): EvpCarrier[] {
+    if (stop === null) return [];
+    const out: EvpCarrier[] = EVP_SIGNALS.filter((s) => s.stops.includes(stop)).map((s) => ({
+      kind: 'signal' as const,
+      khz: this.signalKhz[s.id],
+      signal: s,
+    }));
+    for (const f of this.decoyKhz[stop] || []) out.push({ kind: 'decoy', khz: f });
+    return out;
+  }
+
+  public setKhz(khz: number) {
+    this.khz = Math.max(EVP_MIN_KHZ, Math.min(EVP_MAX_KHZ, Math.round(khz * 10) / 10));
+  }
+
+  public tune(deltaKhz: number) {
+    this.setKhz(this.khz + deltaKhz);
+  }
+
+  public raise() {
+    if (!this.hasRecorder || this.raised) return;
+    this.raised = true;
+    this.watchedCharged = false;
+    this.changed();
+  }
+
+  public lower() {
+    if (!this.raised && !this.recording) return;
+    this.raised = false;
+    this.recording = false;
+    this.recordT = 0;
+    this.locked = null;
+    this.meter = 0;
+    this.changed();
+  }
+
+  public setRecording(on: boolean) {
+    const next = on && this.raised;
+    if (next === this.recording) return;
+    this.recording = next;
+    if (!next) this.recordT = 0;
+    this.changed();
+  }
+
+  /**
+   * Per frame. `stop` is the destination of the segment being ridden (null when not riding).
+   * Returns a tape when one is saved this frame.
+   */
+  public update(dt: number, stop: number | null, gt: number, stopLabel: string): EvpTape | null {
+    if (!this.raised) {
+      this.meter = 0;
+      this.locked = null;
+      return null;
+    }
+    const cs = this.carriers(stop);
+    let best: EvpCarrier | null = null;
+    let bestD = Infinity;
+    for (const c of cs) {
+      const d = Math.abs(c.khz - this.khz);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    this.meter = best ? Math.exp(-((bestD / METER_WIDTH_KHZ) ** 2)) : 0;
+    const prevLocked = this.locked;
+    this.locked = best && bestD <= EVP_LOCK_KHZ ? best : null;
+    if (this.locked !== prevLocked) this.changed();
+
+    const sig = this.locked?.kind === 'signal' ? this.locked.signal! : null;
+    if (sig) {
+      this.heard[sig.id] = Math.min(1, (this.heard[sig.id] || 0) + dt / REVEAL_SECONDS);
+      this.reveal = this.heard[sig.id];
+    } else {
+      this.reveal = 0;
+    }
+
+    if (this.recording && sig && !this.tapes.some((t) => t.signalId === sig.id)) {
+      this.recordT += dt;
+      if (this.recordT >= EVP_RECORD_HOLD) {
+        this.recordT = 0;
+        const tape: EvpTape = {
+          signalId: sig.id,
+          title: sig.title,
+          stop: stopLabel,
+          freq: `${this.khz.toFixed(1)} kHz`,
+          transcript: sig.transcript,
+          gt,
+        };
+        this.tapes.push(tape);
+        this.lastSaved = { title: tape.title, at: Date.now() };
+        const a = loadEvpArchive();
+        a[sig.id] = { first: a[sig.id]?.first ?? Date.now(), count: (a[sig.id]?.count ?? 0) + 1 };
+        saveEvpArchive(a);
+        this.changed();
+        return tape;
+      }
+    } else {
+      this.recordT = 0;
+    }
+    return null;
+  }
+
+  /** Test/debug helper: the frequency a broadcast sits on this run. */
+  public khzOf(signalId: string): number | undefined {
+    return this.signalKhz[signalId];
+  }
+
+  public decoysFor(stop: number): number[] {
+    return [...(this.decoyKhz[stop] || [])];
+  }
+
+  private changed() {
+    this.onChange?.();
+  }
+}
+
+export const evp = new EvpManager();

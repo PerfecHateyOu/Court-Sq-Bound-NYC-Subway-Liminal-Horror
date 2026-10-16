@@ -6,6 +6,7 @@
 
 import { PauseMusic } from './pauseMusic';
 import { Intercom } from './intercom';
+import { EvpAudio, type EvpSoundState } from './evpAudio';
 import { settings } from '../settings';
 
 /*
@@ -158,6 +159,22 @@ export class AudioEngine {
     // Short ramp so dragging a slider doesn't click.
     this.gameVol.gain.setTargetAtTime(v.gameVolume, this.ac.currentTime, 0.03);
     this.musicVol.gain.setTargetAtTime(v.musicVolume, this.ac.currentTime, 0.03);
+  }
+
+  private evpAudio: EvpAudio | null = null;
+
+  /** The EVP recorder's sound (hiss, tuning whistle, voices). Built on first use. */
+  public evpUpdate(state: EvpSoundState) {
+    if (!this.ac || !this.masterGain || !this.whiteBuffer) return;
+    if (!this.evpAudio) {
+      if (!state.raised) return;
+      this.evpAudio = new EvpAudio(this.ac, this.masterGain, this.whiteBuffer);
+    }
+    this.evpAudio.update(state);
+  }
+
+  public getEvpAudio(): EvpAudio | null {
+    return this.evpAudio;
   }
 
   public getMuted(): boolean {

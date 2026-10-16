@@ -21,7 +21,7 @@ test.describe('Polaroid follows the rules', () => {
 
     // The album shows an undeveloped frame and no verdict.
     await game(`window.__P.setAlbum(true); await sleep(400);`);
-    const album = page.locator('text=Polaroid Evidence Album').locator('xpath=ancestor::div[contains(@class,"max-w-4xl")]');
+    const album = page.locator('text=Evidence Log').locator('xpath=ancestor::div[contains(@class,"max-w-4xl")]');
     await expect(album).toContainText('they develop after the ride');
     await expect(album).toContainText('DEVELOPING');
     await expect(album).not.toContainText(/ANOMALY|BASELINE|Anomalies Only|anomalies documented/);
