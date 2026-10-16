@@ -4,8 +4,9 @@ import { test, expect } from './game';
 // real lighting/ambient anomalies). `at` is when it appeared.
 const FAKE = (at: string) => `{ id: 'testanom', desc: 'The test sign changed', tids: ['testsign'], obj: null, at: ${at}, trigger: 0, tier: 0, apply() {}, revert() {} }`;
 // Keep both parents looking away (no one watching).
+// Steps the game clock (not real time), so a slow CI machine can't make it flaky.
 const LOOK_AWAY = `G.carBuilder.parents.forEach((p) => { p.force = false; p.mode = 'phone'; p.until = G.GT + 1e6; p.holdUntil = 0; });
-  for (let i = 0; i < 80 && G.carBuilder.parents.some((p) => p.facing); i++) await sleep(50);`;
+  for (let i = 0; i < 200 && G.carBuilder.parents.some((p) => p.facing); i++) advance(0.05);`;
 
 test.describe('Polaroid follows the rules', () => {
   test('a shot of an anomaly gives no hint, no sanity change and no caption during the ride', async ({ page, game }) => {
@@ -56,7 +57,7 @@ test.describe('Polaroid follows the rules', () => {
   test('the flash raises Suspicion only if a parent is watching; otherwise it may make one look', async ({ game }) => {
     const watched = await game(`ride(0); await sleep(300);
       const mom = G.carBuilder.parents[0]; mom.force = true;
-      for (let i = 0; i < 80 && !mom.facing; i++) await sleep(50);
+      for (let i = 0; i < 200 && !mom.facing; i++) advance(0.05);
       const facing = mom.facing; const sus0 = G.sus; G.takePolaroidPhoto(); mom.force = false;
       return { facing, susDelta: G.sus - sus0, reason: G.susLog[G.susLog.length - 1]?.reason };`);
     expect(watched.facing).toBe(true);
