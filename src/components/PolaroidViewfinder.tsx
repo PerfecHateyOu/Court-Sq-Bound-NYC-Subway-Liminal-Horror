@@ -6,7 +6,7 @@
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { polaroidManager } from '../game/polaroidManager';
-import { Camera, X, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Camera, X, Image as ImageIcon } from 'lucide-react';
 
 interface PolaroidViewfinderProps {
   engine: GameEngine;
@@ -150,37 +150,22 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
           <div className="w-[180px] sm:w-[210px] p-2.5 pb-4 bg-[#f4efe6] rounded shadow-2xl border border-black/30 text-black flex flex-col items-center">
             {/* Square photo print area */}
             <div className="relative w-full aspect-square bg-[#1f1e1c] rounded-sm overflow-hidden border border-black/20">
-              {lastPhoto?.dataUrl && (
-                <img
-                  src={lastPhoto.dataUrl}
-                  alt="Developing Polaroid"
-                  className={`w-full h-full object-cover transition-all duration-[3800ms] ${
-                    isDeveloping
-                      ? 'filter contrast-150 saturate-50 sepia(0.6) blur-[0.5px]'
-                      : 'filter contrast-110 saturate-90'
-                  }`}
-                />
-              )}
-
-              {/* Chemical Developer Emulsion Overlay */}
+              {/* Prints develop after the ride: fresh emulsion only, no image or verdict. */}
+              <div
+                className="absolute inset-0"
+                style={{ background: 'radial-gradient(circle at 40% 35%, #4a4a42 0%, #34352f 55%, #262722 100%)' }}
+                aria-label="Undeveloped print"
+              />
               {isDeveloping && (
-                <div className="absolute inset-0 bg-[#2b2823]/60 mix-blend-color-burn pointer-events-none animate-pulse" />
-              )}
-
-              {/* Anomaly Detection Stamp */}
-              {lastPhoto?.hasAnomalyInFrustum && !isDeveloping && (
-                <div className="absolute top-2 right-2 bg-red-600/90 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-1 border border-red-300">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  <span>ANOMALOUS</span>
-                </div>
+                <div className="absolute inset-0 bg-[#2b2823]/40 mix-blend-color-burn pointer-events-none animate-pulse" />
               )}
             </div>
 
             {/* Handwritten Polaroid Bottom Border Caption */}
             <div className="w-full mt-2 text-center font-mono text-[10px] text-gray-700 leading-tight">
-              <div className="font-bold truncate">{lastPhoto?.anomalyName || 'Transit Baseline'}</div>
+              <div className="font-bold truncate">{isDeveloping ? 'Ejecting…' : 'Develops after the ride'}</div>
               <div className="text-[9px] text-gray-500">
-                {isDeveloping ? 'CHEMICALLY DEVELOPING...' : `CAR ${lastPhoto?.carIndex === 0 ? 'A' : lastPhoto?.carIndex === 2 ? 'C' : 'B'} • ${new Date(lastPhoto?.timestamp ? Date.now() : Date.now()).toLocaleTimeString()}`}
+                CAR {lastPhoto?.carIndex === 0 ? 'A' : lastPhoto?.carIndex === 2 ? 'C' : 'B'} • {polaroidManager.remainingFilm} left
               </div>
             </div>
           </div>

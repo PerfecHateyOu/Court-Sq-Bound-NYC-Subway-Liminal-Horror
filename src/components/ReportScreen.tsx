@@ -227,7 +227,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                             {r.anoms.map((a, ai) => (
                               <div key={ai} className="leading-tight">
                                 <span className={a.hit ? 'text-[#264a22] font-bold' : 'text-[#9b3526] font-bold'}>
-                                  {a.hit ? 'Caught' : 'Missed'}:
+                                  {a.hit ? (a.via === 'photo' ? 'Caught on film' : 'Caught') : 'Missed'}:
                                 </span>{' '}
                                 {a.desc}
                               </div>
@@ -382,7 +382,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                   Photographic Evidence ({polaroidManager.photos.length})
                 </h3>
                 <span className="font-mono text-[11px] text-[#264a22] font-bold">
-                  {polaroidManager.photos.filter((p) => p.hasAnomalyInFrustum).length} Anomalies Verified
+                  {polaroidManager.photos.filter((p) => p.hasAnomalyInFrustum).length} caught on film
                 </span>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -393,12 +393,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                       {photo.hasAnomalyInFrustum && (
                         <div className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[7px] font-mono px-1 rounded-xs flex items-center gap-0.5">
                           <Sparkles className="w-2 h-2" />
-                          <span>ANOM</span>
+                          <span>CAUGHT</span>
                         </div>
                       )}
                     </div>
                     <div className="mt-1 truncate font-mono font-bold text-gray-800 text-[8px] text-center">
-                      {photo.anomalyName || 'Baseline'}
+                      {photo.anomalyName || 'Nothing out of place'}
                     </div>
                   </div>
                 ))}

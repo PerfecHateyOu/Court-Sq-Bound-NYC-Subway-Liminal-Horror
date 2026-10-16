@@ -1,7 +1,13 @@
 /**
  * Polaroid 600 Camera & Evidence Photo Management System
  * Handles viewfinder overlay, mechanical shutter discharge, high-voltage flash,
- * WebGL canvas capture, automated anomaly frustum validation, and the evidence photo album.
+ * WebGL canvas capture, and the evidence photo album.
+ *
+ * Rules (master doc: flags are private, nothing confirms correctness in real time):
+ *  - A shot privately records which manifested anomalies were in frame. It is scored with the
+ *    flags when the train reaches the next stop, and counts as a catch the same way a flag does.
+ *  - Prints develop after the ride. During the ride the album and the ejected print show an
+ *    undeveloped frame with no caption, badge, hint or sanity change.
  */
 import * as THREE from 'three';
 import { PolaroidPhoto } from '../types';
@@ -101,7 +107,9 @@ export class PolaroidManager {
     activeAnomalies: Array<{ id: string; desc: string; obj: THREE.Object3D | null; at: number | null }>,
     carIndex: number,
     routeId: 'G' | 'L' | '7',
-    gameTime: number
+    gameTime: number,
+    segIdx: number = -1,
+    stop: string = ''
   ): PolaroidPhoto | null {
     if (this.remainingFilm <= 0) {
       audioEngine.blip();
@@ -119,7 +127,7 @@ export class PolaroidManager {
     this.projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
 
-    let foundAnomaly: { id: string; desc: string } | null = null;
+    const framed: Array<{ id: string; desc: string }> = [];
     const camPos = camera.position;
     const camDir = new THREE.Vector3();
     camera.getWorldDirection(camDir);
@@ -137,14 +145,12 @@ export class PolaroidManager {
 
           // Within ~38 degree cone of center viewfinder or within frustum
           if (angle < 0.65 && this.frustum.containsPoint(this.tempVec)) {
-            foundAnomaly = { id: anom.id, desc: anom.desc };
-            break;
+            framed.push({ id: anom.id, desc: anom.desc });
           }
         }
       } else {
-        // Full-screen / lighting / ambient anomaly: check if looking inside car
-        foundAnomaly = { id: anom.id, desc: anom.desc };
-        break;
+        // Full-screen / lighting / ambient anomaly: any shot inside the car frames it
+        framed.push({ id: anom.id, desc: anom.desc });
       }
     }
 
@@ -190,12 +196,13 @@ export class PolaroidManager {
       dataUrl,
       carIndex,
       routeId,
-      hasAnomalyInFrustum: !!foundAnomaly,
-      anomalyName: foundAnomaly ? foundAnomaly.desc : undefined,
+      segIdx,
+      stop,
+      developed: false,
+      framed,
+      caught: [],
+      hasAnomalyInFrustum: false, // revealed by develop() after the ride
       exposureQuality: Math.round(80 + Math.random() * 20),
-      description: foundAnomaly
-        ? `[CONFIRMED ANOMALOUS] ${foundAnomaly.desc}`
-        : 'Transit interior baseline - No anomalous variance detected',
     };
 
     this.photos.unshift(photo);
@@ -228,6 +235,32 @@ export class PolaroidManager {
 
     this.notify();
     return photo;
+  }
+
+  /**
+   * Photos from a ride segment that framed this anomaly after it appeared. Called when the stop
+   * is scored; marks them (privately) as having caught it.
+   */
+  public photosCatching(segIdx: number, anomalyId: string, desc: string, appearedAt: number): PolaroidPhoto[] {
+    const hits = this.photos.filter(
+      (p) => p.segIdx === segIdx && p.timestamp >= appearedAt && p.framed.some((f) => f.id === anomalyId)
+    );
+    hits.forEach((p) => {
+      if (!p.caught.includes(desc)) p.caught.push(desc);
+    });
+    return hits;
+  }
+
+  /** The ride is over: every print develops and shows what it caught. */
+  public develop() {
+    this.photos.forEach((p) => {
+      p.developed = true;
+      p.hasAnomalyInFrustum = p.caught.length > 0;
+      p.anomalyName = p.caught[0];
+      p.description = p.caught.length ? `Caught: ${p.caught.join('; ')}` : 'Nothing out of place.';
+    });
+    this.isDeveloping = false;
+    this.notify();
   }
 
   private notify() {
