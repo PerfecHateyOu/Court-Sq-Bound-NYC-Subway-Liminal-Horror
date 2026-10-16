@@ -10,6 +10,8 @@
  * Audio lives in audio/evpAudio.ts; the engine wires suspicion, hands-busy and the handoff.
  */
 
+import { routeManager } from './routeManager';
+
 export const EVP_MIN_KHZ = 70;
 export const EVP_MAX_KHZ = 180;
 /** Within this many kHz of a carrier, the recorder locks on. */
@@ -34,6 +36,8 @@ export interface EvpSignalDef {
   transcript: string;
   /** Intercom voice tier (0 clear … 3 broken) used for the garbled speech. */
   voice: number;
+  /** Transcript on routes where the default doesn't fit (the L and 7 never surface). */
+  transcriptOffG?: string;
 }
 
 /** About one broadcast per stretch from the Safe Haven on. Chapter 3's sit on the trestle. */
@@ -84,6 +88,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
     stops: [12, 13],
     category: 'conductor',
     transcript: '…this is your conductor. We are above ground. This train does not go above ground…',
+    transcriptOffG: '…this is your conductor. We are under the river. This train does not go under the river…',
     voice: 2,
   },
   {
@@ -95,6 +100,11 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
     voice: 0,
   },
 ];
+
+/** The words of a broadcast on the current route. */
+export function transcriptOf(s: EvpSignalDef): string {
+  return routeManager.routeId !== 'G' && s.transcriptOffG ? s.transcriptOffG : s.transcript;
+}
 
 export interface EvpTape {
   signalId: string;
@@ -284,7 +294,7 @@ export class EvpManager {
           title: sig.title,
           stop: stopLabel,
           freq: `${this.khz.toFixed(1)} kHz`,
-          transcript: sig.transcript,
+          transcript: transcriptOf(sig),
           gt,
         };
         this.tapes.push(tape);

@@ -121,6 +121,15 @@ export const HUD: React.FC<HUDProps> = ({
           <HeartbeatTrace engine={G} />
         </div>
 
+        {/* Chapter badge (wide screens; on phones the top bar is full and the rollsign carries it) */}
+        <div
+          data-testid="chapter-badge"
+          className="hidden lg:flex items-center px-2.5 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
+        >
+          CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
+          {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
+        </div>
+
         {/* Consist Car Badge */}
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
           <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />

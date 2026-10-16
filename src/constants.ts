@@ -333,35 +333,19 @@ export interface ChapterDef {
   index: 1 | 2 | 3;
   numeral: 'CHAPTER I' | 'CHAPTER II' | 'CHAPTER III';
   title: string;
-  subtitle: string;
+  /** Title on the L and 7, where the train never surfaces. */
+  titleOffG?: string;
   startStop: number;
   endStop: number;
 }
 
+/** Chapters are labels over the 13 stops: no objectives. The subtitle comes from the route's stop names. */
 export const CHAPTERS: ChapterDef[] = [
-  {
-    index: 1,
-    numeral: 'CHAPTER I',
-    title: 'THE DESCENT',
-    subtitle: 'Hoyt–Schermerhorn to 7th Av',
-    startStop: 1,
-    endStop: 5,
-  },
-  {
-    index: 2,
-    numeral: 'CHAPTER II',
-    title: 'SIGNAL DRIFT',
-    subtitle: '4th Av–9th St to Nassau Av',
-    startStop: 6,
-    endStop: 10,
-  },
-  {
-    index: 3,
-    numeral: 'CHAPTER III',
-    title: 'OPERATION SKYWARD',
-    subtitle: 'Greenpoint Av to Court Sq',
-    startStop: 11,
-    endStop: 13,
-  },
+  { index: 1, numeral: 'CHAPTER I', title: 'THE DESCENT', startStop: 1, endStop: 5 },
+  { index: 2, numeral: 'CHAPTER II', title: 'SIGNAL DRIFT', startStop: 6, endStop: 10 },
+  { index: 3, numeral: 'CHAPTER III', title: 'OPERATION SKYWARD', titleOffG: 'THE LAST STRETCH', startStop: 11, endStop: 13 },
 ];
 
+export function chapterForStop(stop: number): ChapterDef {
+  return stop <= 5 ? CHAPTERS[0] : stop <= 10 ? CHAPTERS[1] : CHAPTERS[2];
+}

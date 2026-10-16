@@ -26,7 +26,7 @@ No environment variables are required.
 
 ### Tests
 
-The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, the tape recorder, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
+The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, the tape recorder, chapters and endings, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
 
 Playwright lives in `e2e/` with its own `package.json` and `bun.lock`, so install it there too:
 
@@ -50,6 +50,8 @@ Google AI Studio puts back its original starter `bun.lock` every time it syncs t
 After the Safe Haven, Dad gives you his old tape recorder. Tune it and you'll pick up voices, and some carriers that are only tones. What it hears has nothing to do with what's wrong in the car, and holding it up where your parents can see is a reaction too.
 
 On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" in Settings). iPhones don't support web vibration.
+
+The ride is told in three chapters, announced by a rollsign as each one begins. At Court Square you choose your way out. How the ride ends depends on how you rode it (your composure, your sanity, what you caught, how you got through the restraint, and what's on your tapes), and the report keeps a case file of the endings you've reached.
 
 A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy, plus a Psychological Log: a case file of the 13 anomaly types that fills in across rides.
 
@@ -86,6 +88,7 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
 | `src/game/evpManager.ts`, `src/audio/evpAudio.ts` | EVP tape recorder: broadcasts and decoy carriers per stretch (shuffled every ride), tuning, tapes kept on the device |
+| `src/game/endings.ts` | Endings: the priority rules (`resolveEnding`, a pure function) and the endings archive |
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/trestleBuilder.ts` | The Newtown Creek trestle: sky, skyline, rain and steel for the open-air stretch between Greenpoint Av and Court Sq (G route, Critical) |
 | `src/graphics/glitchPass.ts` | Brief screen tearing and chromatic aberration, used for Critical anomalies and for decoy glitches at low sanity |

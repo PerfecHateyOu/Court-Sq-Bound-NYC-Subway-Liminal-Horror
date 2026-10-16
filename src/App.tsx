@@ -10,6 +10,7 @@ import { audioEngine } from './audio/audioEngine';
 import { settings } from './settings';
 import { KeyLook } from './input/keyLook';
 import { evp } from './game/evpManager';
+import { resolveEnding, ENDINGS } from './game/endings';
 import { shakeCoverScale, SHAKE_BLEED_PX } from './graphics/shakeCover';
 import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
@@ -234,7 +235,7 @@ export default function App() {
     // Test builds only (vite build --mode test): expose internals to the Playwright suite.
     // MODE is replaced at build time, so production bundles don't contain this.
     if (import.meta.env.MODE === 'test') {
-      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale, __P: polaroidManager, __RT: routeManager, __EVP: evp });
+      Object.assign(window, { __G: engine, __A: audioEngine, __S: settings, __R: { renderer, scene, camera, glitchPass }, __shakeCoverScale: shakeCoverScale, __P: polaroidManager, __RT: routeManager, __EVP: evp, __END: { resolveEnding, ENDINGS } });
     }
 
     engine.onStateChange = () => triggerUpdate();
