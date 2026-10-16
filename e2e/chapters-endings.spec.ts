@@ -217,8 +217,8 @@ test.describe('Operation Skyward Phase 3: Chapters & Multiple Escape Endings', (
     await expect(endingsHeader).toContainText('Case File: Documented Endings');
 
     // Unlocked and locked endings rendering
-    await expect(page.locator('text=The Unbroken Mask')).toBeVisible();
-    await expect(page.locator('text=Civilian Extraction')).toBeVisible();
+    await expect(page.getByText('The Unbroken Mask', { exact: true })).toBeVisible();
+    await expect(page.getByText('Civilian Extraction', { exact: true })).toBeVisible();
     await expect(page.locator('text=Undocumented Outcome')).toHaveCount(4);
   });
 });
