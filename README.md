@@ -28,12 +28,18 @@ No environment variables are required.
 
 The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, the tape recorder, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
 
+Playwright lives in `e2e/` with its own `package.json` and `bun.lock`, so install it there too:
+
 ```bash
-npx playwright install chromium   # once
-bun run test                      # or: npm test
+cd e2e && bun install && npx playwright install chromium && cd ..   # once
+bun run test                                                        # or: npm test
 ```
 
 GitHub Actions runs the type-check, the build, and the full browser suite on every pull request and push to `main`. If a test fails, its Playwright trace is attached to the run.
+
+### Google AI Studio and bun.lock
+
+Google AI Studio puts back its original starter `bun.lock` every time it syncs to GitHub. So the root `package.json` keeps the starter's packages (`@google/genai`, `express`, `dotenv`, `motion`, `@types/express`, `autoprefixer`, `esbuild`, `tsx`) even though the game doesn't import them; they never reach the built game. Don't remove them, or the next sync breaks CI again. If a sync ever brings a different lock, CI's "Check bun.lock matches package.json" step fails and says what changed.
 
 ## How to play
 

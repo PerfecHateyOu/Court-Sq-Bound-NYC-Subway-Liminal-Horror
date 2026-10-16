@@ -16,6 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
+      # A frozen install with no lockfile at all would pass, so check it's there first.
+      - name: bun.lock exists
+        run: |
+          for f in bun.lock e2e/bun.lock; do
+            if [ ! -f "$f" ]; then
+              echo "::error title=$f is missing::$f is missing. Run 'bun install' (in e2e/ for e2e/bun.lock) and commit it."
+              exit 1
+            fi
+          done
+      # AI Studio re-pushes its starter bun.lock on every sync, so package.json lists the
+      # same packages that lock does (see README). This check stays strict.
       - name: Check bun.lock matches package.json
         run: |
           if bun install --frozen-lockfile; then
@@ -44,6 +55,10 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit 1
+      # Playwright lives in e2e/ with its own lockfile; the type-check covers e2e/ too.
+      - name: Install e2e deps
+        run: bun install --frozen-lockfile
+        working-directory: e2e
       - run: bun run lint
       - run: bun run build
       - name: Production build has no test hooks
@@ -61,11 +76,16 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
+      - name: Install e2e deps
+        run: bun install --frozen-lockfile
+        working-directory: e2e
       - run: npx playwright install --with-deps chromium
+        working-directory: e2e
       - run: npx playwright test
+        working-directory: e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-traces
-          path: test-results/
+          path: e2e/test-results/
           retention-days: 7
