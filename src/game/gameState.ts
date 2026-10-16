@@ -34,6 +34,7 @@ import {
   tierOf,
   CHAPTERS,
   ChapterDef,
+  chapterForStop,
 } from '../constants';
 import { recordRide, PsychLogResult } from './psychLog';
 import { audioEngine } from '../audio/audioEngine';
@@ -46,7 +47,7 @@ import { polaroidManager } from './polaroidManager';
 import { evp } from './evpManager';
 import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
-import { evaluateEnding, recordEndingToArchive, EndingDefinition } from './endings';
+import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
 
 /** Dusk haze fog colour on the open trestle. */
 const TRESTLE_FOG = new THREE.Color('#2a2236');
@@ -191,10 +192,9 @@ export class GameEngine {
 
   // Operation Skyward Phase 3: Chapters & Multiple Escape Endings
   public currentChapter: ChapterDef = CHAPTERS[0];
-  public chapterRollsign: { chapter: ChapterDef; until: number } | null = null;
+  public chapterRollsign: { chapter: ChapterDef; title: string; subtitle: string; until: number } | null = null;
   public lastShownChapterIndex: number = 0;
-  public branchStop12: 'stay' | 'catwalk' | 'dispatch' | null = null;
-  public finalExitChoice: 'escalators' | 'lower_level' | 'surface_hatch' | null = null;
+  public finalExitChoice: ExitChoice | null = null;
   public resolvedEnding: EndingDefinition | null = null;
 
   // Subway train motion and screen shake
@@ -273,13 +273,16 @@ export class GameEngine {
     this.notifyUI();
   }
 
+  /** Chapter card. Silent (the chime belongs to the doors), never pauses, and labels come from the route. */
   public triggerChapterRollsign(chapter: ChapterDef) {
+    const route = routeManager.activeRoute;
     this.currentChapter = chapter;
     this.chapterRollsign = {
       chapter,
+      title: route.id !== 'G' && chapter.titleOffG ? chapter.titleOffG : chapter.title,
+      subtitle: `${route.stops[chapter.startStop]} to ${route.stops[chapter.endStop]}`,
       until: this.GT + 4.5,
     };
-    audioEngine.chime();
     this.notifyUI();
   }
 
@@ -481,7 +484,6 @@ export class GameEngine {
     this.currentChapter = CHAPTERS[0];
     this.chapterRollsign = null;
     this.lastShownChapterIndex = 0;
-    this.branchStop12 = null;
     this.finalExitChoice = null;
     this.resolvedEnding = null;
 
@@ -590,7 +592,7 @@ export class GameEngine {
     this.addSanity(dVal, 'Per-stop drift');
 
     // Chapter progression and analog rollsign trigger
-    const targetChapter = seg.stop <= 5 ? CHAPTERS[0] : seg.stop <= 10 ? CHAPTERS[1] : CHAPTERS[2];
+    const targetChapter = chapterForStop(seg.stop);
     if (targetChapter.index !== this.lastShownChapterIndex) {
       this.lastShownChapterIndex = targetChapter.index;
       this.sched(0.6, () => this.triggerChapterRollsign(targetChapter));
@@ -811,21 +813,6 @@ export class GameEngine {
     const t = tierOf(this.san);
     const win = (t >= 2 ? 4.0 : 5.0) + (this.isTouch ? 0.5 : 0);
 
-    // Stop 12 (21 St Trestle) Decision A: 3-way branching choice
-    if (this.seg && this.seg.stop === 12 && !this.seg.b) {
-      this.presentChoice({
-        items: [
-          { txt: 'Hold your ground (Watch flickered lights)', val: 'stay' },
-          { txt: 'Inspect Trestle Catwalk (Lean toward open door)', val: 'catwalk' },
-          { txt: 'Tune Dispatch Frequency (Key EVP recorder)', val: 'dispatch' },
-        ],
-        window: win + 1.5,
-        glitch: 0.35,
-        onPick: (val) => this.resolveStop12Choice(rec, val || 'stay'),
-      });
-      return;
-    }
-
     this.presentChoice({
       items: [
         { txt: 'Stay on', val: 'stay' },
@@ -837,93 +824,31 @@ export class GameEngine {
     });
   }
 
-  private resolveStop12Choice(rec: StopLogRecord, choice: 'stay' | 'catwalk' | 'dispatch') {
-    rec.doors = choice === 'catwalk' ? 'off' : 'stay';
-    rec.correct = choice !== 'catwalk';
-
-    if (choice === 'stay') {
-      this.branchStop12 = 'stay';
-      this.setSub(
-        '<em>You hold your ground, watching the telltale flicker of the lights. Mom sighs:</em> <b>Mom:</b> Fine. One more stop.',
-        3.5
-      );
-      this.sched(3.8, () => this.departNext());
-    } else if (choice === 'catwalk') {
-      this.branchStop12 = 'catwalk';
-      this.addSus(SUS.visible, 'Leaned out toward the open trestle catwalk at 21 St', this.carBuilder.parents[0]);
-      this.setSub(
-        '<em>You lean toward the open doorway over the roaring wind of Newtown Creek. Mom grabs your sleeve:</em> <b>Mom:</b> What are you looking out there for?! Get back inside!',
-        3.8
-      );
-      this.sched(4.0, () => this.departNext());
-    } else if (choice === 'dispatch') {
-      this.branchStop12 = 'dispatch';
-      if (!evp.hasRecorder) evp.hasRecorder = true;
-      this.setSub(
-        '<em>You quickly key the recorder. A burst of static echoes through the car:</em> \u201c\u2026Emergency bridge dispatch 142.4 kHz\u2026 all units hold position\u2026\u201d <b>Dad:</b> Did you catch that on that thing?',
-        4.2
-      );
-      this.sched(4.4, () => this.departNext());
-    }
-  }
-
+  /**
+   * The last choice at Court Sq: which way out. The labels never change and nothing says what's
+   * open. The exit only decides which earned ending you walk into (see game/endings.ts).
+   */
   private presentFinalExitChoice() {
-    const tapesCount = evp.tapes.length;
-    const hasSignalLead = tapesCount >= 3 || this.branchStop12 === 'dispatch';
-
-    const items: ChoiceItem[] = [
-      { txt: 'Follow Parents to Escalators (Standard Exit)', val: 'escalators' },
-      {
-        txt: hasSignalLead
-          ? 'Follow EVP Static to Abandoned Lower Level [UNLOCKED]'
-          : 'Follow EVP Static to Abandoned Lower Level (Signal Lost)',
-        val: 'lower_level',
-      },
-      { txt: 'Slip out Emergency Surface Hatch (Catwalk Exit)', val: 'surface_hatch' },
-    ];
-
     this.presentChoice({
-      items,
+      items: [
+        { txt: 'Follow Mom and Dad to the escalators', val: 'escalators' },
+        { txt: 'Follow the static down the side stairs', val: 'lower_level' },
+        { txt: 'Push through the emergency door', val: 'surface_hatch' },
+      ],
       window: 8.0,
       glitch: 0.1,
-      onPick: (val) => this.resolveFinalExitChoice(val || 'escalators', hasSignalLead),
+      onPick: (val) => this.resolveFinalExitChoice((val as ExitChoice) || 'escalators'),
     });
   }
 
-  private resolveFinalExitChoice(choice: 'escalators' | 'lower_level' | 'surface_hatch', hasSignalLead: boolean) {
-    if (choice === 'lower_level') {
-      if (hasSignalLead) {
-        this.finalExitChoice = 'lower_level';
-        this.setSub(
-          '<em>You slip past the rusted chain-link gate into the dark lower level. The recorder hums with clear static.</em>',
-          3.2
-        );
-      } else {
-        this.finalExitChoice = 'escalators';
-        this.setSub(
-          '<em>The lower level stairs are padlocked shut, and the static fades. Mom waves:</em> <b>Mom:</b> Come on, this way!',
-          3.2
-        );
-      }
-    } else if (choice === 'surface_hatch') {
-      if (this.interventions > 0) {
-        this.finalExitChoice = 'escalators';
-        this.setSub(
-          '<em>Dad catches your coat before you reach the emergency door.</em> <b>Dad:</b> Stay close. We\u2019re going up.',
-          3.2
-        );
-      } else {
-        this.finalExitChoice = 'surface_hatch';
-        this.setSub(
-          '<em>You hit the emergency bar. The heavy door gives way into the cool night air high above Long Island City.</em>',
-          3.2
-        );
-      }
-    } else {
-      this.finalExitChoice = 'escalators';
-      this.setSub('<em>You gather your belongings and follow your parents toward the station escalators.</em>', 3.0);
-    }
-
+  private resolveFinalExitChoice(choice: ExitChoice) {
+    this.finalExitChoice = choice;
+    const line: Record<ExitChoice, string> = {
+      escalators: '<em>You follow your parents toward the escalators.</em>',
+      lower_level: '<em>You drift toward the side stairs. The hiss in your pocket gets louder.</em>',
+      surface_hatch: '<em>You lean on the emergency bar. Somewhere above, the air is moving.</em>',
+    };
+    this.setSub(line[choice], 3.0);
     this.sched(3.6, () => this.endGame());
   }
 
@@ -1448,7 +1373,7 @@ export class GameEngine {
     audioEngine.setBedLevel(0.0001, 0.7);
 
     this.sampleSanity();
-    this.resolvedEnding = evaluateEnding(this);
+    this.resolvedEnding = resolveEnding(endingSummary(this));
     recordEndingToArchive(this.resolvedEnding.id);
 
     const runs = this.loadRuns();

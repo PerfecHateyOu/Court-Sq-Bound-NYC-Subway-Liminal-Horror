@@ -8,6 +8,7 @@
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { settings, useSettings } from '../settings';
+import { routeManager } from '../game/routeManager';
 
 interface AnalogRollsignProps {
   engine: GameEngine;
@@ -18,19 +19,21 @@ export const AnalogRollsign: React.FC<AnalogRollsignProps> = ({ engine }) => {
   useSettings(); // re-render when screenEffects toggle changes
 
   const rollsign = G.chapterRollsign;
-  if (!rollsign) return null;
+  // Never on top of a prompt: choices and the restraint own the screen.
+  if (!rollsign || G.choice || G.restraint) return null;
 
-  const { chapter } = rollsign;
+  const { chapter, title, subtitle } = rollsign;
+  const route = routeManager.activeRoute;
   const isReduced = settings.effectsReduced();
 
   return (
     <div
       role="status"
       aria-live="polite"
-      aria-label={`${chapter.numeral}: ${chapter.title} — ${chapter.subtitle}`}
+      aria-label={`${chapter.numeral}: ${title} — ${subtitle}`}
       data-testid="chapter-rollsign"
       data-chapter={chapter.index}
-      className={`fixed left-1/2 top-5 -translate-x-1/2 z-40 pointer-events-none transition-all duration-500 ease-out ${
+      className={`fixed left-1/2 top-[72px] sm:top-20 -translate-x-1/2 z-40 pointer-events-none transition-all duration-500 ease-out ${
         isReduced ? 'opacity-100' : 'animate-in fade-in slide-in-from-top-6 duration-300'
       }`}
     >
@@ -49,8 +52,11 @@ export const AnalogRollsign: React.FC<AnalogRollsignProps> = ({ engine }) => {
 
         {/* Division Header */}
         <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#6cbe45] inline-flex items-center justify-center text-[7px] font-black text-[#121411]">
-            G
+          <span
+            className="w-3.5 h-3.5 rounded-full inline-flex items-center justify-center text-[8px] font-black"
+            style={{ background: route.bulletColor, color: route.bulletTextColor }}
+          >
+            {route.id}
           </span>
           <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.25em] text-[#9f9883] uppercase font-bold">
             MTA NYCT • SYSTEM DIVISION
@@ -64,10 +70,10 @@ export const AnalogRollsign: React.FC<AnalogRollsignProps> = ({ engine }) => {
             {chapter.numeral}
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-[#f3ede0] uppercase font-sans leading-none drop-shadow-sm">
-            {chapter.title}
+            {title}
           </h2>
           <div className="mt-1 pt-1 border-t border-[#3a372f] text-[10px] sm:text-[11px] font-medium text-[#c4bda7] tracking-wider uppercase font-mono">
-            {chapter.subtitle}
+            {subtitle}
           </div>
         </div>
       </div>

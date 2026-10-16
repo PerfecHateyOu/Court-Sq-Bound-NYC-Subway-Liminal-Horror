@@ -8,7 +8,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { evp, EVP_MIN_KHZ, EVP_MAX_KHZ } from '../game/evpManager';
+import { evp, EVP_MIN_KHZ, EVP_MAX_KHZ, transcriptOf } from '../game/evpManager';
 import { settings } from '../settings';
 import { GameEngine } from '../game/gameState';
 
@@ -46,7 +46,8 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
 
   const locked = evp.locked;
   const sig = locked?.kind === 'signal' ? locked.signal! : null;
-  const words = sig ? sig.transcript.slice(0, Math.max(1, Math.round(sig.transcript.length * evp.reveal))) : '';
+  const full = sig ? transcriptOf(sig) : '';
+  const words = sig ? full.slice(0, Math.max(1, Math.round(full.length * evp.reveal))) : '';
   const needle = -50 + 100 * evp.meter;
   const markerPct = ((evp.khz - EVP_MIN_KHZ) / SPAN) * 100;
 

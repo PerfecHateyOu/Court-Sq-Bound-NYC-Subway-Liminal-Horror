@@ -11,12 +11,7 @@ import { RotateCcw, Camera, Sparkles, Compass, Lock } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
-import {
-  evaluateEnding,
-  loadEndingsArchive,
-  ENDINGS,
-  ENDING_IDS,
-} from '../game/endings';
+import { resolveEnding, endingSummary, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -29,8 +24,8 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
   const b = G.getBand(13);
   const secret = G.peak === 0;
 
-  // Ending narrative text & badge evaluated by priority hierarchy
-  const endingDef = evaluateEnding(G);
+  // The ending was decided when the ride ended (game/endings.ts).
+  const endingDef = G.resolvedEnding ?? resolveEnding(endingSummary(G));
   const endingNarrative = endingDef.narrative;
   const endingBadge = endingDef.badge;
 
@@ -401,7 +396,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
               />
             </div>
             <p className="text-[10px] sm:text-[11px] text-[#55574c] mb-3">
-              Unlock terminal escape outcomes across runs through composure, investigative choices, and tape collection.
+              Each ride ends one way. Some ways are harder to find than others.
             </p>
 
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -424,7 +419,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                   >
                     <div className="flex items-baseline justify-between gap-2 mb-1">
                       <span className="font-mono text-[9px] font-bold px-1 py-0.5 rounded bg-[#1b1d18] text-[#ece6d3]">
-                        {def.badge}
+                        {isDiscovered ? def.badge : '[REDACTED]'}
                       </span>
                       {isCurrent && (
                         <span className="font-mono text-[9px] font-black text-[#264a22] uppercase tracking-wider">
@@ -450,9 +445,6 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                           <Lock className="w-3 h-3 text-[#7a786e]" />
                           <span className="font-bold text-[#7a786e] italic">Undocumented Outcome</span>
                         </div>
-                        <p className="text-[10px] sm:text-[11px] leading-snug text-[#7a786e] mt-1 italic">
-                          {def.hint}
-                        </p>
                       </>
                     )}
                   </li>

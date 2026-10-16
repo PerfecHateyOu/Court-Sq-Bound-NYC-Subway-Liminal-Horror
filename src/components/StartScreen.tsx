@@ -6,6 +6,7 @@ import React from 'react';
 import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X } from 'lucide-react';
 import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '../game/psychLog';
 import { loadEvpArchive, EVP_SIGNALS } from '../game/evpManager';
+import { loadEndingsArchive, ENDING_IDS } from '../game/endings';
 import { useProgressEpoch } from '../settings';
 import { useEscape } from '../ui/escape';
 
@@ -26,6 +27,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   useEscape(() => setShowLog(false), showLog);
   const documentedCount = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
   const tapeCount = React.useMemo(() => Object.keys(loadEvpArchive()).length, [showLog, progressEpoch]);
+  const endingCount = React.useMemo(() => Object.keys(loadEndingsArchive()).length, [showLog, progressEpoch]);
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 sm:p-6 bg-black/80 backdrop-blur-md">
@@ -165,6 +167,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
                   </p>
                   <p className="text-xs text-[#55574c]" data-testid="case-files-tapes">
                     Recordings: {tapeCount} of {EVP_SIGNALS.length} broadcasts on tape.
+                  </p>
+                  <p className="text-xs text-[#55574c]" data-testid="case-files-endings">
+                    Endings: {endingCount} of {ENDING_IDS.length} reached.
                   </p>
                 </div>
                 <button

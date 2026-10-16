@@ -1,224 +1,168 @@
 import { test, expect } from './game';
 
-test.describe('Operation Skyward Phase 3: Chapters & Multiple Escape Endings', () => {
-  test('Chapter progression triggers rollsigns for Chapters 1, 2, and 3', async ({ page, game }) => {
-    // Stop 2 (Chapter 1)
-    await game(`
-      G.Q = [];
-      G.startSegment(0); // Stop 2
-      advance(1.0);
-    `);
-    const ch1 = await page.locator('[data-testid="chapter-rollsign"]');
-    await expect(ch1).toBeVisible();
-    await expect(ch1).toContainText('CHAPTER I');
-    await expect(ch1).toContainText('THE DESCENT');
+// Run a segment to its arrival choice, stepping game time.
+const ARRIVE = (seg: number) => `G.Q = []; G.startSegment(${seg}); G.active.forEach((a) => (a.trigger = 999)); G.seg._masks = [];
+  for (let i = 0; i < 4000 && !G.choice; i++) advance(0.05);
+  if (!G.choice) throw new Error('no choice at segment ${seg}');`;
 
-    // Advance past Stop 5 into Stop 6 (Chapter 2 transition)
-    await game(`
-      G.Q = [];
-      G.startSegment(4); // Stop 6 (Safe Haven)
-      advance(1.0);
-    `);
-    const ch2 = await page.locator('[data-testid="chapter-rollsign"]');
-    await expect(ch2).toBeVisible();
-    await expect(ch2).toContainText('CHAPTER II');
-    await expect(ch2).toContainText('SIGNAL DRIFT');
+// A summary that earns nothing special; each test changes one thing.
+const BASE = `{ peak: 20, interventions: 0, trialStops: [], sanPct: 50, accPct: 50, restraintOK: false, tapes: [], exit: 'escalators' }`;
 
-    // Advance into Stop 11 (Chapter 3 transition: Operation Skyward)
-    await game(`
-      G.Q = [];
-      G.startSegment(10); // Stop 11 (Greenpoint Av / Restraint)
-      advance(1.0);
-    `);
-    const ch3 = await page.locator('[data-testid="chapter-rollsign"]');
-    await expect(ch3).toBeVisible();
-    await expect(ch3).toContainText('CHAPTER III');
-    await expect(ch3).toContainText('OPERATION SKYWARD');
+test.describe('Chapters', () => {
+  test('a silent rollsign opens each chapter, labelled from the route, and the HUD badge follows', async ({ page, game }) => {
+    await page.setViewportSize({ width: 1280, height: 720 }); // the badge is wide-screen only
+    const sign = page.getByTestId('chapter-rollsign');
+    const badge = page.getByTestId('chapter-badge');
+    const show = (seg: number) =>
+      game(`G.Q = []; ${seg === 0 ? 'G.lastShownChapterIndex = 0;' : ''}
+        let chimes = 0; const real = A.chime.bind(A); A.chime = () => { chimes++; real(); };
+        G.startSegment(${seg}); advance(1); A.chime = real;
+        return { chimes, sign: G.chapterRollsign && { title: G.chapterRollsign.title, subtitle: G.chapterRollsign.subtitle } };`);
+
+    const one = await show(0);
+    expect(one).toEqual({ chimes: 0, sign: { title: 'THE DESCENT', subtitle: 'Hoyt–Schermerhorn to Bedford–Nostrand Avs' } });
+    await expect(sign).toContainText('CHAPTER I');
+    await expect(badge).toContainText('CH. I');
+
+    // No new card within a chapter.
+    await game(`advance(5);`);
+    expect((await show(1)).sign).toBeNull();
+
+    expect((await show(4)).sign).toEqual({ title: 'SIGNAL DRIFT', subtitle: 'Myrtle–Willoughby Avs to Nassau Av' });
+    await expect(sign).toContainText('CHAPTER II');
+    await expect(badge).toContainText('CH. II // SIGNAL DRIFT');
+
+    const three = await show(10);
+    expect(three).toEqual({ chimes: 0, sign: { title: 'OPERATION SKYWARD', subtitle: 'Greenpoint Av to Court Sq' } });
+    await expect(sign).toContainText('Greenpoint Av to Court Sq');
+
+    // A prompt hides it.
+    await game(`G.startMaskCheck();`);
+    await expect(sign).toHaveCount(0);
   });
 
-  test('Stop 12 presents 3-way branching choices at the 21 St Trestle', async ({ page, game }) => {
-    await game(`
-      G.Q = [];
-      G.startSegment(11); // Stop 12
-      G.san = 5;
-      advance(0.1);
-      while (G.phase === 'ride') { advance(0.2, 0.05); }
-      // Wait for arrival chime and doors to open
-      advance(2.5, 0.05);
-    `);
+  test('off the G, Chapter III is The Last Stretch, with that route’s stops and bullet', async ({ page, game }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const r = await game(`window.__RT.setRoute('L'); G.Q = []; G.startSegment(10); advance(1);
+      return { title: G.chapterRollsign.title, subtitle: G.chapterRollsign.subtitle };`);
+    expect(r).toEqual({ title: 'THE LAST STRETCH', subtitle: 'Morgan Av to Myrtle–Wyckoff Avs' });
+    await expect(page.getByTestId('chapter-rollsign')).toContainText('L');
+    await expect(page.getByTestId('chapter-badge')).toContainText('THE LAST STRETCH');
+  });
+});
 
-    // Verify 3 distinct options rendered in choice bar
-    const choiceButtons = page.locator('button:has-text("Hold your ground"), button:has-text("Inspect Trestle Catwalk"), button:has-text("Tune Dispatch Frequency")');
-    await expect(choiceButtons).toHaveCount(3);
-
-    // Pick "Inspect Trestle Catwalk"
-    await page.locator('button:has-text("Inspect Trestle Catwalk")').click();
-
-    // Verify branch flag and suspicion reaction
-    const state = await game(`return { branch: G.branchStop12, sus: G.sus, phase: G.phase };`);
-    expect(state.branch).toBe('catwalk');
-    expect(state.sus).toBeGreaterThanOrEqual(10);
+test.describe('Doors and the exit', () => {
+  test('21 St is an ordinary door choice, and stepping off there starts the False Stop Trial', async ({ game }) => {
+    const r = await game(`${ARRIVE(11)} const items = G.choice.items.map((i) => i.txt);
+      G.pickChoiceIndex(items.findIndex((t) => /step off/i.test(t))); advance(0.5);
+      return { items, phase: G.phase };`);
+    expect(r.items).toEqual(['Stay on', 'Step off']);
+    expect(r.phase).toBe('trial');
   });
 
-  test('Stop 13 presents final exit choices at Court Sq Terminus', async ({ page, game }) => {
-    await game(`
-      G.Q = [];
-      G.startSegment(12); // Stop 13 (Court Sq)
-      G.san = 5;
-      advance(0.1);
-      while (G.phase === 'ride') { advance(0.2, 0.05); }
-      // Arrive and wait for doors and final choice
-      advance(5.2, 0.05);
-    `);
+  test('the Court Sq exit offers the same three ways out whatever you carry, and says nothing about what’s open', async ({ page, game }) => {
+    const empty = await game(`window.__EVP.tapes = []; ${ARRIVE(12)} return G.choice.items.map((i) => i.txt);`);
+    const full = await game(`G.choice = null; window.__EVP.tapes = [{ signalId: 'conductor' }, { signalId: 'mom-voice' }, { signalId: 'warning-time' }];
+      ${ARRIVE(12)} return G.choice.items.map((i) => i.txt);`);
+    expect(empty).toEqual(['Follow Mom and Dad to the escalators', 'Follow the static down the side stairs', 'Push through the emergency door']);
+    expect(full).toEqual(empty);
+    await expect(page.locator('body')).not.toContainText(/UNLOCKED|Signal Lost|padlock/i);
 
-    const escalatorsBtn = page.locator('button:has-text("Follow Parents to Escalators")');
-    const lowerLevelBtn = page.locator('button:has-text("Follow EVP Static to Abandoned Lower Level")');
-    const surfaceHatchBtn = page.locator('button:has-text("Slip out Emergency Surface Hatch")');
-
-    await expect(escalatorsBtn).toBeVisible();
-    await expect(lowerLevelBtn).toBeVisible();
-    await expect(surfaceHatchBtn).toBeVisible();
+    const r = await game(`G.pickChoiceIndex(1); advance(4); return { exit: G.finalExitChoice, phase: G.phase };`);
+    expect(r).toEqual({ exit: 'lower_level', phase: 'end' });
   });
+});
 
-  test('Priority 1: Zero Suspicion unlocks Secret Unbroken Mask ending', async ({ page, game }) => {
-    await game(`
-      G.peak = 0;
-      G.sus = 0;
-      G.interventions = 0;
-      G.trials = [];
-      G.endGame();
-    `);
-
-    const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
-    await expect(report).toContainText('[SECRET: THE UNBROKEN MASK]');
-    await expect(report).toContainText('You can stop pretending now');
-
-    // Verify saved to endings archive
-    const archive = await page.evaluate(() => JSON.parse(localStorage.getItem('courtSq_endingsArchive') || '{}'));
-    expect(archive.secret_mask).toBeDefined();
-    expect(archive.secret_mask.count).toBeGreaterThanOrEqual(1);
-  });
-
-  test('Priority 2: Recorded EVP tapes and Lower Level unlock Signal Archivist ending', async ({ page, game }) => {
-    await game(`
-      G.peak = 25; // Break zero suspicion
-      G.interventions = 0;
-      G.trials = [];
-      G.branchStop12 = 'dispatch';
-      G.finalExitChoice = 'lower_level';
-      window.__EVP.tapes = [
-        { signalId: '1', title: 'T1', stop: '6', freq: '80', transcript: '...', gt: 1 },
-        { signalId: '2', title: 'T2', stop: '7', freq: '90', transcript: '...', gt: 2 },
-        { signalId: '3', title: 'T3', stop: '8', freq: '100', transcript: '...', gt: 3 },
-      ];
-      G.endGame();
-    `);
-
-    const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
-    await expect(report).toContainText('[BRANCH: SIGNAL ARCHIVIST]');
-    await expect(report).toContainText('abandoned lower level');
-
-    const archive = await page.evaluate(() => JSON.parse(localStorage.getItem('courtSq_endingsArchive') || '{}'));
-    expect(archive.signal_archivist).toBeDefined();
-  });
-
-  test('Priority 3: Catwalk or surface hatch unlocks Skyward Void ending', async ({ page, game }) => {
-    await game(`
-      G.peak = 30;
-      G.interventions = 0;
-      G.trials = [];
-      G.branchStop12 = 'catwalk';
-      G.finalExitChoice = 'surface_hatch';
-      window.__EVP.tapes = [];
-      G.endGame();
-    `);
-
-    const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
-    await expect(report).toContainText('[BRANCH: SKYWARD VOID]');
-    await expect(report).toContainText('elevated steel trestle above Long Island City');
-
-    const archive = await page.evaluate(() => JSON.parse(localStorage.getItem('courtSq_endingsArchive') || '{}'));
-    expect(archive.skyward_void).toBeDefined();
-  });
-
-  test('Priority 4: Interventions take priority over standard and collapse', async ({ page, game }) => {
-    await game(`
-      G.peak = 65;
-      G.interventions = 1;
-      G.trials = [{ stop: 4, depth: 1, clean: true }];
-      G.branchStop12 = 'catwalk';
-      G.finalExitChoice = 'surface_hatch';
-      G.endGame();
-    `);
-
-    const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
-    await expect(report).toContainText('[TERMINAL: EXPOSED]');
-    await expect(report).toContainText('Dad keeps a firm, unyielding grip');
-  });
-
-  test('Priority 5: False Stop Trials lead to Disoriented Collapse', async ({ page, game }) => {
-    await game(`
-      G.peak = 40;
-      G.interventions = 0;
-      G.trials = [{ stop: 4, depth: 2, clean: false }];
-      G.branchStop12 = 'stay';
-      G.finalExitChoice = 'escalators';
-      G.endGame();
-    `);
-
-    const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
-    await expect(report).toContainText('[COLLAPSE: DISORIENTED]');
-    await expect(report).toContainText('45th Road');
-  });
-
-  test('Priority 6: Default civilian exit', async ({ page, game }) => {
-    await game(`
-      G.peak = 20;
-      G.interventions = 0;
-      G.trials = [];
-      G.branchStop12 = 'stay';
-      G.finalExitChoice = 'escalators';
-      G.endGame();
-    `);
-
-    const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
-    await expect(report).toContainText('[STANDARD: EXTRACTION]');
-    await expect(report).toContainText('arguing about where to eat');
-  });
-
-  test('Endings archive tracks discovered endings in Case File on Report Screen', async ({ page, game }) => {
-    await page.evaluate(() => {
-      localStorage.setItem(
-        'courtSq_endingsArchive',
-        JSON.stringify({
-          secret_mask: { id: 'secret_mask', discoveredAt: Date.now(), count: 1 },
-          civilian_extraction: { id: 'civilian_extraction', discoveredAt: Date.now(), count: 2 },
-        })
-      );
+test.describe('Endings', () => {
+  test('are earned, in priority order', async ({ game }) => {
+    const r = await game(`const E = window.__END; const base = ${BASE};
+      const end = (o) => E.resolveEnding({ ...base, ...o }).id;
+      const dawn = { exit: 'escalators', restraintOK: true, tapes: ['conductor'], sanPct: 60 };
+      return {
+        plain: end({}),
+        secret: end({ peak: 0, trialStops: [12], sanPct: 5 }),                       // beats everything
+        loopBait: end({ trialStops: [12], ...{ restraintOK: true, tapes: ['conductor'] } }),
+        loopSanity: end({ sanPct: 29, exit: 'lower_level', tapes: ['a', 'b'], accPct: 90 }),
+        archivist: end({ exit: 'lower_level', tapes: ['a', 'b'], accPct: 75, peak: 30 }),
+        archivistShort: end({ exit: 'lower_level', tapes: ['a'], accPct: 90, peak: 10 }),
+        archivistLoud: end({ exit: 'lower_level', tapes: ['a', 'b'], accPct: 90, peak: 31 }),
+        skyward: end({ exit: 'surface_hatch', restraintOK: true }),
+        skywardTrial: end({ exit: 'surface_hatch', restraintOK: true, trialStops: [4] }),
+        dawn: end(dawn),
+        dawnNoTape: end({ ...dawn, tapes: [] }),
+        dawnLowSanity: end({ ...dawn, sanPct: 59 }),
+        dawnWrongExit: end({ ...dawn, exit: 'surface_hatch', restraintOK: false }),
+        exposed: end({ interventions: 1, trialStops: [4] }),
+        collapse: end({ trialStops: [4] }),
+      };`);
+    expect(r).toEqual({
+      plain: 'civilian_extraction',
+      secret: 'secret_mask',
+      loopBait: 'eternal_commute',
+      loopSanity: 'eternal_commute',
+      archivist: 'signal_archivist',
+      archivistShort: 'civilian_extraction',
+      archivistLoud: 'civilian_extraction',
+      skyward: 'skyward_void',
+      skywardTrial: 'collapse',
+      dawn: 'dawn_horizon',
+      dawnNoTape: 'civilian_extraction',
+      dawnLowSanity: 'civilian_extraction',
+      dawnWrongExit: 'civilian_extraction',
+      exposed: 'exposed',
+      collapse: 'collapse',
     });
+  });
 
-    await game(`
-      G.peak = 20;
-      G.endGame();
-    `);
-
+  test('the ride’s real state decides it: a Trial at 21 St loops you back', async ({ page, game }) => {
+    const id = await game(`G.peak = 20; G.trials = [{ stop: 12, depth: 1, clean: false }]; G.finalExitChoice = 'escalators';
+      G.endGame(); return G.resolvedEnding.id;`);
+    expect(id).toBe('eternal_commute');
     const report = page.locator('article.ticket-slip');
-    await expect(report).toBeVisible();
+    await expect(report).toContainText('[LOOP: THE ETERNAL COMMUTE]');
+    await expect(report).toContainText('The sign says Hoyt');
+  });
 
-    // Verify Case File: Documented Endings section
-    const endingsHeader = page.locator('#endings-archive-h');
-    await expect(endingsHeader).toBeVisible();
-    await expect(endingsHeader).toContainText('Case File: Documented Endings');
+  test('the report hides endings you haven’t reached; the archive is kept, counted in the Case Files, and erased', async ({ page, game }) => {
+    // An archive saved by the first Phase 3 build is carried over.
+    await page.evaluate(() =>
+      localStorage.setItem('courtSq_endingsArchive', JSON.stringify({ secret_mask: { id: 'secret_mask', discoveredAt: 1, count: 1 }, skyward_gone: { count: 1 } }))
+    );
+    await game(`G.peak = 20; G.trials = []; G.interventions = 0; G.finalExitChoice = 'escalators'; G.endGame();`);
 
-    // Unlocked and locked endings rendering
-    await expect(page.locator('text=The Unbroken Mask')).toBeVisible();
-    await expect(page.locator('text=Civilian Extraction')).toBeVisible();
-    await expect(page.locator('text=Undocumented Outcome')).toHaveCount(4);
+    const archive = page.locator('[aria-labelledby="endings-archive-h"]');
+    await expect(archive).toContainText('2 / 8 documented');
+    await expect(archive.getByText('The Unbroken Mask', { exact: true })).toBeVisible();
+    await expect(archive.getByText('Civilian Extraction', { exact: true })).toBeVisible();
+    await expect(archive.getByText('Undocumented Outcome')).toHaveCount(6);
+    await expect(archive.getByText('[REDACTED]')).toHaveCount(6);
+    // Nothing about endings not yet reached.
+    for (const hidden of ['Midnight Terminal', 'Dawn Horizon', 'Skyward Catwalk', 'Eternal Commute', 'conductor', 'restraint']) {
+      await expect(archive).not.toContainText(hidden);
+    }
+    const stored = await page.evaluate(() => ({ now: JSON.parse(localStorage.getItem('gtrain-endings') || '{}'), legacy: localStorage.getItem('courtSq_endingsArchive') }));
+    expect(Object.keys(stored.now).sort()).toEqual(['civilian_extraction', 'secret_mask']);
+    expect(stored.legacy).toBeNull();
+
+    await page.goto('/');
+    await page.getByRole('button', { name: /Case Files/ }).click();
+    await expect(page.getByTestId('case-files-endings')).toHaveText('Endings: 2 of 8 reached.');
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const d = page.locator('[role=dialog]').last();
+    await d.getByRole('button', { name: 'Erase saved progress' }).click();
+    await d.locator('[role=alertdialog]').getByRole('button', { name: 'Erase' }).click();
+    await expect(d.getByText('Saved progress erased.')).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('gtrain-endings'))).toBeNull();
+  });
+
+  test('the conductor speaks to the route you’re on', async ({ game }) => {
+    const r = await game(`const E = window.__EVP; E.newRun(); E.hasRecorder = true;
+      const take = () => { G.Q = []; G.startSegment(11); G.seg._masks = []; G.toggleRecorder(); E.setKhz(E.khzOf('conductor'));
+        E.setRecording(true); advance(1.6); E.setRecording(false); G.toggleRecorder(); return E.tapes.find((t) => t.signalId === 'conductor')?.transcript; };
+      const onG = take(); E.tapes = []; window.__RT.setRoute('7'); const on7 = take(); return { onG, on7 };`);
+    expect(r.onG).toContain('above ground');
+    expect(r.on7).toContain('under the river');
   });
 });
