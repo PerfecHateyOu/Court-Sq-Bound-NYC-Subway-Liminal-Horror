@@ -597,6 +597,56 @@ export class AudioEngine {
     }
   }
 
+  private openAirGain: GainNode | null = null;
+  private openAirLevel = 0;
+
+  /**
+   * Open air on the trestle: low wind plus rain hiss on the glass, faded by how much of the
+   * train is outside (0 in the tunnel, 1 fully out). Built on first use, on the game bus.
+   */
+  public setOpenAir(level: number) {
+    if (!this.ac || !this.masterGain || !this.whiteBuffer) return;
+    level = Math.max(0, Math.min(1, level));
+    if (Math.abs(level - this.openAirLevel) < 0.01 && (level === 0) === (this.openAirLevel === 0)) return;
+    this.openAirLevel = level;
+    if (!this.openAirGain) {
+      if (level === 0) return;
+      const ac = this.ac;
+      this.openAirGain = ac.createGain();
+      this.openAirGain.gain.value = 0;
+      this.openAirGain.connect(this.masterGain);
+      const src = ac.createBufferSource();
+      src.buffer = this.whiteBuffer;
+      src.loop = true;
+      // Wind: low, slowly breathing.
+      const windLp = ac.createBiquadFilter();
+      windLp.type = 'lowpass';
+      windLp.frequency.value = 420;
+      const windGain = ac.createGain();
+      windGain.gain.value = 0.55;
+      const lfo = ac.createOscillator();
+      lfo.frequency.value = 0.13;
+      const lfoAmt = ac.createGain();
+      lfoAmt.gain.value = 0.25;
+      lfo.connect(lfoAmt).connect(windGain.gain);
+      lfo.start();
+      // Rain on glass: a soft high hiss.
+      const rainHp = ac.createBiquadFilter();
+      rainHp.type = 'highpass';
+      rainHp.frequency.value = 3800;
+      const rainGain = ac.createGain();
+      rainGain.gain.value = 0.22;
+      src.connect(windLp).connect(windGain).connect(this.openAirGain);
+      src.connect(rainHp).connect(rainGain).connect(this.openAirGain);
+      src.start();
+    }
+    this.openAirGain.gain.setTargetAtTime(level * 0.14, this.ac.currentTime, 0.4);
+  }
+
+  public getOpenAirLevel(): number {
+    return this.openAirLevel;
+  }
+
   /**
    * Tunnel wind intensity swell when standing in or near the gangway coupling.
    */

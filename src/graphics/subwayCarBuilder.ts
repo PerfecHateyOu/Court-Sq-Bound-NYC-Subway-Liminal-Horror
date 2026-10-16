@@ -4,6 +4,7 @@
  * ergonomic fiberglass seating, responsive sliding doors, and tunnel lighting.
  */
 import * as THREE from 'three';
+import { TrestleBuilder } from './trestleBuilder';
 import { ACROSS_ADS, NEAR_ADS, STOPS, AdDefinition } from '../constants';
 import { TextureGenerator } from './textureGenerator';
 import { CharacterBuilder } from './characterBuilder';
@@ -54,6 +55,8 @@ export interface StationObject {
   g: THREE.Group;
   baseX: number;
   setName: (name: string) => void;
+  /** Elevated, open-air platform (21 St on the trestle): no tiled back wall. */
+  setOpenAir: (on: boolean) => void;
 }
 
 export class SubwayCarBuilder {
@@ -90,6 +93,9 @@ export class SubwayCarBuilder {
   public maps: RouteMapObject[] = [];
   public tunnelItems: Array<{ m: THREE.Mesh; base: number; s: number; light?: boolean }> = [];
   public tunnelLength: number = 84;
+  /** The two long tunnel walls; the engine slides them to make the tunnel mouth. */
+  public tunnelWalls: THREE.Mesh[] = [];
+  public trestle!: TrestleBuilder;
 
   public stA!: StationObject;
   public stB!: StationObject;
@@ -156,6 +162,7 @@ export class SubwayCarBuilder {
     this.buildRouteMaps();
     this.buildPassengers();
     this.buildTunnel();
+    this.trestle = new TrestleBuilder(this.worldGroup);
     this.stA = this.buildStationPlatform();
     this.stB = this.buildStationPlatform();
   }
@@ -637,6 +644,7 @@ export class SubwayCarBuilder {
       const wall = new THREE.Mesh(new THREE.BoxGeometry(400, 3.4, 0.1), mTunnelWall);
       wall.position.set(0, 1.1, s * 2.55);
       this.tunnelGroup.add(wall);
+      this.tunnelWalls.push(wall);
 
       // Tunnel incandescent lights
       for (let i = 0; i < 12; i++) {
@@ -712,6 +720,10 @@ export class SubwayCarBuilder {
       setName: (name: string) => {
         this.textureGen.drawStationSign(signCanvas.getContext('2d')!, name);
         signTex.needsUpdate = true;
+      },
+      setOpenAir: (on: boolean) => {
+        wall.visible = !on;
+        greenTrim.visible = !on;
       },
     };
 
