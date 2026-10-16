@@ -7,7 +7,7 @@ import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
 import { RESTRAINT_RAISE } from '../constants';
-import { RotateCcw, Camera, Sparkles, Compass, Lock } from 'lucide-react';
+import { RotateCcw, Camera, Sparkles, Compass, Lock, DoorOpen } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
@@ -16,7 +16,8 @@ import { resolveEnding, endingSummary, loadEndingsArchive, ENDINGS, ENDING_IDS }
 interface ReportScreenProps {
   engine: GameEngine;
   runs: RunHistoryRecord[];
-  onPlayAgain: () => void;
+  /** `looped` is true for "Get back on" after The Eternal Commute. */
+  onPlayAgain: (looped?: boolean) => void;
 }
 
 export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlayAgain }) => {
@@ -520,13 +521,23 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
 
         {/* Action Button */}
         <div className="mt-5 flex justify-center">
-          <button
-            onClick={onPlayAgain}
-            className="px-6 py-3.5 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Ride Again
-          </button>
+          {endingDef.id === 'eternal_commute' ? (
+            <button
+              onClick={() => onPlayAgain(true)}
+              className="px-6 py-3.5 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
+            >
+              <DoorOpen className="w-4 h-4" />
+              Get back on
+            </button>
+          ) : (
+            <button
+              onClick={() => onPlayAgain()}
+              className="px-6 py-3.5 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Ride Again
+            </button>
+          )}
         </div>
       </div>
     </div>

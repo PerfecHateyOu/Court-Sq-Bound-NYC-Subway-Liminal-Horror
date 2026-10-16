@@ -166,3 +166,27 @@ test.describe('Endings', () => {
     expect(r.on7).toContain('under the river');
   });
 });
+
+test.describe('Get back on', () => {
+  test('after The Eternal Commute the report offers "Get back on": straight back into a ride you\u2019ve been on before', async ({ page, game }) => {
+    await game(`G.peak = 20; G.trials = [{ stop: 12, depth: 1, clean: false }]; G.endGame();`);
+    await expect(page.getByRole('button', { name: 'Ride Again' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Get back on' }).click();
+    await expect(page.locator('text=/Board the train/i')).toHaveCount(0); // no start screen
+
+    const r = await game(`const phase = G.phase, looped = G.looped, report = !!document.querySelector('article.ticket-slip');
+      advance(3); const hint = G.hintText; advance(6.2); return { phase, looped, report, hint, sub: G.subHtml };`);
+    expect(r).toMatchObject({ phase: 'intro', looped: true, report: false, hint: '' });
+    expect(r.sub).toContain('He said that last time, too.');
+  });
+
+  test('any other ending keeps Ride Again, a normal ride with the hint', async ({ page, game }) => {
+    await game(`G.peak = 20; G.trials = []; G.finalExitChoice = 'escalators'; G.endGame();`);
+    await expect(page.getByRole('button', { name: 'Get back on' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Ride Again' }).click();
+    const r = await game(`advance(3); const hint = G.hintText; advance(6.2); return { phase: G.phase, looped: G.looped, hint, sub: G.subHtml };`);
+    expect(r.looped).toBe(false);
+    expect(r.hint).toMatch(/Hold (F|FLAG)/);
+    expect(r.sub).not.toContain('last time');
+  });
+});
