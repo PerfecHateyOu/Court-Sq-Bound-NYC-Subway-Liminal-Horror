@@ -77,6 +77,7 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
+| `src/graphics/trestleBuilder.ts` | The Newtown Creek trestle: sky, skyline, rain and steel for the open-air stretch between Greenpoint Av and Court Sq (G route, Critical) |
 | `src/graphics/glitchPass.ts` | Brief screen tearing and chromatic aberration, used for Critical anomalies and for decoy glitches at low sanity |
 | `src/settings.ts` | Player settings store (saved on the device) |
 | `src/components/` | React HUD, start, pause, settings, and report screens |

@@ -44,6 +44,8 @@ import { polaroidManager } from './polaroidManager';
 import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
 
+/** Dusk haze fog colour on the open trestle. */
+const TRESTLE_FOG = new THREE.Color('#2a2236');
 /** Chance a flash makes a parent who wasn't watching turn to look. */
 const FLASH_GLANCE_CHANCE = 0.5;
 const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
@@ -163,6 +165,14 @@ export class GameEngine {
   public glitch: { start: number; duration: number; strength: number; seed: number } | null = null;
   public glitchDecoyT: number = 30;
   public glitchLog: Array<{ gt: number; reason: 'anomaly' | 'decoy'; strength: number; duration: number }> = [];
+  // Trestle (Operation Skyward, Phase 1): absolute track positions where the tunnel ends and
+  // starts again. +Infinity / null mean "tunnel everywhere" (every segment but the last two).
+  public trestleExitAt: number = Infinity;
+  public trestleEnterAt: number | null = null;
+  /** Fraction of the consist in the open (0..1), and whether any open air is in view. */
+  public trestleOutside: number = 0;
+  public trestleShow: boolean = false;
+  private fogBase: { color: THREE.Color; near: number; far: number } | null = null;
   // Breathing: phase 0..1 through the current breath, and the eased rate and depth (degrees).
   public breathPhase: number = 0;
   public breathBpm: number = 0;
@@ -414,6 +424,23 @@ export class GameEngine {
     this.glitchDecoyT = 30;
     this.glitchLog = [];
     this.breathPhase = 0;
+    this.trestleExitAt = Infinity;
+    this.trestleEnterAt = null;
+    this.trestleOutside = 0;
+    this.trestleShow = false;
+    // Put the tunnel back: the intro doesn't run the world placement that would otherwise do it.
+    this.carBuilder.trestle?.reset();
+    this.carBuilder.tunnelWalls.forEach((w) => (w.position.x = 0));
+    this.carBuilder.tunnelItems.forEach((it) => (it.m.visible = true));
+    this.carBuilder.stA?.setOpenAir(false);
+    this.carBuilder.stB?.setOpenAir(false);
+    const fog = this.scene.fog as THREE.Fog | null;
+    if (fog && this.fogBase) {
+      fog.color.copy(this.fogBase.color);
+      fog.near = this.fogBase.near;
+      fog.far = this.fogBase.far;
+    }
+    audioEngine.setOpenAir(0);
     this.breathBpm = 0;
     this.breathDepth = 0;
     this.psychLog = null;
@@ -541,6 +568,21 @@ export class GameEngine {
     cb.stB.baseX = this.odo + this.segDist(seg);
     cb.stB.setName(STOPS[seg.stop]);
     if (seg.stop === 9) cb.stB.setName(STOPS[9]);
+
+    // The trestle: on the G, the train climbs out of the Newtown Creek tunnel a quarter of the
+    // way to 21 St, arrives at an open-air 21 St, and drops back underground 60% of the way to
+    // Court Sq. Always at Critical (Stops 11-13 are band 0-9). Interior light never changes.
+    const onG = routeManager.routeId === 'G';
+    this.trestleExitAt = Infinity;
+    this.trestleEnterAt = null;
+    if (onG && seg.stop === 12 && !seg.b) {
+      this.trestleExitAt = this.odo + 0.25 * this.segDist(seg);
+    } else if (onG && seg.stop === 13) {
+      this.trestleExitAt = -Infinity;
+      this.trestleEnterAt = this.odo + 0.6 * this.segDist(seg);
+    }
+    cb.stA.setOpenAir(onG && seg.stop === 13); // leaving 21 St
+    cb.stB.setOpenAir(onG && seg.stop === 12 && !seg.b); // arriving at 21 St
 
     cb.crowd.forEach((c) => (c.g.visible = !!seg.crowd));
     this.planAnomalies(seg);
@@ -1828,7 +1870,7 @@ export class GameEngine {
     if (this.phase === 'ride' && this.seg) this.updateIntercom(dt, this.seg);
     if (this.phase === 'ride') this.updateGlitchDecoys(dt);
     this.applyLighting();
-    this.placeWorld(pos, speed);
+    this.placeWorld(pos, speed, dt);
   }
 
   private updateFlag(dt: number) {
@@ -1936,15 +1978,35 @@ export class GameEngine {
     return [yaw, pitch];
   }
 
-  private placeWorld(pos: number, speed: number) {
+  /** Is a point at relative x (train frame) inside the tunnel, given the trestle positions? */
+  private inTunnelAt(x: number, pos: number): boolean {
+    return x <= this.trestleExitAt - pos || (this.trestleEnterAt !== null && x >= this.trestleEnterAt - pos);
+  }
+
+  private placeWorld(pos: number, speed: number, dt: number = 0) {
     const cb = this.carBuilder;
     const L = cb.tunnelLength;
     const best = [1e9, 1e9];
 
+    // Tunnel walls end at the mouth: slide them so the open stretch has none.
+    const wallX = Number.isFinite(this.trestleExitAt)
+      ? this.trestleExitAt - pos - 200
+      : this.trestleEnterAt !== null
+      ? this.trestleEnterAt - pos + 200
+      : 0;
+    cb.tunnelWalls.forEach((w) => (w.position.x = wallX));
+
+    // How much of the 57 m consist is outside, and whether open air is in view at all.
+    let out = 0;
+    for (let i = 0; i <= 12; i++) if (!this.inTunnelAt(-28.5 + i * 4.75, pos)) out++;
+    this.trestleOutside = out / 13;
+    this.trestleShow = !(this.inTunnelAt(-110, pos) && this.inTunnelAt(110, pos));
+
     cb.tunnelItems.forEach((it) => {
       const x = (((it.base - pos) % L) + L) % L - L / 2;
       it.m.position.x = x;
-      if (it.light) {
+      it.m.visible = this.inTunnelAt(x, pos);
+      if (it.light && it.m.visible) {
         const si = it.s < 0 ? 0 : 1;
         if (Math.abs(x) < Math.abs(best[si])) best[si] = x;
       }
@@ -1958,6 +2020,18 @@ export class GameEngine {
       s.g.visible = Math.abs(x) < 60;
       if (Math.abs(x) < 30) near = true;
     });
+
+    cb.trestle.update(this.GT, dt, pos, speed, this.trestleShow, (x) => !this.inTunnelAt(x, pos), settings.effectsReduced(), this.trestleOutside);
+    // Fog: black tunnel murk inside, dusk haze in the open (interior distances stay unfogged).
+    const fog = this.scene.fog as THREE.Fog | null;
+    if (fog) {
+      if (!this.fogBase) this.fogBase = { color: fog.color.clone(), near: fog.near, far: fog.far };
+      const k = this.trestleOutside;
+      fog.color.lerpColors(this.fogBase.color, TRESTLE_FOG, k);
+      fog.near = this.fogBase.near + 5 * k;
+      fog.far = this.fogBase.far + 55 * k;
+    }
+    audioEngine.setOpenAir(this.phase === 'trial' ? 0 : this.trestleOutside);
 
     cb.outLights.forEach((l, i) => {
       l.position.x = best[i];
