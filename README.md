@@ -51,7 +51,7 @@ After the Safe Haven, Dad gives you his old tape recorder. Tune it and you'll pi
 
 On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" in Settings). iPhones don't support web vibration.
 
-The ride is told in three chapters, announced by a rollsign as each one begins. At Court Square you choose your way out. How the ride ends depends on how you rode it (your composure, your sanity, what you caught, how you got through the restraint, and what's on your tapes), and the report keeps a case file of the endings you've reached.
+The ride is told in three chapters, announced by a rollsign as each one begins. At Court Square you choose your way out. How the ride ends depends on how you rode it (your composure, your sanity, what you caught, how you got through the restraint, and what's on your tapes), and the report keeps a case file of the endings you've reached. One ending puts you back where you started; its report offers **Get back on** instead of Ride Again.
 
 A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy, plus a Psychological Log: a case file of the 13 anomaly types that fills in across rides.
 

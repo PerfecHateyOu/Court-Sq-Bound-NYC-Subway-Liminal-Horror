@@ -195,6 +195,8 @@ export class GameEngine {
   public chapterRollsign: { chapter: ChapterDef; title: string; subtitle: string; until: number } | null = null;
   public lastShownChapterIndex: number = 0;
   public finalExitChoice: ExitChoice | null = null;
+  /** This ride began with "Get back on" after The Eternal Commute. */
+  public looped: boolean = false;
   public resolvedEnding: EndingDefinition | null = null;
 
   // Subway train motion and screen shake
@@ -534,8 +536,13 @@ export class GameEngine {
     this.notifyUI();
   }
 
-  public startIntro() {
+  /**
+   * A new ride. `looped` is "Get back on" after The Eternal Commute: the same ride, but you've
+   * been here before (no tutorial hint, and Dad's line lands as a repeat). Nothing else carries over.
+   */
+  public startIntro(opts: { looped?: boolean } = {}) {
     this.newGame();
+    this.looped = !!opts.looped;
     // Camera and route are per ride: a restart or Ride again starts with fresh film,
     // an empty album, the viewfinder down and the G route.
     polaroidManager.reset();
@@ -551,15 +558,18 @@ export class GameEngine {
     audioEngine.setBedLevel(1.0, 0.3);
 
     this.sched(1.2, () => this.setPA('This is a Court Square–bound G train.', 4.0));
-    this.sched(2.5, () =>
-      this.setHint(
-        this.isTouch
-          ? 'Drag to look around. Hold FLAG while looking at anything that changes.'
-          : 'Move the mouse to look. Hold F while looking at anything that changes.',
-        7.0
-      )
-    );
+    if (!this.looped) {
+      this.sched(2.5, () =>
+        this.setHint(
+          this.isTouch
+            ? 'Drag to look around. Hold FLAG while looking at anything that changes.'
+            : 'Move the mouse to look. Hold F while looking at anything that changes.',
+          7.0
+        )
+      );
+    }
     this.sched(6.0, () => this.say(1, 'Grab a seat. It\u2019s a long one.', 2.8));
+    if (this.looped) this.sched(8.9, () => this.setSub('<em>He said that last time, too.</em>', 2.4));
     this.sched(9.0, () => {
       this.setPA('Stand clear of the closing doors, please.', 3.0);
       audioEngine.chime();

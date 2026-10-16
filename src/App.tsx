@@ -708,10 +708,11 @@ export default function App() {
     triggerUpdate();
   };
 
-  const handlePlayAgain = () => {
+  // Ride Again (or "Get back on" after The Eternal Commute) goes straight into the intro.
+  const handlePlayAgain = (looped = false) => {
     const G = engineRef.current;
     if (G) {
-      G.startIntro();
+      G.startIntro({ looped });
       triggerUpdate();
     }
   };
