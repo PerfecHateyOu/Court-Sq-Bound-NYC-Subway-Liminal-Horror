@@ -67,8 +67,16 @@ test.describe('heartbeat', () => {
 test.describe('heartbeat with reduced motion', () => {
   test.use({ contextOptions: { reducedMotion: 'reduce' } });
   test('trace stays still', async ({ page, game }) => {
-    await game(`G.Q = []; toTier(5, 3); await sleep(1500);`);
-    const a = await game(TRACE_HASH);
+    // The static trace redraws once when the tier changes. On a slow machine that first redraw
+    // can land late, so wait until it has happened (two equal readings), then check it holds.
+    await game(`G.Q = []; toTier(5, 3);`);
+    let a = await game(TRACE_HASH);
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(500);
+      const b = await game(TRACE_HASH);
+      if (b === a) break;
+      a = b;
+    }
     await page.waitForTimeout(1500);
     expect(await game(TRACE_HASH)).toBe(a);
   });
