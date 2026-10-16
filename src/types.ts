@@ -77,6 +77,8 @@ export interface StopAnomalyRecord {
   id: string;
   desc: string;
   hit: boolean;
+  /** How it was caught: a held flag, a photo, or both. */
+  via?: 'flag' | 'photo' | 'both';
 }
 
 export interface StopLogRecord {
@@ -169,6 +171,19 @@ export interface PolaroidPhoto {
   dataUrl: string;
   carIndex: number;
   routeId: 'G' | 'L' | '7';
+  /** Ride segment the shot was taken in (-1 outside a ride), and its stop label ("7", "6b"). */
+  segIdx: number;
+  stop: string;
+  /**
+   * Prints develop after the ride, like a real Polaroid 600. Until then nothing about what the
+   * shot caught is shown anywhere: a photo must never work as a real-time anomaly detector.
+   */
+  developed: boolean;
+  /** Private until developed: manifested anomalies in frame at the moment of the shot. */
+  framed: Array<{ id: string; desc: string }>;
+  /** Filled in when the stop is scored: anomalies this photo caught (private until developed). */
+  caught: string[];
+  /** Set when developed. */
   hasAnomalyInFrustum: boolean;
   anomalyName?: string;
   exposureQuality: number;
