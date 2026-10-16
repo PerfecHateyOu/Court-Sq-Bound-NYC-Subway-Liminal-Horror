@@ -14,6 +14,7 @@ import { routeManager } from '../game/routeManager';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import { EvpRecorder } from './EvpRecorder';
+import { AnalogRollsign } from './AnalogRollsign';
 
 interface HUDProps {
   engine: GameEngine;
@@ -74,6 +75,9 @@ export const HUD: React.FC<HUDProps> = ({
 
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-20">
+      {/* Chapter Transition Rollsign */}
+      <AnalogRollsign engine={G} />
+
       {/* Central Reticle */}
       {!isTrial && !polaroidManager.isViewfinderOpen && (
         <div

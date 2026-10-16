@@ -163,6 +163,7 @@ export interface RunHistoryRecord {
   peak: number;
   acc: { correct: number; miss: number; fp: number };
   trials: number;
+  endingId?: string;
 }
 
 export interface PolaroidPhoto {

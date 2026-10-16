@@ -328,3 +328,40 @@ export const NEAR_ADS: AdDefinition[] = [
     logoType: 'book',
   },
 ];
+
+export interface ChapterDef {
+  index: 1 | 2 | 3;
+  numeral: 'CHAPTER I' | 'CHAPTER II' | 'CHAPTER III';
+  title: string;
+  subtitle: string;
+  startStop: number;
+  endStop: number;
+}
+
+export const CHAPTERS: ChapterDef[] = [
+  {
+    index: 1,
+    numeral: 'CHAPTER I',
+    title: 'THE DESCENT',
+    subtitle: 'Hoyt–Schermerhorn to 7th Av',
+    startStop: 1,
+    endStop: 5,
+  },
+  {
+    index: 2,
+    numeral: 'CHAPTER II',
+    title: 'SIGNAL DRIFT',
+    subtitle: '4th Av–9th St to Nassau Av',
+    startStop: 6,
+    endStop: 10,
+  },
+  {
+    index: 3,
+    numeral: 'CHAPTER III',
+    title: 'OPERATION SKYWARD',
+    subtitle: 'Greenpoint Av to Court Sq',
+    startStop: 11,
+    endStop: 13,
+  },
+];
+

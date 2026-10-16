@@ -34,8 +34,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const KEY = 'gtrain-settings';
-/** Saved progress the "Erase saved progress" button clears. */
-export const PROGRESS_KEYS = ['gtrain-psychlog', 'gtrain-runs', 'gtrain-tapes'];
+export const PROGRESS_KEYS = ['gtrain-psychlog', 'gtrain-runs', 'gtrain-tapes', 'courtSq_endingsArchive'];
 
 const clamp = (v: unknown, lo: number, hi: number, d: number) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;

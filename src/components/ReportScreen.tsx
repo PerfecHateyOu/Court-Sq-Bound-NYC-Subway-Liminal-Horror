@@ -7,10 +7,16 @@ import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
 import { RESTRAINT_RAISE } from '../constants';
-import { RotateCcw, Camera, Sparkles } from 'lucide-react';
+import { RotateCcw, Camera, Sparkles, Compass, Lock } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
+import {
+  evaluateEnding,
+  loadEndingsArchive,
+  ENDINGS,
+  ENDING_IDS,
+} from '../game/endings';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -23,18 +29,13 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
   const b = G.getBand(13);
   const secret = G.peak === 0;
 
-  // Ending narrative text
-  let ending = 'You made it to Court Square. Your parents are already arguing about where to eat.';
-  if (secret) {
-    ending =
-      'At Court Square, Mom takes your hand on the escalator. \u201cYou can stop pretending now,\u201d she says, not looking at you. \u201cWe saw it too.\u201d';
-  } else if (G.interventions > 0) {
-    ending =
-      'You made it to Court Square. Dad keeps a hand on your shoulder all the way up the stairs, and nobody says anything.';
-  } else if (G.trials.length > 0) {
-    ending =
-      'You made it to Court Square. Mom doesn\u2019t let go of your sleeve until you\u2019re outside.';
-  }
+  // Ending narrative text & badge evaluated by priority hierarchy
+  const endingDef = evaluateEnding(G);
+  const endingNarrative = endingDef.narrative;
+  const endingBadge = endingDef.badge;
+
+  const endingsArchive = loadEndingsArchive();
+  const documentedEndingsCount = ENDING_IDS.filter((id) => !!endingsArchive[id]).length;
 
   const sanityPct = G.getSanityScore();
   const totalAn = G.acc.correct + G.acc.miss;
@@ -97,8 +98,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
           </div>
 
           {/* Narrative Outcome */}
-          <div className="mb-5 p-3.5 rounded bg-black/5 border-l-4 border-[#6cbe45] text-sm sm:text-base font-semibold leading-relaxed relative z-10">
-            {ending}
+          <div className="mb-5 p-3.5 rounded bg-black/5 border-l-4 border-[#6cbe45] text-sm sm:text-base leading-relaxed relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#1b1d18] text-[#ece6d3] font-mono text-[11px] font-bold tracking-wider mb-2">
+              <Compass className="w-3.5 h-3.5 text-[#e3a83a]" />
+              <span>{endingBadge}</span>
+            </div>
+            <div className="font-semibold text-[#1b1d18]">{endingNarrative}</div>
           </div>
 
           {/* Core Evaluation Pillars */}
@@ -365,6 +370,88 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                         )}
                         <p className="font-mono text-[10px] text-[#55574c] mt-1">
                           Witnessed {rec!.seen}× · caught {rec!.caught}×
+                        </p>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          {/* Documented Endings Archive Case File */}
+          <section aria-labelledby="endings-archive-h" className="mt-5 border-t-2 border-[#1b1d18] pt-3">
+            <div className="flex items-baseline justify-between gap-3 mb-1">
+              <h3 id="endings-archive-h" className="font-black text-xs sm:text-sm uppercase tracking-wide flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-[#1b1d18]" />
+                Case File: Documented Endings
+              </h3>
+              <span className="font-mono text-[11px] sm:text-xs font-bold whitespace-nowrap text-[#264a22]">
+                {documentedEndingsCount} / {ENDING_IDS.length} documented ({Math.round((documentedEndingsCount / ENDING_IDS.length) * 100)}%)
+              </span>
+            </div>
+            <div
+              className="h-1.5 rounded-sm bg-[#c4bda7] overflow-hidden flex mb-2"
+              role="img"
+              aria-label={`${documentedEndingsCount} of ${ENDING_IDS.length} endings documented`}
+            >
+              <div
+                className="h-full bg-[#264a22] transition-all duration-300"
+                style={{ width: `${(documentedEndingsCount / ENDING_IDS.length) * 100}%` }}
+              />
+            </div>
+            <p className="text-[10px] sm:text-[11px] text-[#55574c] mb-3">
+              Unlock terminal escape outcomes across runs through composure, investigative choices, and tape collection.
+            </p>
+
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {ENDING_IDS.map((id) => {
+                const def = ENDINGS[id];
+                const rec = endingsArchive[id];
+                const isDiscovered = !!rec;
+                const isCurrent = endingDef.id === id;
+
+                return (
+                  <li
+                    key={id}
+                    className={`p-2.5 rounded-sm border transition-all ${
+                      isCurrent
+                        ? 'border-[#264a22] bg-[#264a22]/10 ring-1 ring-[#264a22]'
+                        : isDiscovered
+                        ? 'border-[#9f9883] bg-black/5'
+                        : 'border-[#c4bda7] bg-black/[0.02] text-[#55574c]'
+                    }`}
+                  >
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <span className="font-mono text-[9px] font-bold px-1 py-0.5 rounded bg-[#1b1d18] text-[#ece6d3]">
+                        {def.badge}
+                      </span>
+                      {isCurrent && (
+                        <span className="font-mono text-[9px] font-black text-[#264a22] uppercase tracking-wider">
+                          THIS RIDE
+                        </span>
+                      )}
+                    </div>
+
+                    {isDiscovered ? (
+                      <>
+                        <div className="font-extrabold text-[#1b1d18] mt-1">{def.title}</div>
+                        <p className="text-[10px] sm:text-[11px] leading-snug text-[#55574c] mt-0.5">
+                          {def.summary}
+                        </p>
+                        <div className="font-mono text-[9px] text-[#55574c] mt-1 flex items-center justify-between">
+                          <span>Documented {rec.count}×</span>
+                          <span className="text-[#264a22] font-semibold">Filed</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Lock className="w-3 h-3 text-[#7a786e]" />
+                          <span className="font-bold text-[#7a786e] italic">Undocumented Outcome</span>
+                        </div>
+                        <p className="text-[10px] sm:text-[11px] leading-snug text-[#7a786e] mt-1 italic">
+                          {def.hint}
                         </p>
                       </>
                     )}
