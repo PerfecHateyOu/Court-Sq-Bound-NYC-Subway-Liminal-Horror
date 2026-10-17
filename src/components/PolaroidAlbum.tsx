@@ -7,14 +7,18 @@
 import React, { useState } from 'react';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
+import type { GameEngine } from '../game/gameState';
+import { TapePlayButton } from './TapePlayButton';
 import { PolaroidPhoto } from '../types';
 import { X, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, ZoomIn, Mic } from 'lucide-react';
 
 interface PolaroidAlbumProps {
   onClose: () => void;
+  /** Needed to play tapes; without it the Tapes tab shows transcripts only. */
+  engine?: GameEngine;
 }
 
-export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
+export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine }) => {
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
   const [filter, setFilter] = useState<'all' | 'anomalies' | 'carA' | 'carB' | 'carC'>('all');
   const [tab, setTab] = useState<'prints' | 'tapes'>('prints');
@@ -96,10 +100,13 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose }) => {
               <ul className="space-y-3">
                 {tapes.map((t) => (
                   <li key={t.signalId} className="p-3 rounded border border-[#3a3328] bg-[#15130f]">
-                    <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-[#8d8371]">
+                    <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-[#8d8371]">
                       <span className="font-bold text-[#ece6d3] text-xs">{t.title}</span>
-                      <span>
-                        Stop {t.stop} · {t.freq}
+                      <span className="flex items-center gap-2">
+                        <span>
+                          Stop {t.stop} · {t.freq}
+                        </span>
+                        {engine && <TapePlayButton engine={engine} tape={t} />}
                       </span>
                     </div>
                     <p className="mt-1.5 text-sm italic text-[#d9d1bd] leading-snug">{t.transcript}</p>

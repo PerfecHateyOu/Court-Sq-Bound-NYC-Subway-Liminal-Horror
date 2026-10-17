@@ -44,13 +44,15 @@ import { AnomalyManager } from './anomalyManager';
 import { haptics } from './haptics';
 import { settings } from '../settings';
 import { polaroidManager } from './polaroidManager';
-import { evp } from './evpManager';
+import { evp, EVP_SIGNALS } from './evpManager';
 import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
 import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
 
 /** Dusk haze fog colour on the open trestle. */
 const TRESTLE_FOG = new THREE.Color('#2a2236');
+/** Chance a tape played out loud makes a parent who wasn't watching turn to look. */
+const TAPE_GLANCE_CHANCE = 0.5;
 /** Chance a flash makes a parent who wasn't watching turn to look. */
 const FLASH_GLANCE_CHANCE = 0.5;
 const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
@@ -195,6 +197,13 @@ export class GameEngine {
   public chapterRollsign: { chapter: ChapterDef; title: string; subtitle: string; until: number } | null = null;
   public lastShownChapterIndex: number = 0;
   public finalExitChoice: ExitChoice | null = null;
+  /**
+   * A tape playing out loud (Evidence Log or report). During the ride it can be heard: a parent
+   * watching while it plays costs Suspicion once, and it may make one look.
+   */
+  public tapePlaying: { signalId: string; inRide: boolean; charged: boolean; endsAt: number } | null = null;
+  private tapeTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** This ride began with "Get back on" after The Eternal Commute. */
   public looped: boolean = false;
   public resolvedEnding: EndingDefinition | null = null;
@@ -320,6 +329,7 @@ export class GameEngine {
   public pause() {
     if (this.paused || this.phase === 'menu' || this.phase === 'end') return;
     evp.setRecording(false);
+    this.stopTape();
     this.paused = true;
     this.interruptInputs();
     this.notifyUI();
@@ -488,6 +498,7 @@ export class GameEngine {
     this.lastShownChapterIndex = 0;
     this.finalExitChoice = null;
     this.resolvedEnding = null;
+    this.stopTape();
 
     // Reset world entities
     const cb = this.carBuilder;
@@ -943,6 +954,45 @@ export class GameEngine {
     this.notifyUI();
   }
 
+  /** Play a saved tape out loud. Playing another one, or the same one again, restarts. */
+  public playTape(signalId: string) {
+    const sig = EVP_SIGNALS.find((x) => x.id === signalId);
+    if (!sig || this.paused || this.phase === 'menu') return;
+    this.stopTape();
+    const dur = audioEngine.playTape(sig.voice) || 4; // keep the UI honest even with audio off
+    const inRide = this.phase === 'ride' || this.phase === 'stop';
+    this.tapePlaying = { signalId, inRide, charged: false, endsAt: Date.now() + dur * 1000 };
+    this.tapeTimer = setTimeout(() => {
+      this.tapePlaying = null;
+      this.tapeTimer = null;
+      this.notifyUI();
+    }, dur * 1000);
+    // Heard but not seen: a parent who isn't watching may turn toward the sound.
+    if (inRide && !this.carBuilder.parents.some((p) => p.facing) && Math.random() < TAPE_GLANCE_CHANCE) {
+      this.sched(0.8, () => {
+        if (!this.tapePlaying) return;
+        const free = this.carBuilder.parents.filter((p) => !p.frozen && !p.force);
+        const p = free[Math.floor(Math.random() * free.length)];
+        if (p) {
+          p.mode = 'player';
+          p.holdUntil = this.GT + 2.0;
+          p.until = this.GT + 2.0;
+        }
+      });
+    }
+    this.notifyUI();
+  }
+
+  public stopTape() {
+    if (this.tapeTimer) clearTimeout(this.tapeTimer);
+    this.tapeTimer = null;
+    if (this.tapePlaying) {
+      audioEngine.stopTape();
+      this.tapePlaying = null;
+      this.notifyUI();
+    }
+  }
+
   /** Raise or lower the recorder. Raising lowers the camera; it can't come up during prompts. */
   public toggleRecorder(): boolean {
     if (evp.raised) {
@@ -1378,6 +1428,7 @@ export class GameEngine {
   public endGame() {
     this.phase = 'end';
     evp.lower();
+    this.stopTape();
     this.flagHeld = false;
     audioEngine.setMasterLevel(0.2, 0.8);
     audioEngine.setBedLevel(0.0001, 0.7);
@@ -1887,6 +1938,11 @@ export class GameEngine {
     if (evp.raised && watcher && !evp.watchedCharged && (this.phase === 'ride' || this.phase === 'stop')) {
       this.addSus(SUS.visible, `Held up a tape recorder while ${watcher.label} was watching`, watcher);
       evp.watchedCharged = true;
+    }
+    // A tape playing out loud during the ride is a visible reaction if a parent is watching.
+    if (this.tapePlaying?.inRide && !this.tapePlaying.charged && watcher && (this.phase === 'ride' || this.phase === 'stop')) {
+      this.addSus(SUS.visible, `Played a tape out loud while ${watcher.label} was watching`, watcher);
+      this.tapePlaying.charged = true;
     }
     const tape = evp.update(dt, this.phase === 'ride' && seg ? seg.stop : null, this.GT, seg ? `${seg.stop}${seg.b ? 'b' : ''}` : '');
     if (tape) {

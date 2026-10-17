@@ -211,3 +211,60 @@ test.describe('EVP recorder', () => {
     expect(await page.evaluate(() => localStorage.getItem('gtrain-tapes'))).toBeNull();
   });
 });
+
+// A saved tape, without recording one.
+const HAS_TAPE = `window.__EVP.hasRecorder = true; window.__EVP.tapes = [{ signalId: 'passenger-hoyt', title: 'A passenger', stop: '7',
+  freq: '120.0 kHz', transcript: '…I got on at Hoyt too…', gt: 0 }];`;
+const level = `return A.getTapeLevel();`;
+
+test.describe('Tape playback', () => {
+  test('on the report it plays for free, louder than the ducked game, and stops by itself or on Stop', async ({ page, game }) => {
+    await game(`${HAS_TAPE} G.peak = 20; G.finalExitChoice = 'escalators'; G.endGame();`);
+    const sus0 = await game<number>(`return G.sus;`);
+    const tapes = page.locator('[aria-labelledby="tapes-h"]');
+    await tapes.getByRole('button', { name: 'Play tape: A passenger' }).click();
+    await expect(tapes.getByRole('button', { name: 'Stop tape: A passenger' })).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => game<number>(level)).toBeGreaterThan(0.8); // the report ducks the game bus to 0.2
+    expect(await game<number>(`return G.sus;`)).toBe(sus0);
+
+    await tapes.getByRole('button', { name: 'Stop tape: A passenger' }).click();
+    await expect.poll(() => game<number>(level)).toBe(0);
+    await expect(tapes.getByRole('button', { name: 'Play tape: A passenger' })).toBeVisible();
+
+    // Left alone, it ends on its own.
+    await tapes.getByRole('button', { name: 'Play tape: A passenger' }).click();
+    const dur = await game<number>(`return (G.tapePlaying.endsAt - Date.now()) / 1000;`);
+    expect(dur).toBeGreaterThan(1);
+    expect(dur).toBeLessThan(15);
+    await expect(tapes.getByRole('button', { name: 'Play tape: A passenger' })).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('during the ride, playing it while a parent watches costs Suspicion once', async ({ page, game }) => {
+    await game(`ride(${TO_7}); G.seg._masks = []; ${HAS_TAPE}
+      const mom = G.carBuilder.parents[0]; mom.force = true; for (let i = 0; i < 200 && !mom.facing; i++) advance(0.05);
+      window.__P.setAlbum(true);`);
+    await page.getByRole('tab', { name: /TAPES/ }).click();
+    const s0 = await game<number>(`return G.sus;`);
+    await page.getByRole('button', { name: 'Play tape: A passenger' }).click();
+    const r = await game(`advance(2); return { d: G.sus - ${s0}, reason: G.susLog[G.susLog.length - 1]?.reason, playing: !!G.tapePlaying };`);
+    expect(r).toMatchObject({ d: 10, playing: true });
+    expect(r.reason).toMatch(/Played a tape out loud while Mom was watching/);
+  });
+
+  test('unwatched, it may make a parent turn toward the sound', async ({ game }) => {
+    const r = await game(`ride(${TO_7}); G.seg._masks = []; ${LOOK_AWAY} ${HAS_TAPE}
+      const real = Math.random;
+      Math.random = () => 0.99; G.playTape('passenger-hoyt'); advance(1); const quiet = G.carBuilder.parents.filter((p) => p.mode === 'player').length;
+      G.stopTape(); ${LOOK_AWAY}
+      Math.random = () => 0.1; G.playTape('passenger-hoyt'); advance(1); const turned = G.carBuilder.parents.filter((p) => p.mode === 'player').length;
+      Math.random = real; G.stopTape(); return { quiet, turned };`);
+    expect(r).toEqual({ quiet: 0, turned: 1 });
+  });
+
+  test('pausing or a new ride stops it', async ({ game }) => {
+    const r = await game(`ride(${TO_7}); G.seg._masks = []; ${HAS_TAPE}
+      G.playTape('passenger-hoyt'); const on = !!G.tapePlaying; G.pause(); const afterPause = !!G.tapePlaying; G.resume();
+      G.playTape('passenger-hoyt'); G.startIntro(); return { on, afterPause, afterNew: !!G.tapePlaying, level: A.getTapeLevel() };`);
+    expect(r).toEqual({ on: true, afterPause: false, afterNew: false, level: 0 });
+  });
+});

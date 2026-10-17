@@ -11,6 +11,7 @@ import { RotateCcw, Camera, Sparkles, Compass, Lock, DoorOpen } from 'lucide-rea
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
+import { TapePlayButton } from './TapePlayButton';
 import { resolveEnding, endingSummary, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
 
 interface ReportScreenProps {
@@ -498,7 +499,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                   <li key={t.signalId} className="grid grid-cols-[3.25rem_1fr] gap-x-2">
                     <span className="font-mono font-bold text-[11px]">Stop {t.stop}</span>
                     <span>
-                      <strong>{t.title}</strong> <span className="font-mono text-[10px] text-[#55574c]">{t.freq}</span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span>
+                          <strong>{t.title}</strong> <span className="font-mono text-[10px] text-[#55574c]">{t.freq}</span>
+                        </span>
+                        <TapePlayButton engine={G} tape={t} tone="paper" />
+                      </span>
                       <span className="block italic text-[#55574c] leading-snug">{t.transcript}</span>
                     </span>
                   </li>
