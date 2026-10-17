@@ -11,6 +11,7 @@
  */
 
 import { routeManager } from './routeManager';
+import { fillRoute } from './routeText';
 
 export const EVP_MIN_KHZ = 70;
 export const EVP_MAX_KHZ = 180;
@@ -47,7 +48,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
     title: 'Dispatch, track 2',
     stops: [6, 7],
     category: 'dispatch',
-    transcript: '…G four-forty, hold at Nassau. Hold. Do not open the doors at Nassau…',
+    transcript: '…{line} four-forty, hold at {s10}. Hold. Do not open the doors at {s10}…',
     voice: 1,
   },
   {
@@ -55,7 +56,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
     title: 'A passenger',
     stops: [7, 8, 9],
     category: 'passenger',
-    transcript: '…I got on at Hoyt too. I always get on at Hoyt. I always get on at Hoyt…',
+    transcript: '…I got on at {originShort} too. I always get on at {originShort}. I always get on at {originShort}…',
     voice: 1,
   },
   {
@@ -71,7 +72,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
     title: 'Someone at the far end',
     stops: [10, 11],
     category: 'passenger',
-    transcript: '…first time? It gets easier after Greenpoint. Don’t let them see you looking…',
+    transcript: '…first time? It gets easier after {s11}. Don’t let them see you looking…',
     voice: 2,
   },
   {
@@ -103,7 +104,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
 
 /** The words of a broadcast on the current route. */
 export function transcriptOf(s: EvpSignalDef): string {
-  return routeManager.routeId !== 'G' && s.transcriptOffG ? s.transcriptOffG : s.transcript;
+  return fillRoute(routeManager.routeId !== 'G' && s.transcriptOffG ? s.transcriptOffG : s.transcript);
 }
 
 export interface EvpTape {
