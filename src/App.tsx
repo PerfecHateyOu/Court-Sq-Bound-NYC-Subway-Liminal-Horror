@@ -776,6 +776,7 @@ export default function App() {
       {/* Polaroid Evidence Photo Album Drawer */}
       {polaroidManager.isAlbumOpen && (
         <PolaroidAlbum
+          engine={engineRef.current ?? undefined}
           onClose={() => {
             polaroidManager.setAlbum(false);
             triggerUpdate();

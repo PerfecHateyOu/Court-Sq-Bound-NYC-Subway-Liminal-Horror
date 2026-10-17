@@ -6,6 +6,7 @@
 
 import { PauseMusic } from './pauseMusic';
 import { Intercom } from './intercom';
+import { TapePlayback } from './tapePlayback';
 import { EvpAudio, type EvpSoundState } from './evpAudio';
 import { settings } from '../settings';
 
@@ -171,6 +172,26 @@ export class AudioEngine {
       this.evpAudio = new EvpAudio(this.ac, this.masterGain, this.whiteBuffer);
     }
     this.evpAudio.update(state);
+  }
+
+  private tape: TapePlayback | null = null;
+
+  /** Play a tape out loud (see tapePlayback.ts). Returns its duration in seconds, 0 if audio is off. */
+  public playTape(voiceTier: number): number {
+    this.stopTape();
+    if (!this.ac || !this.gameVol || !this.whiteBuffer) return 0;
+    this.tape = new TapePlayback(this.ac, this.gameVol, this.whiteBuffer, voiceTier);
+    return this.tape.duration;
+  }
+
+  public stopTape() {
+    this.tape?.stop();
+    this.tape = null;
+  }
+
+  /** For tests: the playback's output level (0 when nothing is playing). */
+  public getTapeLevel(): number {
+    return this.tape?.level ?? 0;
   }
 
   public getEvpAudio(): EvpAudio | null {

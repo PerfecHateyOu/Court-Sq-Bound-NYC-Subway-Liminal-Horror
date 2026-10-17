@@ -47,7 +47,7 @@ Google AI Studio puts back its original starter `bun.lock` every time it syncs t
 2. **Don't show it.** Staring at something wrong, or whipping your head around, while a parent is looking at you raises their suspicion. When they talk to you, answer like nothing is wrong.
 3. **Read the doors.** At every stop you can stay on or step off. Stepping off is usually a trap.
 
-After the Safe Haven, Dad gives you his old tape recorder. Tune it and you'll pick up voices, and some carriers that are only tones. What it hears has nothing to do with what's wrong in the car, and holding it up where your parents can see is a reaction too.
+After the Safe Haven, Dad gives you his old tape recorder. Tune it and you'll pick up voices, and some carriers that are only tones. What it hears has nothing to do with what's wrong in the car, and holding it up where your parents can see is a reaction too. Tapes you record can be played back from the Evidence Log or the report. During the ride, though, your parents can hear them too.
 
 On Android phones, the train arrives at each stop with a soft vibration for every anomaly you caught on the way in ("Vibrate for catches" in Settings). iPhones don't support web vibration.
 
@@ -87,7 +87,7 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/audioEngine.ts` | WebAudio bed, chimes, screech, whispers |
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
-| `src/game/evpManager.ts`, `src/audio/evpAudio.ts` | EVP tape recorder: broadcasts and decoy carriers per stretch (shuffled every ride), tuning, tapes kept on the device |
+| `src/game/evpManager.ts`, `src/audio/evpAudio.ts`, `src/audio/tapePlayback.ts` | EVP tape recorder: broadcasts and decoy carriers per stretch (shuffled every ride), tuning, tapes kept on the device |
 | `src/game/endings.ts` | Endings: the priority rules (`resolveEnding`, a pure function) and the endings archive |
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/trestleBuilder.ts` | The Newtown Creek trestle: sky, skyline, rain and steel for the open-air stretch between Greenpoint Av and Court Sq (G route, Critical) |
