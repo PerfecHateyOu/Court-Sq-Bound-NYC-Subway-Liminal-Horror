@@ -25,7 +25,6 @@ import {
   RESTRAINT_RAISE,
   SAN,
   SEGS,
-  STOPS,
   SUS,
   TA,
   TD,
@@ -47,6 +46,7 @@ import { polaroidManager } from './polaroidManager';
 import { evp, EVP_SIGNALS } from './evpManager';
 import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
+import { routeText, fillRoute } from './routeText';
 import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
 
 /** Dusk haze fog colour on the open trestle. */
@@ -540,9 +540,9 @@ export class GameEngine {
     cb.worldGroup.visible = true;
     this.trialBuilder.group.visible = false;
     cb.stA.baseX = 0;
-    cb.stA.setName(STOPS[1]);
+    cb.stA.setName(routeManager.getStopName(1));
     cb.stB.baseX = 9999;
-    cb.stB.setName(STOPS[2]);
+    cb.stB.setName(routeManager.getStopName(2));
 
     this.notifyUI();
   }
@@ -568,7 +568,7 @@ export class GameEngine {
     audioEngine.setMasterLevel(0.85, 0.3);
     audioEngine.setBedLevel(1.0, 0.3);
 
-    this.sched(1.2, () => this.setPA('This is a Court Square–bound G train.', 4.0));
+    this.sched(1.2, () => this.setPA(fillRoute('This is a {terminus}–bound {line} train.'), 4.0));
     if (!this.looped) {
       this.sched(2.5, () =>
         this.setHint(
@@ -626,8 +626,8 @@ export class GameEngine {
     cb.stB = prev ? tmp : cb.stB;
     cb.stA.baseX = this.odo;
     cb.stB.baseX = this.odo + this.segDist(seg);
-    cb.stB.setName(STOPS[seg.stop]);
-    if (seg.stop === 9) cb.stB.setName(STOPS[9]);
+    cb.stB.setName(routeManager.getStopName(seg.stop));
+    if (seg.stop === 9) cb.stB.setName(routeManager.getStopName(9));
 
     // The trestle: on the G, the train climbs out of the Newtown Creek tunnel a quarter of the
     // way to 21 St, arrives at an open-air 21 St, and drops back underground 60% of the way to
@@ -659,7 +659,7 @@ export class GameEngine {
     const L = this.segLen(seg);
 
     if (!seg.silent) {
-      this.sched(7.0, () => this.setPA(`The next stop is ${STOPS[seg.stop]}.`, 4.5));
+      this.sched(7.0, () => this.setPA(`The next stop is ${routeManager.getStopName(seg.stop)}.`, 4.5));
     }
 
     if (seg.chat !== undefined) {
@@ -669,7 +669,7 @@ export class GameEngine {
     }
 
     if (seg.final) {
-      this.sched(L - 9.0, () => this.setPA('Court Square. This is the last stop on this train.', 5.0));
+      this.sched(L - 9.0, () => this.setPA(fillRoute('{terminus}. This is the last stop on this train.'), 5.0));
     }
 
     this.notifyUI();
@@ -735,7 +735,7 @@ export class GameEngine {
     const rec: StopLogRecord = {
       stop: seg.stop,
       b: !!seg.b,
-      name: STOPS[seg.stop],
+      name: routeManager.getStopName(seg.stop),
       anoms: [],
       fps: [],
       doors: null,
@@ -796,7 +796,7 @@ export class GameEngine {
       this.sched(2.3, () => {
         this.doorTarget = 1;
       });
-      this.sched(3.4, () => this.say(0, 'Here we are. Court Square.', 3.0));
+      this.sched(3.4, () => this.say(0, fillRoute('Here we are. {terminus}.'), 3.0));
       this.sched(4.8, () => this.presentFinalExitChoice());
       return;
     }
@@ -813,7 +813,7 @@ export class GameEngine {
     if (seg.paLie) {
       this.sched(0.2, () => this.setPA(seg.paLie!, 5.0));
     } else if (!seg.silent && seg.type !== 'false') {
-      this.sched(0.9, () => this.setPA(`This is ${STOPS[seg.stop]}.`, 3.0));
+      this.sched(0.9, () => this.setPA(`This is ${routeManager.getStopName(seg.stop)}.`, 3.0));
     }
 
     this.sched(0.35, () => audioEngine.chime());
@@ -880,7 +880,7 @@ export class GameEngine {
     if (rec.type === 'real') {
       rec.correct = choice === 'stay';
       if (choice === 'off') {
-        this.addSus(SUS.falsePos, `Stepped off at ${STOPS[seg.stop]}, a real stop`, this.carBuilder.parents[0]);
+        this.addSus(SUS.falsePos, `Stepped off at ${routeManager.getStopName(seg.stop)}, a real stop`, this.carBuilder.parents[0]);
         this.addSanity(SAN.falsePos, 'Stepped off at a real stop');
         this.say(0, 'Hey! Where are you going? Get back in here.', 3.0);
         this.sched(3.2, () => this.departNext());
@@ -926,7 +926,7 @@ export class GameEngine {
     audioEngine.setBedLevel(2.2, 0.4);
     this.sched(2.0, () => audioEngine.setBedLevel(0.18, 2.4));
     this.sched(0.8, () => this.say(0, 'Feels good to stand up, right?', 2.6));
-    this.sched(3.5, () => this.say(1, 'Couple more stops after this. Then Court Square.', 2.8));
+    this.sched(3.5, () => this.say(1, fillRoute('Couple more stops after this. Then {terminus}.'), 2.8));
     // Dad hands over his old recorder (the EVP recorder, Operation Skyward Phase 2).
     this.sched(6.4, () => this.giveRecorder('haven'));
     this.sched(10.4, () => {
@@ -1192,7 +1192,7 @@ export class GameEngine {
       correct: 0,
       events: [],
       picks: [],
-      stopName: STOPS[this.seg!.stop],
+      stopName: routeManager.getStopName(this.seg!.stop),
       stepT: 2,
     };
 
@@ -1214,17 +1214,20 @@ export class GameEngine {
     const d = tr.depth;
     tr.correct = tr.mode === 'paths' ? Math.floor(Math.random() * 3) : Math.random() < 0.5 ? 0 : 2;
 
+    const rt = routeText();
+    const toward = fillRoute('To {terminusSign} trains', rt);
     const signsPool = [
-      ['To Court Sq trains', 'Exit', 'To Church Av trains'],
-      ['To Court Sq trains', 'To Court Sq trains', 'To Court Sq trains'],
-      ['To Cort Sq trians', 'Ext', 'To You'],
-      ['Hoyt\u2013Schermerhorn', 'Hoyt\u2013Schermerhorn', 'Hoyt\u2013Schermerhorn'],
+      [toward, 'Exit', fillRoute('To {opposite} trains', rt)],
+      [toward, toward, toward],
+      // The signs start to fail: the first word's letters swap, and one points at you.
+      [toward.replace(/^To (\S)(\S)/, 'To $2$1').replace(/trains$/, 'trians'), 'Ext', 'To You'],
+      [rt.origin, rt.origin, rt.origin],
     ];
     const signs = [...signsPool[Math.min(d, 3)]].sort(() => Math.random() - 0.5);
 
     this.trialBuilder.open.forEach((o, i) => {
       const isDoor = tr.mode === 'board' && i !== 1;
-      this.trialBuilder.setSignText(o, tr.mode === 'board' ? (i === 1 ? '—' : 'Court Sq-bound G') : signs[i]);
+      this.trialBuilder.setSignText(o, tr.mode === 'board' ? (i === 1 ? '—' : fillRoute('{terminusSign}-bound {line}', rt)) : signs[i]);
       o.interior.visible = isDoor;
       o.leaves.forEach((l) => {
         l.lg.visible = isDoor;
@@ -1376,7 +1379,7 @@ export class GameEngine {
       this.snapPeak = 0;
       this.snapCd = 1.5;
 
-      this.addSus(SUS.falsePos, `Walked off the train at ${STOPS[this.seg!.stop]}`, this.carBuilder.parents[0]);
+      this.addSus(SUS.falsePos, `Walked off the train at ${routeManager.getStopName(this.seg!.stop)}`, this.carBuilder.parents[0]);
       this.phase = 'stop';
       this.trial = null;
       this.addSanity(SAN.trial, 'Returned from a False Stop Trial');

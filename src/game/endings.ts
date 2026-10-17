@@ -24,6 +24,8 @@ export type EndingId =
 
 export type ExitChoice = 'escalators' | 'lower_level' | 'surface_hatch';
 
+import { fillRoute } from './routeText';
+
 export interface EndingDefinition {
   id: EndingId;
   priority: number;
@@ -32,6 +34,11 @@ export interface EndingDefinition {
   narrative: string;
   /** Shown in the archive only once this ending has been reached. */
   summary: string;
+}
+
+/** An ending's narrative and summary with the current route's place names (see routeText.ts). */
+export function endingText(def: EndingDefinition): { narrative: string; summary: string } {
+  return { narrative: fillRoute(def.narrative), summary: fillRoute(def.summary) };
 }
 
 /** Everything an ending depends on, taken from the engine when the ride ends. */
@@ -59,7 +66,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'The Unbroken Mask',
     badge: '[SECRET: THE UNBROKEN MASK]',
     narrative:
-      'At Court Square, Mom takes your hand on the escalator. “You can stop pretending now,” she says, not looking at you. “We saw it too.”',
+      'At {terminus}, Mom takes your hand on the escalator. “You can stop pretending now,” she says, not looking at you. “We saw it too.”',
     summary: 'The whole ride without a single visible reaction (peak Suspicion 0).',
   },
   eternal_commute: {
@@ -68,8 +75,8 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'The Eternal Commute',
     badge: '[LOOP: THE ETERNAL COMMUTE]',
     narrative:
-      'The doors open. The sign says Hoyt–Schermerhorn. Mom stands up and smooths her coat. “This is us,” she says.',
-    summary: 'Stepped off at 21 St, or let too much of yourself slip away (Sanity Retained under 30%).',
+      'The doors open. The sign says {origin}. Mom stands up and smooths her coat. “This is us,” she says.',
+    summary: 'Stepped off at {bait}, or let too much of yourself slip away (Sanity Retained under 30%).',
   },
   signal_archivist: {
     id: 'signal_archivist',
@@ -77,7 +84,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'Midnight Terminal',
     badge: '[BRANCH: SIGNAL ARCHIVIST]',
     narrative:
-      'You descend past the rusted chain-link gate into Court Square’s abandoned lower level. The microcassette recorder crackles to life on its own in the damp darkness. A calm dispatcher voice speaks through the hiss: “Track 4 clear. All units hold position.” The loop is broken.',
+      'You descend past the rusted chain-link gate into {terminus}’s abandoned lower level. The microcassette recorder crackles to life on its own in the damp darkness. A calm dispatcher voice speaks through the hiss: “Track 4 clear. All units hold position.” The loop is broken.',
     summary: 'Followed the static down the side stairs, with tapes in hand, most anomalies caught, and your composure intact.',
   },
   skyward_void: {
@@ -95,7 +102,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'Dawn Horizon',
     badge: '[BRANCH: DAWN HORIZON]',
     narrative:
-      'The doors open at Court Square onto daylight that shouldn’t reach this platform. Dad squints and says nothing. For once, neither do you.',
+      'The doors open at {terminus} onto daylight that shouldn’t reach this platform. Dad squints and says nothing. For once, neither do you.',
     summary: 'Stayed with your parents after holding firm through the restraint, with the conductor on tape and most of yourself intact.',
   },
   exposed: {
@@ -104,7 +111,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'Exposed',
     badge: '[TERMINAL: EXPOSED]',
     narrative:
-      'You made it to Court Square. Dad keeps a firm, unyielding grip on your shoulder all the way up the stairs into the street. Nobody says a single word.',
+      'You made it to {terminus}. Dad keeps a firm, unyielding grip on your shoulder all the way up the stairs into the street. Nobody says a single word.',
     summary: 'Your parents stepped in.',
   },
   collapse: {
@@ -113,7 +120,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'Disoriented Collapse',
     badge: '[COLLAPSE: DISORIENTED]',
     narrative:
-      'You made it to Court Square. Mom doesn’t let go of your sleeve until you’re outside on 45th Road. You have no memory of the last three stops.',
+      'You made it to {terminus}. Mom doesn’t let go of your sleeve until you’re outside on {street}. You have no memory of the last three stops.',
     summary: 'Stepped off at a False Stop.',
   },
   civilian_extraction: {
@@ -122,7 +129,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
     title: 'Civilian Extraction',
     badge: '[STANDARD: EXTRACTION]',
     narrative:
-      'You made it to Court Square. Your parents push through the turnstiles, already arguing about where to eat in Long Island City.',
+      'You made it to {terminus}. Your parents push through the turnstiles, already arguing about where to eat in {area}.',
     summary: 'An ordinary arrival.',
   },
 };

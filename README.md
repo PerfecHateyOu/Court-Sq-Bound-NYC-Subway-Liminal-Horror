@@ -88,6 +88,7 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
 | `src/game/evpManager.ts`, `src/audio/evpAudio.ts`, `src/audio/tapePlayback.ts` | EVP tape recorder: broadcasts and decoy carriers per stretch (shuffled every ride), tuning, tapes kept on the device |
+| `src/game/routeText.ts` | Place names per route (first and last stop, streets, the bait stop) for endings, announcements, Trial signs and broadcasts |
 | `src/game/endings.ts` | Endings: the priority rules (`resolveEnding`, a pure function) and the endings archive |
 | `src/game/psychLog.ts` | Psychological Log: case-file entries for each anomaly type, kept across rides on the device |
 | `src/graphics/trestleBuilder.ts` | The Newtown Creek trestle: sky, skyline, rain and steel for the open-air stretch between Greenpoint Av and Court Sq (G route, Critical) |

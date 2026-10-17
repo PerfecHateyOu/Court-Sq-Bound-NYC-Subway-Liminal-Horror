@@ -12,7 +12,8 @@ import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psych
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import { TapePlayButton } from './TapePlayButton';
-import { resolveEnding, endingSummary, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
+import { resolveEnding, endingSummary, endingText, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
+import { routeText } from '../game/routeText';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -28,7 +29,8 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
 
   // The ending was decided when the ride ended (game/endings.ts).
   const endingDef = G.resolvedEnding ?? resolveEnding(endingSummary(G));
-  const endingNarrative = endingDef.narrative;
+  const endingNarrative = endingText(endingDef).narrative;
+  const rt = routeText();
   const endingBadge = endingDef.badge;
 
   const endingsArchive = loadEndingsArchive();
@@ -83,7 +85,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                 Travel Report
               </h2>
               <p className="text-xs sm:text-sm text-[#55574c] mt-1 font-semibold">
-                G train, Hoyt–Schermerhorn to Court Sq. Ride #{runs.length}.
+                {rt.line} train, {rt.origin} to {rt.terminusSign}. Ride #{runs.length}.
               </p>
             </div>
             <div className="text-right hidden sm:block">
@@ -434,7 +436,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                       <>
                         <div className="font-extrabold text-[#1b1d18] mt-1">{def.title}</div>
                         <p className="text-[10px] sm:text-[11px] leading-snug text-[#55574c] mt-0.5">
-                          {def.summary}
+                          {endingText(def).summary}
                         </p>
                         <div className="font-mono text-[9px] text-[#55574c] mt-1 flex items-center justify-between">
                           <span>Documented {rec.count}×</span>
