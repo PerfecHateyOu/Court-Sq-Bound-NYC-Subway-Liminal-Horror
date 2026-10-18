@@ -119,7 +119,7 @@ class SettingsStore {
     return this.systemReduced;
   }
 
-  /** Clears the Psychological Log and ride history. */
+  /** Clears everything in PROGRESS_KEYS (see savedProgress). Settings are kept. */
   public eraseProgress() {
     for (const k of PROGRESS_KEYS) {
       try {
@@ -149,4 +149,33 @@ export function useSettings(): Settings {
 /** React hook: changes whenever saved progress is erased. */
 export function useProgressEpoch(): number {
   return useSyncExternalStore(settings.subscribe, settings.getProgressEpoch, settings.getProgressEpoch);
+}
+
+/**
+ * What "Erase saved progress" would remove, counted, so the confirmation can say exactly that.
+ * Empty when there's nothing saved.
+ */
+export function savedProgress(): string[] {
+  const read = (k: string): unknown => {
+    try {
+      return JSON.parse(localStorage.getItem(k) || 'null');
+    } catch {
+      return null;
+    }
+  };
+  const count = (v: unknown, keep: (x: any) => boolean = () => true) =>
+    Array.isArray(v) ? v.filter(keep).length : v && typeof v === 'object' ? Object.values(v).filter(keep).length : 0;
+  const n = (k: number, one: string, many: string) => (k > 0 ? [`${k} ${k === 1 ? one : many}`] : []);
+  const endings = new Set([
+    ...Object.keys((read('gtrain-endings') as object) || {}),
+    ...Object.keys((read('courtSq_endingsArchive') as object) || {}),
+  ]).size;
+  return [
+    ...n(count(read('gtrain-runs')), 'finished ride', 'finished rides'),
+    ...n(count(read('gtrain-psychlog'), (r) => r && r.seen > 0), 'Case Files entry', 'Case Files entries'),
+    ...n(endings, 'ending', 'endings'),
+    ...n(count(read('gtrain-tapes')), 'tape', 'tapes'),
+    ...n(count(read('gtrain-polaroids')), 'print', 'prints'),
+    ...n(count(read('gtrain-achievements')), 'badge', 'badges'),
+  ];
 }
