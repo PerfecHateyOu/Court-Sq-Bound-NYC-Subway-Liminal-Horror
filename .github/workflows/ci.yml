@@ -55,6 +55,18 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit 1
+      # AI Studio installs with npm, which (unlike bun) refuses peer-dependency conflicts:
+      # when that happens its dev server can't start. Catch it here first.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: npm can install package.json (AI Studio's dev server needs this)
+        run: |
+          if ! npm install --dry-run --no-audit --no-fund > npm-check.log 2>&1; then
+            cat npm-check.log
+            echo "::error title=npm install fails::npm can't install package.json (usually a peer-dependency conflict, shown above), so AI Studio's dev server won't start. Fix the versions in package.json."
+            exit 1
+          fi
       # Playwright lives in e2e/ with its own lockfile; the type-check covers e2e/ too.
       - name: Install e2e deps
         run: bun install --frozen-lockfile
