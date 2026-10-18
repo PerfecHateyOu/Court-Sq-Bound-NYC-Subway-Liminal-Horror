@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+
+# Test build and Playwright output
+dist-test/
+test-results/
+playwright-report/
+
+# AI Studio's working notes (implementation plans etc.)
+.aistudio/

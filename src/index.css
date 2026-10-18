@@ -1,48 +1,240 @@
 @import "tailwindcss";
 
-html, body, #root {
-  width: 100%;
-  height: 100%;
+:root {
+  --tunnel: #0a0d0b;
+  --ink: #ece6d3;
+  --dim: #9a9684;
+  --gline: #6cbe45;
+  --amber: #e3a83a;
+  --tile: #e8e2cf;
+  --tile-ink: #1b1d18;
+  --grout: #b8b09a;
+  --bad: #c9513f;
+  --panel: rgba(9, 12, 10, 0.88);
+  --line: rgba(236, 230, 211, 0.16);
+  --vig: 0.55;
+  font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
   margin: 0;
   padding: 0;
+  background-color: var(--tunnel);
+  color: var(--ink);
   overflow: hidden;
-  background-color: #0c0e10;
-  color: #ece6d3;
   user-select: none;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Subway Tile Pattern Background */
+.subway-tile-pattern {
+  background-color: var(--tile);
+  background-image: linear-gradient(var(--grout) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--grout) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Custom Scrollbar for Report */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(236, 230, 211, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 230, 211, 0.45);
+}
+
+/* Distortion / Liminal filter classes */
+.glitch-text {
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Animations */
+@keyframes tiltPhone {
+  0%, 30% { transform: rotate(0deg); }
+  55%, 85% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-tilt {
+  animation: tiltPhone 2.6s ease-in-out infinite;
+}
+
+/* Ticket slip mask */
+.ticket-slip {
+  -webkit-mask: radial-gradient(circle 7px at 50% 0, transparent 96%, #000) 0 0/18px 100% repeat-x;
+  mask: radial-gradient(circle 7px at 50% 0, transparent 96%, #000) 0 0/18px 100% repeat-x;
+}
+
+/* Transit Signage Flicker and Phosphor Animations */
+@keyframes transitSignFlicker {
+  0% {
+    opacity: 0;
+    filter: brightness(0.3) contrast(1.3);
+    transform: scale(0.985);
+  }
+  6% {
+    opacity: 0.88;
+    filter: brightness(1.4) drop-shadow(0 0 14px rgba(108, 190, 69, 0.45));
+    transform: scale(1.004);
+  }
+  12% {
+    opacity: 0.2;
+    filter: brightness(0.6);
+    transform: scale(0.995);
+  }
+  20% {
+    opacity: 0.95;
+    filter: brightness(1.25) drop-shadow(0 0 8px rgba(227, 168, 58, 0.35));
+    transform: scale(1.002);
+  }
+  28% {
+    opacity: 0.4;
+    filter: brightness(0.75);
+    transform: scale(0.998);
+  }
+  38% {
+    opacity: 1;
+    filter: brightness(1.18) drop-shadow(0 0 6px rgba(236, 230, 211, 0.3));
+    transform: scale(1);
+  }
+  48% {
+    opacity: 0.75;
+    filter: brightness(0.92);
+  }
+  60% {
+    opacity: 1;
+    filter: brightness(1.08);
+  }
+  75% {
+    opacity: 0.92;
+    filter: brightness(0.98);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+@keyframes transitSignFlickerSubtle {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: brightness(0.5);
+  }
+  10% {
+    opacity: 0.85;
+    filter: brightness(1.3);
+    transform: translateY(1px);
+  }
+  20% {
+    opacity: 0.25;
+    filter: brightness(0.7);
+  }
+  35% {
+    opacity: 0.98;
+    filter: brightness(1.15);
+  }
+  50% {
+    opacity: 0.65;
+    filter: brightness(0.88);
+  }
+  68% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: brightness(1.05);
+  }
+  82% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+}
+
+@keyframes transitHeaderGlow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(108, 190, 69, 0.35), 0 0 20px rgba(108, 190, 69, 0.15);
+  }
+  45% {
+    text-shadow: 0 0 14px rgba(108, 190, 69, 0.5), 0 0 28px rgba(108, 190, 69, 0.25);
+  }
+  50% {
+    text-shadow: 0 0 4px rgba(108, 190, 69, 0.1);
+    opacity: 0.88;
+  }
+  55% {
+    text-shadow: 0 0 12px rgba(108, 190, 69, 0.4), 0 0 24px rgba(108, 190, 69, 0.2);
+    opacity: 1;
+  }
+}
+
+@keyframes transitAmberGlow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(227, 168, 58, 0.35), 0 0 20px rgba(227, 168, 58, 0.15);
+  }
+  48% {
+    text-shadow: 0 0 15px rgba(227, 168, 58, 0.55), 0 0 30px rgba(227, 168, 58, 0.25);
+  }
+  52% {
+    text-shadow: 0 0 3px rgba(227, 168, 58, 0.12);
+  }
+  56% {
+    text-shadow: 0 0 12px rgba(227, 168, 58, 0.4), 0 0 24px rgba(227, 168, 58, 0.2);
+  }
 }
 
 .transit-sign-flicker {
-  animation: signFlicker 8s infinite linear;
+  animation: transitSignFlicker 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .transit-sign-flicker-subtle {
-  animation: signFlickerSubtle 12s infinite linear;
+  animation: transitSignFlickerSubtle 0.45s ease-out both;
 }
 
-@keyframes signFlicker {
-  0%, 100% { opacity: 1; }
-  32% { opacity: 1; }
-  32.5% { opacity: 0.88; }
-  33% { opacity: 1; }
-  78% { opacity: 1; }
-  78.3% { opacity: 0.92; }
-  78.7% { opacity: 1; }
+.transit-sign-header {
+  animation: transitHeaderGlow 4.5s ease-in-out infinite;
 }
 
-@keyframes signFlickerSubtle {
-  0%, 100% { opacity: 1; }
-  45% { opacity: 1; }
-  45.3% { opacity: 0.95; }
-  45.6% { opacity: 1; }
+.transit-sign-amber-header {
+  animation: transitAmberGlow 4.5s ease-in-out infinite;
 }
 
+/* Subtle raster lines for illuminated transit boxes */
 .transit-sign-raster {
-  background: repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.15) 0px,
-    rgba(0, 0, 0, 0.15) 1px,
+    rgba(0, 0, 0, 0.12) 0px,
+    rgba(0, 0, 0, 0.12) 1px,
     transparent 1px,
-    transparent 2px
+    transparent 3px
   );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transit-sign-flicker,
+  .transit-sign-flicker-subtle {
+    animation: simpleFadeIn 0.3s ease-out both;
+  }
+  .transit-sign-header,
+  .transit-sign-amber-header {
+    animation: none;
+  }
+}
+
+@keyframes simpleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
