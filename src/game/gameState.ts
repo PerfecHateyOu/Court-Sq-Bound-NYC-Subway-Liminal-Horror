@@ -121,6 +121,8 @@ export class GameEngine {
   public segSusGain: boolean = false;
 
   public flagHeld: boolean = false;
+  /** This press of Flag has already been told the recorder is in the way. */
+  private flagBlockedSaid = false;
   public flagProg: number = 0;
   public flagTid: string | null = null;
   public flagLock: boolean = false;
@@ -1059,6 +1061,9 @@ export class GameEngine {
       polaroidManager.setViewfinder(false);
       this.flagHeld = false;
       evp.raise();
+    } else if (evp.hasRecorder && (this.choice || this.restraint)) {
+      // Say why it won't come up, instead of doing nothing.
+      this.setHint(this.choice ? 'Hands full: answer first, then raise the recorder.' : 'Not now: keep holding on.', 3);
     }
     this.notifyUI();
     return evp.raised;
@@ -2157,12 +2162,18 @@ export class GameEngine {
   }
 
   private updateFlag(dt: number) {
-    // Hands busy: no flagging while the recorder is up.
+    // Hands busy: no flagging while the recorder is up. Say so once per press.
     if (evp.raised) {
       this.flagProg = 0;
       this.flagTid = null;
+      if (this.flagHeld && !this.flagBlockedSaid) {
+        this.flagBlockedSaid = true;
+        this.setHint(`Hands full: lower the recorder to flag (${this.isTouch ? 'tap Recorder' : 'press R'}).`, 3);
+      }
+      if (!this.flagHeld) this.flagBlockedSaid = false;
       return;
     }
+    this.flagBlockedSaid = false;
     if (this.flagHeld && !this.flagLock && this.gazeTid) {
       if (this.flagTid !== this.gazeTid) {
         this.flagTid = this.gazeTid;
@@ -2444,6 +2455,12 @@ export class GameEngine {
    * The flash is a visible reaction: if a parent is watching it raises Suspicion, and if not,
    * it can still make one of them look over.
    */
+  /** A photo from a tap, click or key: at most one per SNAP_COOLDOWN_MS, so a double tap takes one. */
+  public snapFromInput() {
+    if (!polaroidManager.readyToSnap()) return null;
+    return this.takePolaroidPhoto();
+  }
+
   public takePolaroidPhoto() {
     const seg = this.seg;
     const photo = polaroidManager.snapPhoto(

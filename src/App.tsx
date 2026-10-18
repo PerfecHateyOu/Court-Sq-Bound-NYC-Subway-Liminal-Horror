@@ -374,7 +374,7 @@ export default function App() {
       // waits for pointerup so a drag can aim first (see handlePointerEnd).
       if (polaroidManager.isViewfinderOpen && e.button === 0) {
         if (e.pointerType === 'mouse') {
-          G.takePolaroidPhoto();
+          G.snapFromInput();
           triggerUpdate();
           return;
         }
@@ -439,7 +439,7 @@ export default function App() {
           !G.paused &&
           polaroidManager.isViewfinderOpen
         ) {
-          G.takePolaroidPhoto();
+          G.snapFromInput();
           triggerUpdate();
         }
       }
@@ -593,7 +593,8 @@ export default function App() {
       // Snap photo if viewfinder is active
       if (polaroidManager.isViewfinderOpen && (e.code === 'Space' || e.code === 'Enter')) {
         e.preventDefault();
-        G.takePolaroidPhoto();
+        if (e.repeat) return; // holding the key takes one photo, not a burst
+        G.snapFromInput();
         triggerUpdate();
         return;
       }

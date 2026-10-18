@@ -75,6 +75,8 @@ export async function persistThumbnails(photos: PolaroidPhoto[]): Promise<void> 
 
 /** Film loaded at the start of every ride. */
 export const STARTING_FILM = 8;
+/** After a shot, taps, clicks and keys are ignored this long (ms): a double tap takes one photo. */
+export const SNAP_COOLDOWN_MS = 700;
 
 export class PolaroidManager {
   public isViewfinderOpen: boolean = false;
@@ -86,6 +88,8 @@ export class PolaroidManager {
   public flashActive: boolean = false;
   public flashUntil: number = 0;
   public isAlbumOpen: boolean = false;
+  /** performance.now() when the last shot finished (for SNAP_COOLDOWN_MS). */
+  private lastSnapAt = -Infinity;
 
   private frustum = new THREE.Frustum();
   private projScreenMatrix = new THREE.Matrix4();
@@ -111,7 +115,13 @@ export class PolaroidManager {
     this.isDeveloping = false;
     this.flashActive = false;
     this.flashUntil = 0;
+    this.lastSnapAt = -Infinity;
     this.notify();
+  }
+
+  /** Whether a tap, click or key may take a photo yet (see SNAP_COOLDOWN_MS). */
+  public readyToSnap(now = performance.now()): boolean {
+    return now - this.lastSnapAt >= SNAP_COOLDOWN_MS;
   }
 
   public toggleViewfinder(): boolean {
@@ -293,6 +303,8 @@ export class PolaroidManager {
       this.onPhotoSnapped(photo);
     }
 
+    // The cooldown runs from when the shot is done: capturing the frame can take a while on a slow GPU.
+    this.lastSnapAt = performance.now();
     this.notify();
     return photo;
   }

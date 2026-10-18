@@ -26,7 +26,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
   const flashActive = polaroidManager.flashActive;
 
   const handleSnap = () => {
-    engine.takePolaroidPhoto();
+    engine.snapFromInput();
   };
 
   return (
@@ -74,9 +74,9 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
           </div>
 
           {/* Center Viewfinder Framing Crosshairs & Reticle */}
-          <div className="relative flex-1 flex items-center justify-center pointer-events-none">
-            {/* 1:1 Square Format Framing Box */}
-            <div className="relative w-[min(72vw,72vh)] h-[min(72vw,72vh)] border-2 border-dashed border-white/30 rounded-sm">
+          <div className="relative flex-1 min-h-0 flex items-center justify-center pointer-events-none">
+            {/* 1:1 Square Format Framing Box (shrinks to fit between the bars on short screens) */}
+            <div className="relative h-full max-h-[min(72vw,72vh)] aspect-square border-2 border-dashed border-white/30 rounded-sm">
               {/* Corner framing brackets */}
               <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/80" />
               <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/80" />
@@ -115,9 +115,15 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
                     : 'bg-red-900/40 text-red-400 border border-red-500/40'
                 }`}
               >
-                0{remainingFilm} / 10
+                {String(remainingFilm).padStart(2, '0')} / {polaroidManager.maxFilm}
               </span>
-              <span className="text-[10px] text-white/40 hidden sm:inline">600 INSTANT CARTRIDGE</span>
+              {remainingFilm > 0 ? (
+                <span className="text-[10px] text-white/40 hidden sm:inline">600 INSTANT CARTRIDGE</span>
+              ) : (
+                <span data-testid="out-of-film" className="text-[10px] text-red-300">
+                  Out of film. Your prints develop after the ride.
+                </span>
+              )}
             </div>
 
             {/* Red Shutter Trigger Button */}
@@ -131,10 +137,12 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
               }`}
             >
               <Camera className="w-5 h-5" />
-              <span>SNAP PHOTO</span>
-              <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono hidden sm:inline">
-                CLICK / SPACE
-              </span>
+              <span>{remainingFilm > 0 ? 'SNAP PHOTO' : 'OUT OF FILM'}</span>
+              {remainingFilm > 0 && (
+                <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono hidden sm:inline">
+                  CLICK / SPACE
+                </span>
+              )}
             </button>
           </div>
         </div>
