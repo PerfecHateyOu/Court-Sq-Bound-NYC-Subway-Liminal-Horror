@@ -8,6 +8,7 @@
  * Checked in priority order; the first match wins. `resolveEnding` is a pure function of an
  * `EndingSummary`, so the rules are testable without the 3D scene.
  */
+import { practice } from './practice';
 import type { GameEngine } from './gameState';
 import { evp } from './evpManager';
 import { SUS } from '../constants';
@@ -202,6 +203,7 @@ export function loadEndingsArchive(): EndingsArchive {
 
 export function recordEndingToArchive(id: EndingId): EndingsArchive {
   const archive = loadEndingsArchive();
+  if (practice.on) return archive; // practice runs don't discover endings
   const existing = archive[id];
   archive[id] = { id, discoveredAt: existing?.discoveredAt ?? Date.now(), count: (existing?.count ?? 0) + 1 };
   try {

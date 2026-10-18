@@ -10,6 +10,7 @@
  * The log is only shown on the end-of-ride report, after scoring, so it never acts as an
  * oracle during play.
  */
+import { practice } from './practice';
 import type { StopLogRecord } from '../types';
 
 export interface PsychEntryDef {
@@ -150,6 +151,11 @@ export function recordRide(stopLog: StopLogRecord[], now = Date.now()): PsychLog
     for (const a of r.anoms) {
       if (!a.id || !PSYCH_ENTRIES[a.id]) continue;
       const prev = archive[a.id];
+      if (practice.on) {
+        // Practice runs list what happened but leave the Case Files as they were.
+        ride.push({ id: a.id, stop: `${r.stop}${r.b ? 'b' : ''}`, desc: a.desc, hit: a.hit, isNew: false, confirmed: false });
+        continue;
+      }
       const isNew = !prev;
       const rec: PsychRecord = prev ?? { seen: 0, caught: 0, first: now };
       const confirmed = !isNew && a.hit && rec.caught === 0;
@@ -160,6 +166,6 @@ export function recordRide(stopLog: StopLogRecord[], now = Date.now()): PsychLog
     }
   }
 
-  saveArchive(archive);
+  if (!practice.on) saveArchive(archive);
   return { ride, archive };
 }
