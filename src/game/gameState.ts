@@ -31,6 +31,7 @@ import {
   TD,
   TIER_NAMES,
   V,
+  NIGHTMARE,
   tierOf,
   CHAPTERS,
   ChapterDef,
@@ -209,6 +210,11 @@ export class GameEngine {
 
   /** The trestle badge has been checked this ride. */
   private trestleBadgeChecked = false;
+
+  /** Nightmare mode (see NIGHTMARE in constants.ts). Chosen on the start screen; kept across rides. */
+  public nightmare = false;
+  /** Game time until which each ceiling tube is out (Nightmare bulb flicker). */
+  private bulbOut: number[] = [];
 
   /** This ride began with "Get back on" after The Eternal Commute. */
   public looped: boolean = false;
@@ -622,7 +628,8 @@ export class GameEngine {
     this.bandStop = seg.stop;
 
     if (this.harder > 0) this.harder--;
-    const dVal = DRIFT[seg.stop] ?? SAN.drift;
+    const base = DRIFT[seg.stop] ?? SAN.drift;
+    const dVal = this.nightmare ? Math.min(NIGHTMARE.minDrift, base * NIGHTMARE.drift) : base;
     this.addSanity(dVal, 'Per-stop drift');
 
     // Chapter progression and analog rollsign trigger
@@ -663,7 +670,10 @@ export class GameEngine {
     }
     this.planAnomalies(seg);
 
-    seg._masks = (seg.mask || []).map((t) => ({ t, done: false }));
+    // Mask checks are timed for the normal ride; a shorter Nightmare ride brings them forward too,
+    // so none lands on the approach.
+    const maskScale = this.nightmare ? NIGHTMARE.cruise : 1;
+    seg._masks = (seg.mask || []).map((t) => ({ t: Math.max(6, t * maskScale), done: false }));
     seg._havenSaid = false;
     seg._screech = false;
     seg._mislead = false;
@@ -704,7 +714,7 @@ export class GameEngine {
   private planAnomalies(seg: SegmentDef) {
     this.active = [];
     this.usedTids = new Set();
-    const C = seg.cruise || 26;
+    const C = this.cruiseOf(seg);
     const times: number[] = [];
     const n = seg.anoms + (seg.forced ? seg.forced.length : 0);
     for (let i = 0; i < n; i++) {
@@ -1462,6 +1472,7 @@ export class GameEngine {
       acc: this.acc,
       trials: this.trials.length,
       endingId: this.resolvedEnding.id,
+      nightmare: this.nightmare,
     });
     this.saveRuns(runs);
     this.psychLog = recordRide(this.stopLog);
@@ -1714,7 +1725,7 @@ export class GameEngine {
     }
 
     this.speed = speed;
-    const sf = speed / V;
+    const sf = speed / this.topSpeed;
 
     // Train motion & screen shake calculation linked to ride phase and sanity tier
     const isRide = this.phase === 'ride' && !!seg;
@@ -2109,6 +2120,7 @@ export class GameEngine {
     }
     if (this.phase === 'ride' && this.seg) this.updateIntercom(dt, this.seg);
     if (this.phase === 'ride') this.updateGlitchDecoys(dt);
+    this.updateBulbs(dt);
     this.applyLighting();
     this.placeWorld(pos, speed, dt);
   }
@@ -2162,9 +2174,9 @@ export class GameEngine {
             p.mode = Math.random() < 0.6 ? 'phone' : 'other';
             p.until = this.GT + (4 + Math.random() * 5);
           }
-        } else if (active && other.mode !== 'player' && Math.random() < 0.6 + 0.1 * this.tier) {
+        } else if (active && other.mode !== 'player' && Math.random() < 0.6 + 0.1 * this.tier + (this.nightmare ? NIGHTMARE.glance : 0)) {
           p.mode = 'player';
-          p.until = this.GT + (1.6 + Math.random() * 1.6);
+          p.until = this.GT + (1.6 + Math.random() * 1.6) * (this.nightmare ? NIGHTMARE.watchHold : 1);
         } else {
           const modes = ['phone', 'phone', 'other', 'down'] as const;
           p.mode = modes[Math.floor(Math.random() * modes.length)];
@@ -2196,7 +2208,8 @@ export class GameEngine {
 
       if (p.phone) p.phone.visible = p.mode === 'phone';
       const [py, pp] = this.aimLocal(p, this.camera.position);
-      p.facing = p.mode === 'player' && Math.abs((p.yaw || 0) - py) < 0.22 && Math.abs((p.pitch || 0) - pp) < 0.25;
+      const [fy, fp] = this.nightmare ? [NIGHTMARE.facingYaw, NIGHTMARE.facingPitch] : [0.22, 0.25];
+      p.facing = p.mode === 'player' && Math.abs((p.yaw || 0) - py) < fy && Math.abs((p.pitch || 0) - pp) < fp;
     });
   }
 
@@ -2297,20 +2310,57 @@ export class GameEngine {
 
     cb.carLights.forEach((l) => (l.intensity = 0.55 * k * (1 - this.tier * 0.08)));
     cb.hemiLight.intensity = off ? 0.05 : 0.65 * (0.55 + 0.45 * k) * (1 - this.tier * 0.07);
-    cb.lightSegs.forEach((l) => (l.m.visible = !off));
+    cb.lightSegs.forEach((l, i) => (l.m.visible = !off && !(this.GT < (this.bulbOut[i] ?? -1))));
+  }
+
+  /**
+   * Nightmare: single ceiling tubes drop out for a moment, mid-ride only. Never the whole car
+   * (that's the False Stop tick), never near departure or on the approach, and not with
+   * Screen effects: Reduced.
+   */
+  private updateBulbs(dt: number) {
+    const seg = this.seg;
+    const n = this.carBuilder.lightSegs.length;
+    const allowed =
+      this.nightmare &&
+      !settings.effectsReduced() &&
+      this.phase === 'ride' &&
+      !!seg &&
+      this.ts > NIGHTMARE.bulbQuietStart &&
+      this.ts < this.segLen(seg) - TD - NIGHTMARE.bulbQuietEnd;
+    if (!allowed) {
+      if (this.bulbOut.length) this.bulbOut = [];
+      return;
+    }
+    if (n && Math.random() < NIGHTMARE.bulbRate * dt) {
+      const [a, b] = NIGHTMARE.bulbOut;
+      this.bulbOut[Math.floor(Math.random() * n)] = this.GT + a + Math.random() * (b - a);
+    }
   }
 
   // Kinematic helpers
+  /** Top speed (m/s): faster in Nightmare. */
+  public get topSpeed(): number {
+    return V * (this.nightmare ? NIGHTMARE.speed : 1);
+  }
+
+  /** Seconds at top speed between stations: shorter in Nightmare. */
+  public cruiseOf(s: SegmentDef): number {
+    return (s.cruise || 26) * (this.nightmare ? NIGHTMARE.cruise : 1);
+  }
+
   public segLen(s: SegmentDef): number {
-    return TA + (s.cruise || 26) + TD;
+    return TA + this.cruiseOf(s) + TD;
   }
 
   public segDist(s: SegmentDef): number {
-    return V * (TA / 2 + (s.cruise || 26) + TD / 2);
+    const V = this.topSpeed;
+    return V * (TA / 2 + this.cruiseOf(s) + TD / 2);
   }
 
   private segVel(s: SegmentDef, t: number): number {
-    const C = s.cruise || 26;
+    const V = this.topSpeed;
+    const C = this.cruiseOf(s);
     if (t < TA) return V * this.smooth(t / TA);
     if (t < TA + C) return V;
     if (t < TA + C + TD) return V * (1 - this.smooth((t - TA - C) / TD));
@@ -2318,7 +2368,8 @@ export class GameEngine {
   }
 
   private segPos(s: SegmentDef, t: number): number {
-    const C = s.cruise || 26;
+    const V = this.topSpeed;
+    const C = this.cruiseOf(s);
     if (t <= TA) {
       const u = t / TA;
       return V * TA * (u * u * u - (u * u * u * u) / 2);

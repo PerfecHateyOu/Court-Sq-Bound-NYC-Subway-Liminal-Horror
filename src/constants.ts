@@ -5,6 +5,34 @@
 import { SegmentDef } from './types';
 
 export const V = 14;
+
+/**
+ * Nightmare mode (unlocked after one completed ride): the same ride, harder.
+ * Rules it keeps: the arrival tick stays the only reliable door signal (bulb flicker is one tube
+ * at a time, mid-ride only, never on the approach), sanity stays band-clamped, and Screen
+ * effects: Reduced turns the flicker off.
+ */
+export const NIGHTMARE = {
+  /** Cruise time between stations (less time to notice). */
+  cruise: 0.75,
+  /** Top speed (the tunnel rushes past). */
+  speed: 1.2,
+  /** Added chance a free parent turns to watch you, and how much longer they hold the look. */
+  glance: 0.2,
+  watchHold: 1.4,
+  /** How far off-centre a parent's gaze still counts as watching (radians: normal 0.22 / 0.25). */
+  facingYaw: 0.3,
+  facingPitch: 0.33,
+  /** Per-stop sanity drift is 1.5x, and at least -2 even where normal drift is 0. */
+  drift: 1.5,
+  minDrift: -2,
+  /** Single-tube flickers per second while cruising, and how long each lasts (s). */
+  bulbRate: 0.6,
+  bulbOut: [0.05, 0.18] as const,
+  /** No flicker this close to the start of a ride or the start of braking (s). */
+  bulbQuietStart: 3,
+  bulbQuietEnd: 8,
+};
 export const TA = 5;
 export const TD = 6;
 
