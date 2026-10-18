@@ -4,7 +4,8 @@
 import React from 'react';
 import { Play, RotateCcw, Settings as SettingsIcon, Maximize2, Minimize2 } from 'lucide-react';
 import { fullscreenSupported, isStandalone, toggleFullscreen, useFullscreen } from '../ui/fullscreen';
-import { STOPS } from '../constants';
+import { routeManager } from '../game/routeManager';
+import { chapterOrigin } from '../game/practice';
 import { GameEngine } from '../game/gameState';
 import { useEscape } from '../ui/escape';
 
@@ -16,7 +17,14 @@ interface PauseScreenProps {
 }
 
 export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRestart, onOpenSettings }) => {
-  const nextStop = engine.seg ? STOPS[engine.seg.stop] : STOPS[2];
+  const route = routeManager.activeRoute;
+  const nextStop = routeManager.getStopName(engine.seg ? engine.seg.stop : 2);
+  // The strip shows the line's name without its leading bullet letter.
+  const lineName = route.name.replace(/^\S+\s+/, '');
+  // A restart begins this ride's chapter again, back on the G (see GameEngine.startIntro),
+  // whichever line you're on now.
+  const origin = chapterOrigin(engine.startChapter);
+  const restartOrigin = route.id === 'G' ? origin : `the G at ${origin}`;
   // Restarting throws away the current ride, so it takes a second, explicit click.
   const [confirmRestart, setConfirmRestart] = React.useState(false);
   const full = useFullscreen();
@@ -33,9 +41,13 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
         <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-40" />
 
         {/* Top MTA-style route strip */}
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#6cbe45]/15 border border-[#6cbe45]/30 text-[#6cbe45] text-[11px] font-mono font-bold tracking-wider mb-2">
-          <span className="w-2 h-2 rounded-full bg-[#6cbe45] animate-pulse" />
-          BROOKLYN–QUEENS CROSSTOWN
+        <div
+          data-testid="pause-line"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono font-bold tracking-wider uppercase mb-2"
+          style={{ color: route.bulletColor, backgroundColor: `${route.bulletColor}26`, borderColor: `${route.bulletColor}4d` }}
+        >
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: route.bulletColor }} />
+          {lineName}
         </div>
 
         <h2 className="text-2xl font-black text-[#ece6d3] uppercase tracking-wide transit-sign-header drop-shadow-md">
@@ -49,11 +61,14 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
             PRACTICE RUN: NOTHING IS SAVED
           </p>
         )}
-        <p className="mt-2 text-sm text-[#9a9684]">
+        <p data-testid="pause-next-stop" className="mt-2 text-sm text-[#9a9684]">
           Next approaching station:{' '}
           <span className="text-[#ece6d3] font-bold inline-flex items-center gap-1">
-            <span className="w-4 h-4 rounded-full bg-[#6cbe45] text-[#0a0d0b] text-[10px] font-extrabold inline-flex items-center justify-center font-sans">
-              G
+            <span
+              className="w-4 h-4 rounded-full text-[10px] font-extrabold inline-flex items-center justify-center font-sans"
+              style={{ backgroundColor: route.bulletColor, color: route.bulletTextColor }}
+            >
+              {route.id}
             </span>
             {nextStop}
           </span>
@@ -106,7 +121,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
               className="w-full p-3 rounded border border-[#e3a83a]/50 bg-[#e3a83a]/10 text-left transit-sign-flicker shadow-[0_0_15px_rgba(227,168,58,0.15)]"
             >
               <p id="restart-confirm-text" className="text-sm text-[#ece6d3] leading-snug">
-                Start over from {STOPS[1]}? This ride won't be saved to your history.
+                Start over from {restartOrigin}? This ride won't be saved to your history.
               </p>
               <div className="mt-3 flex gap-2">
                 <button

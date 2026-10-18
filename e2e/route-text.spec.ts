@@ -68,4 +68,36 @@ test.describe('Place names follow the route', () => {
     expect(r.hold).toBe('…L four-forty, hold at Montrose Av. Hold. Do not open the doors at Montrose Av…');
     expect(r.easier).toContain('It gets easier after Morgan Av.');
   });
+  test('the pause menu names the route’s line, bullet and next stop', async ({ page, game }) => {
+    await game(`ride(6);`); // heading to stop 7
+    await page.keyboard.press('KeyP');
+    await expect(page.locator('[data-testid=pause-line]')).toHaveText('Brooklyn–Queens Crosstown');
+    await expect(page.locator('[data-testid=pause-next-stop]')).toContainText('GFlushing Av');
+    await page.keyboard.press('KeyP');
+
+    await game(`window.__RT.setRoute('L');`);
+    await page.keyboard.press('KeyP');
+    await expect(page.locator('[data-testid=pause-line]')).toHaveText('14th St–Canarsie Express');
+    await expect(page.locator('[data-testid=pause-next-stop]')).toContainText('LLorimer St');
+    await expect(page.locator('[data-testid=pause-next-stop]')).not.toContainText('Flushing Av');
+    // A restart starts a new ride on the G, so the confirmation says so.
+    await page.locator('text=/Restart Ride/i').click();
+    await expect(page.locator('[role=alertdialog]')).toContainText('Start over from the G at Hoyt–Schermerhorn?');
+  });
+
+  test('on the G, the restart confirmation reads as before', async ({ page, game }) => {
+    await game(`ride(2);`);
+    await page.keyboard.press('KeyP');
+    await page.locator('text=/Restart Ride/i').click();
+    await expect(page.locator('[role=alertdialog]')).toContainText('Start over from Hoyt–Schermerhorn?');
+  });
+
+  test('in a practice run, the restart confirmation names the chapter’s first station', async ({ page, game }) => {
+    await game(`G.startChapter = 2; G.startIntro(); advance(12.5);`);
+    await page.keyboard.press('KeyP');
+    await page.locator('text=/Restart Ride/i').click();
+    await expect(page.locator('[role=alertdialog]')).toContainText('Start over from Bedford–Nostrand Avs?');
+    await page.locator('[role=alertdialog]').locator('text=/^Restart$/').click();
+    expect(await game(`advance(12.5); return [G.isPractice, G.carBuilder.stA.name];`)).toEqual([true, 'Bedford–Nostrand Avs']);
+  });
 });

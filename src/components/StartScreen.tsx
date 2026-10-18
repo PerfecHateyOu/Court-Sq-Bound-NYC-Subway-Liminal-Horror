@@ -11,17 +11,11 @@ import { useProgressEpoch } from '../settings';
 import { useEscape } from '../ui/escape';
 import { CaseFilesModal } from './CaseFilesModal';
 import { GameEngine } from '../game/gameState';
-import { CHAPTERS, SEGS } from '../constants';
-import { CHAPTER_START_SEGMENT } from '../game/practice';
-import { ROUTES } from '../game/routeManager';
+import { CHAPTERS } from '../constants';
+import { chapterOrigin } from '../game/practice';
 
 /** "SIGNAL DRIFT" → "Signal Drift" */
 const titleCase = (t: string) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-/** Where each chapter's ride leaves from (the station before its first stretch). The start screen is the G. */
-const chapterFrom = (chapter: number) => {
-  const seg = CHAPTER_START_SEGMENT[chapter] ?? 0;
-  return ROUTES.G.stops[seg > 0 ? SEGS[seg - 1].stop : 1];
-};
 
 interface StartScreenProps {
   onStart: (muted: boolean, debug: boolean, nightmare: boolean, startChapter: number) => void;
@@ -197,7 +191,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
               >
                 {CHAPTERS.map((c) => (
                   <option key={c.index} value={c.index}>
-                    {`Chapter ${c.numeral.split(' ')[1]}: ${titleCase(c.title)}, from ${chapterFrom(c.index)}`}
+                    {`Chapter ${c.numeral.split(' ')[1]}: ${titleCase(c.title)}, from ${chapterOrigin(c.index)}`}
                   </option>
                 ))}
               </select>

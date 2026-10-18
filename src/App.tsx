@@ -715,7 +715,7 @@ export default function App() {
   const handlePause = pauseGame;
   const handleResume = resumeGame;
 
-  // Restart from the pause menu: a fresh run from Hoyt–Schermerhorn. The abandoned
+  // Restart from the pause menu: a fresh run from the same starting chapter. The abandoned
   // ride is not saved to run history (only endGame() saves).
   const handleRestart = () => {
     const G = engineRef.current;
