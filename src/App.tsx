@@ -303,6 +303,9 @@ export default function App() {
         camera.updateProjectionMatrix();
       }
 
+      // A few real lights follow the camera through the cars (see SubwayCarBuilder.updateLightPool).
+      engine.carBuilder.updateLightPool(camera.position, deltaMs / 1000);
+
       // Screen glitch: only route through the shader pass while one is playing.
       const glitchAmt = reduced ? 0 : engine.glitchAmount();
       if (glitchAmt > 0.001 && engine.glitch) {

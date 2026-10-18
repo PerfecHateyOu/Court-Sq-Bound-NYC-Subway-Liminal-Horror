@@ -3,6 +3,10 @@
  * Authentic NYC subway graphic aesthetic: reticle with flag progress ring,
  * dynamic MTA route bullet, car consist position, gangway door prompt,
  * Polaroid camera & album buttons, PA banner, and subtitles.
+ *
+ * No backdrop-filter blur here: these panels sit over the live 3D view, and a blur behind each
+ * one is recomputed every frame (it roughly halved the frame rate in profiling). Slightly more
+ * opaque backgrounds keep them readable instead. Short-lived dialogs may still blur.
  */
 import React from 'react';
 import { GameEngine } from '../game/gameState';
@@ -107,7 +111,7 @@ export const HUD: React.FC<HUDProps> = ({
         <div
           onClick={onOpenRouteSelector}
           title="Click to Switch Route Line"
-          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/75 backdrop-blur-sm border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle"
+          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle"
         >
           <span
             className="w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
@@ -124,14 +128,14 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Chapter badge (wide screens; on phones the top bar is full and the rollsign carries it) */}
         <div
           data-testid="chapter-badge"
-          className="hidden lg:flex items-center px-2.5 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
+          className="hidden lg:flex items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
         >
           CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
           {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
         </div>
 
         {/* Consist Car Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
           <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />
           <span>{carName}</span>
         </div>
@@ -144,10 +148,10 @@ export const HUD: React.FC<HUDProps> = ({
           onClick={onToggleCamera}
           title="Equip Polaroid Camera [C]"
           aria-label="Polaroid Camera"
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold backdrop-blur-sm transition-all active:scale-95 ${
+          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
             polaroidManager.isViewfinderOpen
               ? 'bg-red-600 text-white border-red-400'
-              : 'bg-black/60 border-white/15 text-[#ece6d3] hover:bg-black/80'
+              : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
           }`}
         >
           <Camera className="w-4 h-4 text-[#e3a83a]" />
@@ -164,8 +168,8 @@ export const HUD: React.FC<HUDProps> = ({
             title="Tape recorder [R]"
             aria-label="Recorder"
             aria-pressed={evp.raised}
-            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold backdrop-blur-sm transition-all active:scale-95 ${
-              evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/60 border-white/15 text-[#ece6d3] hover:bg-black/80'
+            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+              evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
             }`}
           >
             <Mic className="w-4 h-4 text-[#e8a49a]" />
@@ -179,10 +183,10 @@ export const HUD: React.FC<HUDProps> = ({
           onClick={onToggleAlbum}
           title="Evidence Album [TAB]"
           aria-label="Evidence Album"
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold backdrop-blur-sm transition-all active:scale-95 ${
+          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
             polaroidManager.isAlbumOpen
               ? 'bg-amber-600 text-white border-amber-400'
-              : 'bg-black/60 border-white/15 text-[#ece6d3] hover:bg-black/80'
+              : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
           }`}
         >
           <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
@@ -197,7 +201,7 @@ export const HUD: React.FC<HUDProps> = ({
           onClick={onOpenRouteSelector}
           title="Branching Line Selector"
           aria-label="Route Lines"
-          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/60 text-[#ece6d3] backdrop-blur-sm hover:bg-black/80 transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
         >
           <GitBranch className="w-4 h-4 text-[#9a9684]" />
         </button>
@@ -206,7 +210,7 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute' : 'Mute'}
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/60 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-black/80 ${
+          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
             isMuted ? 'text-[#e3a83a] border-[#e3a83a]/40' : 'text-[#ece6d3]'
           }`}
         >
@@ -218,7 +222,7 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           onClick={onPause}
           aria-label="Pause"
-          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/60 text-[#ece6d3] backdrop-blur-sm hover:bg-black/80 transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
         >
           <Pause className="w-4 h-4" />
         </button>
@@ -251,7 +255,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Contextual Hint */}
       {G.hintText && G.GT < G.hintUntil && (
-        <div className="absolute left-1/2 top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/75 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
+        <div className="absolute left-1/2 top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/80 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
           {G.hintText}
         </div>
       )}
@@ -259,7 +263,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* Subtitles (Conversations, Parent Reactions) */}
       {G.subHtml && (
         <div
-          className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/75 backdrop-blur-md border border-white/10 text-center text-sm sm:text-base text-[#ece6d3] leading-relaxed shadow-lg transit-sign-flicker-subtle transition-all duration-300 ${
+          className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/80 border border-white/10 text-center text-sm sm:text-base text-[#ece6d3] leading-relaxed shadow-lg transit-sign-flicker-subtle transition-all duration-300 ${
             showChoices ? 'bottom-28' : isRestraint ? 'bottom-32' : 'bottom-16'
           }`}
           dangerouslySetInnerHTML={{ __html: G.subHtml }}
@@ -268,7 +272,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Choice Buttons Bar (Doors & Mask Checks) */}
       {showChoices && choice && (
-        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100vw-32px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 backdrop-blur-md border border-white/15 shadow-2xl transit-sign-flicker">
+        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100vw-32px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 border border-white/15 shadow-2xl transit-sign-flicker">
           {/* Progress Time Bar */}
           {isFinite(choice.window) && (
             <div className="w-full h-1 bg-white/15 rounded-full overflow-hidden mb-1">
@@ -285,7 +289,7 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={() => G.pickChoiceIndex(idx)}
               className="flex-1 min-w-[160px] min-h-[46px] flex items-center gap-3 px-3.5 py-2.5 rounded bg-[#151916] hover:bg-[#202722] border border-white/15 hover:border-[#6cbe45] text-left text-sm sm:text-base text-[#ece6d3] transition-all active:scale-[0.98]"
             >
-              <span className="w-6 h-6 rounded bg-black/60 border border-white/20 text-[#9a9684] flex items-center justify-center text-xs font-mono font-bold">
+              <span className="w-6 h-6 rounded bg-black/70 border border-white/20 text-[#9a9684] flex items-center justify-center text-xs font-mono font-bold">
                 {idx + 1}
               </span>
               <span className="flex-1 font-medium">{item.txt}</span>
@@ -306,7 +310,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Bottom Controls / Key Hints Bar (Left) — keyboard only */}
       {!G.isTouch && (
-      <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-[11px] text-[#9a9684] font-mono bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded border border-white/10">
+      <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-[11px] text-[#9a9684] font-mono bg-black/70 px-3 py-1.5 rounded border border-white/10">
         <span>[W][A][S][D] WALK</span>
         <span className="text-white/30">•</span>
         <span>[C] CAMERA</span>
