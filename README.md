@@ -91,7 +91,7 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | Polaroid camera | C to raise, click / Space / Enter to shoot | Camera button, then the shutter |
 | Tape recorder (after Stop 6) | R to raise; [ ] or wheel to tune; hold Space to record | Recorder button; drag the tuning strip; hold REC |
 | Evidence log (Polaroids, tapes) | Tab | Album button |
-| Route lines | — | Route button |
+| Route lines | L (again, or Esc, to close) | Route button |
 | Flag | Hold F | Hold the Flag button |
 | Answer / choose | 1, 2, 3 or click | Tap |
 | Hold during the restraint moment | Hold Space | Hold the Hold button |

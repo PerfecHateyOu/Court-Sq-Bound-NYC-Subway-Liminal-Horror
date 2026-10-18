@@ -75,6 +75,8 @@ export default function App() {
   const [routeSelectorOpen, setRouteSelectorOpen] = useState(false);
   const routeSelectorOpenRef = useRef(false);
   routeSelectorOpenRef.current = routeSelectorOpen;
+  // Set while the route selector frees the mouse, so losing pointer lock doesn't pause the ride.
+  const quietUnlockRef = useRef(false);
 
   // Held arrow keys; the render loop turns the view while they're down.
   const keyLookRef = useRef(new KeyLook());
@@ -449,9 +451,15 @@ export default function App() {
     container.addEventListener('pointercancel', handlePointerEnd);
     container.addEventListener('pointerleave', handlePointerEnd);
 
-    // Auto-pause when pointerlock is exited mid-game (Esc)
+    // Auto-pause when pointerlock is exited mid-game (Esc), but not when the route selector
+    // freed the mouse itself (see openRouteSelector).
     const handleLockChange = () => {
-      if (!document.pointerLockElement) pauseGame();
+      if (document.pointerLockElement) return;
+      if (quietUnlockRef.current) {
+        quietUnlockRef.current = false;
+        return;
+      }
+      pauseGame();
     };
     document.addEventListener('pointerlockchange', handleLockChange);
     // Leaving full screen mid-ride (Esc, a swipe, the browser's button) pauses, like losing the mouse.
@@ -470,6 +478,17 @@ export default function App() {
     };
   }, [isTouch, requestLock, pauseGame]);
 
+  // The route selector (L, or the HUD's route buttons). The ride keeps going behind it, so the
+  // mouse is freed to click a line without pausing, and held keys are let go.
+  const openRouteSelector = useCallback(() => {
+    releaseHeldKeys();
+    if (document.pointerLockElement) {
+      quietUnlockRef.current = true;
+      document.exitPointerLock();
+    }
+    setRouteSelectorOpen(true);
+  }, [releaseHeldKeys]);
+
   // Keyboard Event Handlers
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -486,8 +505,15 @@ export default function App() {
         if (e.code !== 'KeyM') return;
       }
       // The route selector can open mid-ride; while it's up, keys belong to it (Tab moves
-      // focus, Enter/Space pick a line, Esc closes it via ui/escape.ts). Only M still mutes.
-      if (routeSelectorOpenRef.current && e.code !== 'KeyM') return;
+      // focus, Enter/Space pick a line, Esc closes it via ui/escape.ts). L closes it again,
+      // and M still mutes.
+      if (routeSelectorOpenRef.current) {
+        if (e.code === 'KeyL' && !e.repeat) {
+          e.preventDefault();
+          setRouteSelectorOpen(false);
+        }
+        if (e.code !== 'KeyM') return;
+      }
 
       if ((e.code === 'KeyP' || e.code === 'Escape') && G.phase !== 'menu' && G.phase !== 'end') {
         if (G.paused) resumeGame();
@@ -529,6 +555,13 @@ export default function App() {
           if (!e.repeat) evp.setRecording(true);
           return;
         }
+      }
+
+      // Route lines [L]
+      if (e.code === 'KeyL' && !e.repeat) {
+        e.preventDefault();
+        openRouteSelector();
+        return;
       }
 
       // Polaroid Album [TAB] toggle
@@ -671,7 +704,7 @@ export default function App() {
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys]);
+  }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys, openRouteSelector]);
 
   const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false, startChapter = 1) => {
     // Inside the click, as browsers require: go full screen for the ride.
@@ -773,7 +806,7 @@ export default function App() {
             polaroidManager.toggleAlbum();
             triggerUpdate();
           }}
-          onOpenRouteSelector={() => setRouteSelectorOpen(true)}
+          onOpenRouteSelector={openRouteSelector}
         />
       )}
 

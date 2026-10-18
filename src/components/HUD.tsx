@@ -123,8 +123,9 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           type="button"
           onClick={onOpenRouteSelector}
-          title="Switch route line"
+          title="Switch route line (L)"
           aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
+          aria-keyshortcuts="L"
           data-testid="hud-route-panel"
           className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
         >
@@ -214,8 +215,9 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Route Selector Button */}
         <button
           onClick={onOpenRouteSelector}
-          title="Branching Line Selector"
+          title="Route lines (L)"
           aria-label="Route Lines"
+          aria-keyshortcuts="L"
           className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
         >
           <GitBranch className="w-4 h-4 text-[#9a9684]" />
