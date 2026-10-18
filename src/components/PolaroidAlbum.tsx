@@ -9,6 +9,7 @@ import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import type { GameEngine } from '../game/gameState';
 import { TapePlayButton } from './TapePlayButton';
+import { useEscape } from '../ui/escape';
 import { PolaroidPhoto } from '../types';
 import { X, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, ZoomIn, Mic } from 'lucide-react';
 
@@ -22,6 +23,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
   const [filter, setFilter] = useState<'all' | 'anomalies' | 'carA' | 'carB' | 'carC'>('all');
   const [tab, setTab] = useState<'prints' | 'tapes'>('prints');
+  // Esc closes an enlarged print first, then the log (rather than pausing the ride behind it).
+  useEscape(onClose);
+  useEscape(() => setSelectedPhoto(null), !!selectedPhoto);
   const tapes = evp.tapes;
 
   const photos = polaroidManager.photos;
@@ -253,6 +257,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             {/* Close button */}
             <button
               onClick={() => setSelectedPhoto(null)}
+              aria-label="Close photo"
               className="absolute -top-12 right-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
             >
               <X className="w-5 h-5" />

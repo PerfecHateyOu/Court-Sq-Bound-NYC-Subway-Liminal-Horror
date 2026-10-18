@@ -491,6 +491,17 @@ export default function App() {
     setRouteSelectorOpen(true);
   }, [releaseHeldKeys]);
 
+  // The evidence log can open mid-ride (Tab, the HUD, the viewfinder). The ride keeps going behind
+  // it, so, like the route selector, it frees a captured mouse (without pausing) so its tabs,
+  // filters and close button can be clicked.
+  const albumOpen = polaroidManager.isAlbumOpen;
+  useEffect(() => {
+    if (albumOpen && document.pointerLockElement) {
+      quietUnlockRef.current = true;
+      document.exitPointerLock();
+    }
+  }, [albumOpen]);
+
   // Keyboard Event Handlers
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
