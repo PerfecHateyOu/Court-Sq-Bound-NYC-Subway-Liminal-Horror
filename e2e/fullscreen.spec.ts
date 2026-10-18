@@ -153,3 +153,33 @@ test.describe('full screen on a phone without the Fullscreen API (iPhone)', () =
     await expect(page.getByRole('button', { name: /Full Screen/ })).toHaveCount(0);
   });
 });
+
+test.describe('the home-screen app on Android (it opens full screen already)', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 844, height: 390 } });
+  test('offers no full-screen button or setting, asks for nothing on boarding, and shows no tip', async ({ page }) => {
+    const errs = watchErrors(page);
+    await page.addInitScript(() => {
+      // display: fullscreen from the manifest; the Fullscreen API is still reported as available.
+      const real = window.matchMedia.bind(window);
+      window.matchMedia = (q: string) =>
+        /display-mode:\s*fullscreen/.test(q) ? ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} } as unknown as MediaQueryList) : real(q);
+      (window as any).__fsRequests = 0;
+      Element.prototype.requestFullscreen = function () {
+        (window as any).__fsRequests++;
+        return Promise.resolve();
+      };
+    });
+    await fresh(page); // full screen on boarding is on by default
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByRole('checkbox', { name: /Full screen when boarding/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await boardTrain(page);
+    expect(await page.evaluate(() => (window as any).__fsRequests)).toBe(0);
+    await page.evaluate(() => (window as any).__G.pause());
+    await expect(page.getByRole('button', { name: 'Resume Ride' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Full Screen/i })).toHaveCount(0);
+    await expect(page.getByTestId('home-screen-tip')).toHaveCount(0);
+    expect(errs).toEqual([]);
+  });
+});
