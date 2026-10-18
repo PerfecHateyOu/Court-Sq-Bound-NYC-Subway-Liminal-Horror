@@ -1,18 +1,22 @@
 /**
- * Transit Route Management (G, L, 7 Subway Lines)
+ * Subway Route & Transit Line Manager
+ * Provides branching MTA routes:
+ * - G Line (Lime Crosstown): Classic industrial Brooklyn-Queens route
+ * - L Line (Slate 14th St-Canarsie): Modern digital cars, cold ambiance, electronic/temporal anomalies
+ * - 7 Ghost Express (Purple Abandoned Spur): Vintage incandescent flicker, subterranean mist, psychological apparitions
  */
 import { TransitLineRoute } from '../types';
 
 export const ROUTES: Record<'G' | 'L' | '7', TransitLineRoute> = {
   G: {
     id: 'G',
-    name: 'Brooklyn–Queens Crosstown Local',
+    name: 'G Brooklyn–Queens Crosstown',
     bulletColor: '#6cbe45',
-    bulletTextColor: '#1b1d18',
+    bulletTextColor: '#000000',
     accentHex: 0x6cbe45,
     anomalyFrequency: 1.0,
-    soundtrackProfile: 'brooklyn_crosstown',
-    description: 'The classic G train through Brooklyn and Queens, surfacing over Newtown Creek.',
+    soundtrackProfile: 'industrial-screech',
+    description: 'The classic non-Manhattan line. Rattling curves, aged stainless steel, and flickering fluorescent tubes.',
     stops: [
       '',
       'Hoyt–Schermerhorn',
@@ -32,21 +36,21 @@ export const ROUTES: Record<'G' | 'L' | '7', TransitLineRoute> = {
   },
   L: {
     id: 'L',
-    name: '14th St–Canarsie Local',
+    name: 'L 14th St–Canarsie Express',
     bulletColor: '#a7a9ac',
-    bulletTextColor: '#1b1d18',
+    bulletTextColor: '#000000',
     accentHex: 0xa7a9ac,
     anomalyFrequency: 1.25,
-    soundtrackProfile: 'canarsie_tunnel',
-    description: 'High-frequency East River crossing through industrial Brooklyn warehouses.',
+    soundtrackProfile: 'digital-drone',
+    description: 'Modernized CBTC digital transit cars. Cold LED light strips, high-frequency signage glitching, and temporal loops.',
     stops: [
       '',
       '8th Av',
       '6th Av',
-      'Union Sq',
+      'Union Sq–14th St',
       '3rd Av',
       '1st Av',
-      'Bedford Av',
+      'Bedford Av (Haven)',
       'Lorimer St',
       'Graham Av',
       'Grand St',
@@ -56,58 +60,69 @@ export const ROUTES: Record<'G' | 'L' | '7', TransitLineRoute> = {
       'Myrtle–Wyckoff Avs',
     ],
   },
-  '7': {
+  7: {
     id: '7',
-    name: 'Flushing Local',
+    name: '7 Ghost Line (Abandoned Spur)',
     bulletColor: '#b933ad',
     bulletTextColor: '#ffffff',
     accentHex: 0xb933ad,
-    anomalyFrequency: 1.15,
-    soundtrackProfile: 'queens_elevated',
-    description: 'Steep underground grades turning into elevated viaducts over Sunnyside Yard.',
+    anomalyFrequency: 1.6,
+    soundtrackProfile: 'abyssal-reverb',
+    description: 'An unmapped vintage tunnel beneath the East River. Dim incandescent bulbs, thick subterranean vapor, and uncanny passenger apparitions.',
     stops: [
       '',
-      '34 St–Hudson Yards',
-      'Times Sq–42 St',
-      '5th Av',
+      'Times Sq–42nd St',
+      '5th Av–Bryant Pk',
       'Grand Central',
-      'Vernon Blvd–Jackson Av',
-      'Hunters Point Av',
-      'Court Sq',
-      'Queensboro Plaza',
-      '33 St–Rawson St',
-      '40 St–Lowery St',
-      '46 St–Bliss St',
-      '52 St',
-      '61 St–Woodside',
+      'Sub-River Tube Level -4',
+      'Abandoned Steinway Haven',
+      'Hunters Point Depths',
+      'Vernon–Jackson Void',
+      'Sunken Yard Switch 9',
+      'Dead Track Gantry',
+      'Queensboro Cavern',
+      'Rawlings Switch',
+      'Court Sq Tower Vault',
+      'Terminal Echo',
     ],
   },
 };
 
-class RouteManager {
-  public routeId: 'G' | 'L' | '7' = 'G';
+export class RouteManager {
+  private activeRouteId: 'G' | 'L' | '7' = 'G';
   public onRouteChanged?: (route: TransitLineRoute) => void;
 
   public get activeRoute(): TransitLineRoute {
-    return ROUTES[this.routeId];
+    return ROUTES[this.activeRouteId];
   }
 
-  public setRoute(id: 'G' | 'L' | '7') {
-    if (!ROUTES[id]) return;
-    this.routeId = id;
-    this.onRouteChanged?.(ROUTES[id]);
+  public get routeId(): 'G' | 'L' | '7' {
+    return this.activeRouteId;
   }
 
-  public getStopName(index: number): string {
-    const stops = this.activeRoute.stops;
-    if (index >= 0 && index < stops.length) {
-      return stops[index] || stops[stops.length - 1];
+  public setRoute(routeId: 'G' | 'L' | '7') {
+    if (this.activeRouteId === routeId) return;
+    this.activeRouteId = routeId;
+    if (this.onRouteChanged) {
+      this.onRouteChanged(ROUTES[routeId]);
     }
-    return stops[stops.length - 1] || 'Court Sq';
   }
 
+  /** A new ride starts on the G. */
   public reset() {
-    this.routeId = 'G';
+    this.setRoute('G');
+  }
+
+  public getStopName(stopIndex: number): string {
+    const stops = this.activeRoute.stops;
+    if (stopIndex >= 1 && stopIndex < stops.length) {
+      return stops[stopIndex];
+    }
+    return `Track Marker ${stopIndex}`;
+  }
+
+  public getAllRoutes(): TransitLineRoute[] {
+    return [ROUTES.G, ROUTES.L, ROUTES[7]];
   }
 }
 

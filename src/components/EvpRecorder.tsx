@@ -1,146 +1,223 @@
 /**
- * Microcassette EVP Audio Recorder Handheld Interface
- * Displays analog frequency tuning dial, signal VU meter, fast-step nudge buttons,
- * and magnetic tape recording controls.
+ * Dad's microcassette recorder, raised (Operation Skyward, Phase 2).
+ *
+ * Sits where the Flag button is (you can't flag with your hands full). Tune with the scrub
+ * strip, the arrows, [ and ], or the mouse wheel; hold REC (or Space) to record. The meter
+ * and the lock light react to every carrier alike, broadcast or decoy: what you hear (and the
+ * words, shown here as subtitles) is the only difference.
  */
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { evp, EVP_MIN_KHZ, EVP_MAX_KHZ, transcriptOf } from '../game/evpManager';
+import { settings } from '../settings';
 import { GameEngine } from '../game/gameState';
-import { evp, EVP_MIN_KHZ, EVP_MAX_KHZ, EVP_RECORD_HOLD } from '../game/evpManager';
-import { ChevronLeft, ChevronRight, Mic, Disc3 } from 'lucide-react';
 
-interface EvpRecorderProps {
-  engine: GameEngine;
-}
+const SPAN = EVP_MAX_KHZ - EVP_MIN_KHZ;
 
-export const EvpRecorder: React.FC<EvpRecorderProps> = ({ engine }) => {
-  const isLocked = !!evp.locked;
-  const meterVal = Math.max(0, Math.min(1, evp.meter));
-  const recProgress = Math.min(1, evp.recordT / EVP_RECORD_HOLD);
+const Reel: React.FC<{ spinning: boolean }> = ({ spinning }) => (
+  <svg viewBox="0 0 40 40" className={`w-9 h-9 ${spinning ? 'animate-spin [animation-duration:1.6s]' : ''}`} aria-hidden="true">
+    <circle cx="20" cy="20" r="18" fill="#1a1712" stroke="#4a4438" strokeWidth="2" />
+    <circle cx="20" cy="20" r="11" fill="#3a2f22" />
+    {[0, 120, 240].map((a) => (
+      <rect key={a} x="18.5" y="5" width="3" height="9" rx="1" fill="#8d8371" transform={`rotate(${a} 20 20)`} />
+    ))}
+    <circle cx="20" cy="20" r="3.5" fill="#d9d1bd" />
+  </svg>
+);
+
+export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
+  const stripRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ id: number; x: number } | null>(null);
+  const reduced = settings.effectsReduced();
+
+  // Brief "saved" note after a tape is recorded (kept on the recorder, so a save between renders
+  // still shows). Re-render once when it expires.
+  const SAVED_MS = 2600;
+  const saved = evp.lastSaved;
+  const savedTitle = saved && Date.now() - saved.at < SAVED_MS ? saved.title : null;
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!saved) return;
+    const left = saved.at + SAVED_MS - Date.now();
+    if (left <= 0) return;
+    const t = setTimeout(() => setTick((n) => n + 1), left + 20);
+    return () => clearTimeout(t);
+  }, [saved]);
+
+  const locked = evp.locked;
+  const sig = locked?.kind === 'signal' ? locked.signal! : null;
+  const full = sig ? transcriptOf(sig) : '';
+  const words = sig ? full.slice(0, Math.max(1, Math.round(full.length * evp.reveal))) : '';
+  const needle = -50 + 100 * evp.meter;
+  const markerPct = ((evp.khz - EVP_MIN_KHZ) / SPAN) * 100;
+
+  let status: string;
+  if (savedTitle) status = `Saved to tape: ${savedTitle}`;
+  else if (sig) status = words;
+  else if (locked) status = '— a carrier tone, no voice —';
+  else if (evp.recording) status = 'Recording hiss…';
+  else status = engine.phase === 'ride' ? 'Tune slowly. Something is out there.' : 'Nothing comes through at a standstill.';
 
   return (
-    <div className="absolute right-4 bottom-5 pointer-events-auto z-30 select-none animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <div className="w-64 sm:w-72 bg-[#2c2621] text-[#ece6d3] border-2 border-[#5c4e43] rounded-md p-3 shadow-2xl flex flex-col gap-2 font-mono">
-        {/* Top Header & Tape Counter */}
-        <div className="flex items-center justify-between border-b border-[#4d4239] pb-1.5 text-xs">
-          <div className="flex items-center gap-1.5">
-            <Disc3 className={`w-4 h-4 text-[#e3a83a] ${evp.recording ? 'animate-spin' : ''}`} />
-            <span className="font-bold tracking-wider text-[11px] text-[#cfc5b0]">EVP RECORDER</span>
-          </div>
-          <span className="text-[10px] text-[#8c7e70] bg-black/40 px-1.5 py-0.5 rounded">
-            TAPES: {evp.tapes.length}
-          </span>
-        </div>
-
-        {/* Frequency LCD & Lock Meter */}
-        <div className="bg-[#12100d] border border-[#443a32] p-2 rounded flex flex-col gap-1.5">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[10px] text-[#8c7e70]">FREQUENCY</span>
-            <span className="text-xl font-black text-[#5df264] tracking-wider">
-              {evp.khz.toFixed(1)} <span className="text-xs text-[#3b9e40]">kHz</span>
-            </span>
-          </div>
-
-          {/* VU / Carrier Signal Meter */}
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] text-[#8c7e70]">SIGNAL</span>
-            <div className="flex-1 h-2 bg-[#221d18] rounded-full overflow-hidden p-0.5 flex gap-0.5">
-              {[0.15, 0.35, 0.55, 0.75, 0.95].map((thresh, idx) => (
-                <div
-                  key={idx}
-                  className={`flex-1 rounded-sm transition-opacity duration-75 ${
-                    meterVal >= thresh
-                      ? idx >= 3
-                        ? 'bg-amber-500 opacity-100'
-                        : 'bg-[#5df264] opacity-100'
-                      : 'bg-white/10 opacity-30'
-                  }`}
-                />
-              ))}
-            </div>
-            {isLocked && (
-              <span className="text-[9px] font-bold px-1 rounded bg-[#5df264]/20 text-[#5df264] animate-pulse">
-                LOCK
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Tuning Controls */}
-        <div className="flex items-center gap-1">
-          <button
-            aria-label="Tune down 5 kHz"
-            onClick={() => evp.tune(-5.0)}
-            className="px-1.5 py-1.5 rounded bg-[#3d342d] hover:bg-[#4d4239] text-[10px] font-bold text-[#cfc5b0] active:scale-95 transition-all"
-          >
-            -5k
-          </button>
-          <button
-            aria-label="Tune down"
-            onClick={() => evp.tune(-0.5)}
-            className="flex-1 py-1.5 flex items-center justify-center rounded bg-[#3d342d] hover:bg-[#4d4239] text-xs text-[#cfc5b0] active:scale-95 transition-all"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          {/* Draggable Tuning Slider */}
-          <input
-            type="range"
-            min={EVP_MIN_KHZ}
-            max={EVP_MAX_KHZ}
-            step={0.5}
-            value={evp.khz}
-            onChange={(e) => evp.setKhz(parseFloat(e.target.value))}
-            className="w-24 accent-[#5df264] cursor-pointer"
+    <div
+      data-testid="evp-recorder"
+      className="absolute right-4 bottom-5 w-[min(300px,calc(100vw-160px))] pointer-events-auto select-none rounded-lg border border-[#4a4438] bg-[#15130f]/95 shadow-2xl text-[#d9d1bd] p-3"
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] tracking-[0.25em] text-[#8d8371]">MICROCASSETTE</span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`w-2 h-2 rounded-full ${evp.recording ? 'bg-red-500 shadow-[0_0_6px_#ef4444]' : 'bg-[#3a3328]'}`}
+            aria-label={evp.recording ? 'Recording' : 'Not recording'}
           />
-
-          <button
-            aria-label="Tune up"
-            onClick={() => evp.tune(0.5)}
-            className="flex-1 py-1.5 flex items-center justify-center rounded bg-[#3d342d] hover:bg-[#4d4239] text-xs text-[#cfc5b0] active:scale-95 transition-all"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <button
-            aria-label="Tune up 5 kHz"
-            onClick={() => evp.tune(5.0)}
-            className="px-1.5 py-1.5 rounded bg-[#3d342d] hover:bg-[#4d4239] text-[10px] font-bold text-[#cfc5b0] active:scale-95 transition-all"
-          >
-            +5k
-          </button>
-        </div>
-
-        {/* Record Button & Lower Button */}
-        <div className="flex items-center gap-2 pt-1 border-t border-[#4d4239]">
-          <button
-            onPointerDown={() => evp.setRecording(true)}
-            onPointerUp={() => evp.setRecording(false)}
-            onPointerCancel={() => evp.setRecording(false)}
-            className={`flex-1 py-2 rounded flex items-center justify-center gap-1.5 text-xs font-bold transition-all active:scale-95 relative overflow-hidden ${
-              evp.recording
-                ? 'bg-red-700 text-white'
-                : 'bg-red-950/80 hover:bg-red-900/90 text-red-200 border border-red-700/50'
-            }`}
-          >
-            {evp.recording && (
-              <div
-                className="absolute inset-y-0 left-0 bg-red-600/50 transition-all"
-                style={{ width: `${recProgress * 100}%` }}
-              />
-            )}
-            <Mic className="w-3.5 h-3.5 relative z-10" />
-            <span className="relative z-10">
-              {evp.recording ? 'RECORDING…' : 'HOLD TO RECORD'}
-            </span>
-          </button>
-
           <button
             onClick={() => engine.toggleRecorder()}
-            className="px-3 py-2 rounded bg-black/40 hover:bg-black/60 text-[11px] text-[#8c7e70] active:scale-95 transition-all"
+            aria-label="Lower recorder"
+            className="w-7 h-7 -mr-1 flex items-center justify-center rounded-full text-[#8d8371] hover:text-[#ece6d3] hover:bg-white/10"
           >
-            LOWER [R]
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      <div className="mt-1.5 flex items-center gap-3">
+        <div className="flex gap-1.5 p-1.5 rounded bg-black/40 border border-[#3a3328]">
+          <Reel spinning={evp.recording && !reduced} />
+          <Reel spinning={evp.recording && !reduced} />
+        </div>
+        {/* VU meter */}
+        <svg viewBox="0 0 100 56" className="w-[92px] h-[52px]" role="img" aria-label="Signal meter">
+          <rect x="1" y="1" width="98" height="54" rx="4" fill="#efe6c9" />
+          <path d="M14 46 A40 40 0 0 1 86 46" fill="none" stroke="#6d6450" strokeWidth="1.5" />
+          <path d="M66 18 A40 40 0 0 1 86 46" fill="none" stroke="#b33a2b" strokeWidth="3" />
+          <line
+            x1="50"
+            y1="50"
+            x2="50"
+            y2="12"
+            stroke="#1b1d18"
+            strokeWidth="1.6"
+            transform={`rotate(${needle} 50 50)`}
+            style={{ transition: reduced ? 'none' : 'transform 90ms linear' }}
+          />
+          <circle cx="50" cy="50" r="3" fill="#1b1d18" />
+          <text x="50" y="30" textAnchor="middle" fontSize="7" fontFamily="monospace" fill="#6d6450">
+            VU
+          </text>
+        </svg>
+        <div className="flex-1 text-right">
+          <div className="font-mono text-lg font-bold tabular-nums text-[#ece6d3]" data-testid="evp-khz">
+            {evp.khz.toFixed(1)}
+          </div>
+          <div className="flex items-center justify-end gap-1.5 font-mono text-[10px] text-[#8d8371]">
+            kHz
+            <span
+              className={`w-2 h-2 rounded-full ${locked ? 'bg-[#6cbe45] shadow-[0_0_6px_#6cbe45]' : 'bg-[#2c3a28]'}`}
+              aria-label={locked ? 'Locked on' : 'No lock'}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tuning: drag the strip, nudge with arrows, or jump 5 kHz */}
+      <div className="mt-2 flex items-center gap-1">
+        <button
+          aria-label="Tune down 5 kHz"
+          onClick={() => evp.tune(-5.0)}
+          className="px-1.5 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          title="-5 kHz"
+        >
+          -5k
+        </button>
+        <button
+          aria-label="Tune down"
+          onClick={() => evp.tune(-0.5)}
+          className="w-7 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div
+          ref={stripRef}
+          role="slider"
+          aria-label="Tuning"
+          aria-valuemin={EVP_MIN_KHZ}
+          aria-valuemax={EVP_MAX_KHZ}
+          aria-valuenow={evp.khz}
+          data-testid="evp-strip"
+          className="relative flex-1 h-9 rounded bg-black/50 border border-[#3a3328] touch-none cursor-ew-resize overflow-hidden"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(90deg, rgba(217,209,189,0.35) 0 1px, transparent 1px 9px), repeating-linear-gradient(90deg, rgba(217,209,189,0.6) 0 1px, transparent 1px 45px)',
+            backgroundSize: '100% 40%, 100% 70%',
+            backgroundRepeat: 'repeat-x',
+            backgroundPosition: '0 100%, 0 100%',
+          }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            drag.current = { id: e.pointerId, x: e.clientX };
+            try {
+              e.currentTarget.setPointerCapture(e.pointerId);
+            } catch {
+              /* synthetic pointer */
+            }
+          }}
+          onPointerMove={(e) => {
+            if (!drag.current || drag.current.id !== e.pointerId) return;
+            // Fine control: 1 px of drag is 0.1 kHz.
+            evp.tune((e.clientX - drag.current.x) * 0.1);
+            drag.current.x = e.clientX;
+          }}
+          onPointerUp={() => (drag.current = null)}
+          onPointerCancel={() => (drag.current = null)}
+        >
+          <div className="absolute top-0 bottom-0 w-0.5 bg-[#e3a83a]" style={{ left: `${markerPct}%` }} />
+        </div>
+        <button
+          aria-label="Tune up"
+          onClick={() => evp.tune(0.5)}
+          className="w-7 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <button
+          aria-label="Tune up 5 kHz"
+          onClick={() => evp.tune(5.0)}
+          className="px-1.5 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          title="+5 kHz"
+        >
+          +5k
+        </button>
+      </div>
+
+      <div className="mt-2 flex items-stretch gap-2">
+        <button
+          onPointerDown={(e) => {
+            e.preventDefault();
+            evp.setRecording(true);
+          }}
+          onPointerUp={() => evp.setRecording(false)}
+          onPointerCancel={() => evp.setRecording(false)}
+          onPointerLeave={() => evp.setRecording(false)}
+          onContextMenu={(e) => e.preventDefault()}
+          className={`w-[86px] shrink-0 rounded border font-mono text-[11px] font-bold tracking-wider touch-none ${
+            evp.recording ? 'bg-red-600/80 border-red-400 text-white' : 'bg-black/40 border-[#5a2a24] text-[#e8a49a]'
+          }`}
+        >
+          HOLD
+          <br />
+          TO REC
+        </button>
+        <p
+          aria-live="polite"
+          data-testid="evp-transcript"
+          className={`flex-1 min-h-[2.6rem] text-[11px] leading-snug ${sig ? 'italic text-[#ece6d3]' : 'text-[#8d8371]'}`}
+        >
+          {status}
+        </p>
+      </div>
+      {!engine.isTouch && (
+        <p className="mt-1.5 font-mono text-[9px] text-[#6d6450]">[ ] or wheel to tune · hold Space to record · R to lower</p>
+      )}
     </div>
   );
 };
