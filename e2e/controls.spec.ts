@@ -91,6 +91,7 @@ test.describe('Esc', () => {
 
   test('in Settings, cancels the erase confirmation first, then closes the panel', async ({ page }) => {
     await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('gtrain-tapes', JSON.stringify({ 'passenger-hoyt': { first: 1, count: 1 } })));
     await page.getByRole('button', { name: 'Settings' }).click();
     const d = page.locator('[role=dialog][aria-labelledby=settings-title]');
     await d.getByRole('button', { name: 'Erase saved progress' }).click();

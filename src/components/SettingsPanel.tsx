@@ -6,7 +6,7 @@
 import { fullscreenSupported } from '../ui/fullscreen';
 import React from 'react';
 import { X } from 'lucide-react';
-import { settings, useSettings, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
+import { settings, useSettings, savedProgress, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
 import { haptics } from '../game/haptics';
 import { useEscape } from '../ui/escape';
 
@@ -85,6 +85,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
   const [vibrate, setVibrate] = React.useState(haptics.enabled);
   const [confirmErase, setConfirmErase] = React.useState(false);
   const [erased, setErased] = React.useState(false);
+  // Counted when the confirmation opens, so it names exactly what will go.
+  const saved = React.useMemo(() => savedProgress(), [confirmErase, erased]);
   const canVibrate = isTouch && haptics.supported;
   // Esc closes the panel, or first cancels the erase confirmation if it's open.
   useEscape(onClose);
@@ -219,22 +221,40 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               <p role="status" className="text-sm text-[#6cbe45] font-semibold">
                 Saved progress erased.
               </p>
+            ) : !saved.length ? (
+              <p className="text-sm text-[#9a9684]">Nothing saved on this device yet.</p>
             ) : !confirmErase ? (
-              <button
-                onClick={() => setConfirmErase(true)}
-                className="w-full py-2.5 px-4 rounded border border-white/20 hover:border-[#e3a83a]/60 text-[#ece6d3] font-bold text-sm transition-colors"
-              >
-                Erase saved progress
-              </button>
+              <>
+                <p className="text-xs text-[#9a9684] leading-snug mb-2">
+                  Your Case Files, endings, tapes, prints, badges and finished rides on this device. Settings are kept.
+                </p>
+                <button
+                  onClick={() => setConfirmErase(true)}
+                  className="w-full py-2.5 px-4 rounded border border-white/20 hover:border-[#e3a83a]/60 text-[#ece6d3] font-bold text-sm transition-colors"
+                >
+                  Erase saved progress
+                </button>
+              </>
             ) : (
               <div
                 role="alertdialog"
                 aria-labelledby="erase-confirm-text"
                 className="p-3 rounded border border-[#e3a83a]/40 bg-[#e3a83a]/10"
               >
-                <p id="erase-confirm-text" className="text-sm text-[#ece6d3] leading-snug">
-                  Erase your Psychological Log and ride history on this device? This can't be undone.
-                </p>
+                <div id="erase-confirm-text" className="text-sm text-[#ece6d3] leading-snug">
+                  <p>Erase everything saved on this device? This can’t be undone.</p>
+                  <ul className="mt-1.5 list-disc pl-5 text-[#ece6d3]/85" data-testid="erase-list">
+                    {saved.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  {saved.some((l) => l.includes('finished ride')) && (
+                    <p className="mt-1.5 text-xs text-[#9a9684]">
+                      Nightmare mode and chapter select lock again until you finish a ride.
+                    </p>
+                  )}
+                  <p className="mt-1.5 text-xs text-[#9a9684]">Your settings are kept.</p>
+                </div>
                 <div className="mt-3 flex gap-2">
                   <button
                     autoFocus

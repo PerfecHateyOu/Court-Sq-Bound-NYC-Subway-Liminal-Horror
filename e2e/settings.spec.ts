@@ -100,7 +100,12 @@ test.describe('settings', () => {
     });
     await page.getByRole('button', { name: 'Settings' }).click();
     const d = page.locator(DIALOG);
+    await expect(d.getByText('Settings are kept.')).toBeVisible();
     await d.getByRole('button', { name: 'Erase saved progress' }).click();
+    // The confirmation names exactly what will go, and what it relocks.
+    await expect(d.getByTestId('erase-list').locator('li')).toHaveText(['1 finished ride', '1 Case Files entry']);
+    await expect(d.locator('[role=alertdialog]')).toContainText('Nightmare mode and chapter select lock again');
+    await expect(d.locator('[role=alertdialog]')).toContainText('Your settings are kept.');
     await d.locator('[role=alertdialog]').getByRole('button', { name: 'Cancel' }).click();
     expect(await page.evaluate(() => localStorage.getItem('gtrain-psychlog'))).not.toBeNull();
     await d.getByRole('button', { name: 'Erase saved progress' }).click();
@@ -112,6 +117,30 @@ test.describe('settings', () => {
     expect(left.log).toBeNull();
     expect(left.runs).toBeNull();
     expect(left.settings).not.toBeNull(); // settings are kept
+  });
+
+  test('the erase list counts everything saved; with nothing saved there’s nothing to erase', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const d = page.locator(DIALOG);
+    await expect(d.getByText('Nothing saved on this device yet.')).toBeVisible();
+    await expect(d.getByRole('button', { name: 'Erase saved progress' })).toHaveCount(0);
+    await d.getByRole('button', { name: 'Done' }).click();
+
+    await page.evaluate(() => {
+      const set = (k: string, v: unknown) => localStorage.setItem(k, JSON.stringify(v));
+      set('gtrain-psychlog', { stare: { seen: 2, caught: 1, first: 1 }, adswap: { seen: 1, caught: 0, first: 1 } });
+      set('gtrain-endings', { exposed: { id: 'exposed', discoveredAt: 1, count: 1 } });
+      set('gtrain-tapes', { a: { first: 1, count: 1 }, b: { first: 1, count: 2 } });
+      set('gtrain-polaroids', [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }]);
+      set('gtrain-achievements', { first_anomaly: { unlockedAt: 1 } });
+    });
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await d.getByRole('button', { name: 'Erase saved progress' }).click();
+    await expect(d.getByTestId('erase-list').locator('li')).toHaveText(['2 Case Files entries', '1 ending', '2 tapes', '3 prints', '1 badge']);
+    // No finished rides saved, so nothing relocks.
+    await expect(d.locator('[role=alertdialog]')).not.toContainText('lock again');
   });
 
   test('bad saved settings fall back to defaults', async ({ page }) => {
