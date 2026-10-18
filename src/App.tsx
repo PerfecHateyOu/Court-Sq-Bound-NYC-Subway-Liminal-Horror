@@ -96,10 +96,10 @@ export default function App() {
 
 
   useEffect(() => {
-    if (phase !== 'menu' && !paused) {
-      setSettingsOpen(false);
-      setRouteSelectorOpen(false);
-    }
+    if (phase !== 'menu' && !paused) setSettingsOpen(false);
+    // The route selector opens mid-ride (L or the HUD), so it stays up while the train runs and
+    // closes when the train stops or the ride ends: the doors, the Haven, a Trial and the report need you.
+    if (phase !== 'intro' && phase !== 'ride') setRouteSelectorOpen(false);
   }, [phase, paused]);
 
   useEffect(() => {

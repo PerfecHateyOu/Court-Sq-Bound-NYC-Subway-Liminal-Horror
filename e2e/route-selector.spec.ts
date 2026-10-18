@@ -98,4 +98,17 @@ test.describe('Route selector and HUD route panel work from the keyboard', () =>
     await page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
     expect(await game(`return G.paused;`)).toBe(true);
   });
+
+  test('the selector stays open as the train pulls out, and closes when it stops', async ({ page, game }) => {
+    await game(`G.startIntro();`);
+    await page.keyboard.press('KeyL');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await game(`advance(12); if (G.phase !== 'ride') throw new Error(G.phase);`); // the doors close, the ride starts
+    await page.waitForTimeout(300);
+    await expect(dialog).toBeVisible();
+    await game(`G.seg._masks = []; G.active.forEach((a) => (a.trigger = 999));
+      for (let i = 0; i < 4000 && G.phase === 'ride'; i++) advance(0.05); if (G.phase !== 'stop') throw new Error(G.phase);`);
+    await expect(dialog).toHaveCount(0);
+  });
 });
