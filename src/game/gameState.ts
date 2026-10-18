@@ -51,6 +51,7 @@ import { routeManager } from './routeManager';
 import { routeText, fillRoute } from './routeText';
 import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
 import { unlockAchievement } from './achievements';
+import { practice, CHAPTER_START_SEGMENT } from './practice';
 
 /** Foggy sodium-vapor night fog colour on the open trestle. */
 const TRESTLE_FOG = new THREE.Color('#322018');
@@ -213,8 +214,18 @@ export class GameEngine {
 
   /** Nightmare mode (see NIGHTMARE in constants.ts). Chosen on the start screen; kept across rides. */
   public nightmare = false;
+  /**
+   * The chapter the ride starts from (the start screen's "Start from"). Chapter I is a full ride;
+   * II and III are practice runs that save nothing (see practice.ts). Kept across rides.
+   */
+  public startChapter = 1;
   /** Game time until which each ceiling tube is out (Nightmare bulb flicker). */
   private bulbOut: number[] = [];
+
+  /** This ride is a practice run (started from Chapter II or III): nothing it does is saved. */
+  public get isPractice(): boolean {
+    return practice.on;
+  }
 
   /** This ride began with "Get back on" after The Eternal Commute. */
   public looped: boolean = false;
@@ -581,6 +592,20 @@ export class GameEngine {
     this.doorOpen = 1;
     this.doorTarget = 1;
 
+    // Practice run: start at the chapter's first stretch, from the station before it.
+    const from = CHAPTER_START_SEGMENT[this.startChapter] ?? 0;
+    practice.on = from > 0;
+    practice.chapter = practice.on ? this.startChapter : 1;
+    if (from > 0) {
+      this.carBuilder.stA.setName(routeManager.getStopName(SEGS[from - 1].stop));
+      this.carBuilder.stB.setName(routeManager.getStopName(SEGS[from].stop));
+      // Sanity starts where that stretch's band allows (the first drift clamps it into the band).
+      this.bandStop = SEGS[from].stop;
+      this.san = this.getBand(this.bandStop)[1];
+      // Dad handed you the recorder at the Stop 6 Safe Haven; by Chapter III you have it.
+      if (SEGS[from].stop > 6) evp.hasRecorder = true;
+    }
+
     // The report screen drops the master level and fades the hum out, and a Trial or the
     // Stop 6 transition thins the bed. A new run (Ride again, or Restart from the pause
     // menu) must start at full ambience.
@@ -607,7 +632,12 @@ export class GameEngine {
     this.sched(10.4, () => {
       this.doorTarget = 0;
     });
-    this.sched(11.6, () => this.startSegment(0));
+    if (from > 0 && evp.hasRecorder) {
+      this.sched(12.5, () =>
+        this.setHint(this.isTouch ? 'You have Dad\u2019s tape recorder. Tap Recorder to raise it.' : 'You have Dad\u2019s tape recorder. Press R to raise it.', 5)
+      );
+    }
+    this.sched(11.6, () => this.startSegment(from));
     this.notifyUI();
   }
 
@@ -1463,8 +1493,9 @@ export class GameEngine {
     this.resolvedEnding = resolveEnding(endingSummary(this));
     recordEndingToArchive(this.resolvedEnding.id);
 
+    // A practice run isn't added to the ride history (or anything else; see practice.ts).
     const runs = this.loadRuns();
-    runs.push({
+    if (!practice.on) runs.push({
       date: Date.now(),
       san: this.san,
       sanPct: this.getSanityScore(),
@@ -1474,7 +1505,7 @@ export class GameEngine {
       endingId: this.resolvedEnding.id,
       nightmare: this.nightmare,
     });
-    this.saveRuns(runs);
+    if (!practice.on) this.saveRuns(runs);
     this.psychLog = recordRide(this.stopLog);
     polaroidManager.develop(); // prints develop now, after scoring
 

@@ -91,4 +91,13 @@ test.describe('Place names follow the route', () => {
     await page.locator('text=/Restart Ride/i').click();
     await expect(page.locator('[role=alertdialog]')).toContainText('Start over from Hoyt–Schermerhorn?');
   });
+
+  test('in a practice run, the restart confirmation names the chapter’s first station', async ({ page, game }) => {
+    await game(`G.startChapter = 2; G.startIntro(); advance(12.5);`);
+    await page.keyboard.press('KeyP');
+    await page.locator('text=/Restart Ride/i').click();
+    await expect(page.locator('[role=alertdialog]')).toContainText('Start over from Bedford–Nostrand Avs?');
+    await page.locator('[role=alertdialog]').locator('text=/^Restart$/').click();
+    expect(await game(`advance(12.5); return [G.isPractice, G.carBuilder.stA.name];`)).toEqual([true, 'Bedford–Nostrand Avs']);
+  });
 });

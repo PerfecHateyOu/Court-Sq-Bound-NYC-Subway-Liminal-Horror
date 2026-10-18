@@ -668,7 +668,7 @@ export default function App() {
     };
   }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys]);
 
-  const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false) => {
+  const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false, startChapter = 1) => {
     // Inside the click, as browsers require: go full screen for the ride.
     if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
@@ -679,6 +679,7 @@ export default function App() {
     if (G) {
       G.debug = showDebug;
       G.nightmare = nightmare; // kept for Ride Again / Restart until the next start screen
+      G.startChapter = startChapter; // likewise; Chapter II and III are practice runs
       G.startIntro();
       triggerUpdate();
     }
@@ -709,7 +710,7 @@ export default function App() {
   const handlePause = pauseGame;
   const handleResume = resumeGame;
 
-  // Restart from the pause menu: a fresh run from Hoyt–Schermerhorn. The abandoned
+  // Restart from the pause menu: a fresh run from the same starting chapter. The abandoned
   // ride is not saved to run history (only endGame() saves).
   const handleRestart = () => {
     const G = engineRef.current;

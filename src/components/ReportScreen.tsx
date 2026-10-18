@@ -6,12 +6,13 @@
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
-import { RESTRAINT_RAISE } from '../constants';
+import { RESTRAINT_RAISE, CHAPTERS } from '../constants';
 import { RotateCcw, Camera, Sparkles, Compass, Lock, DoorOpen, BookOpen } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import { TapePlayButton } from './TapePlayButton';
+import { practice } from '../game/practice';
 import { resolveEnding, endingSummary, endingText, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
 import { routeText } from '../game/routeText';
 import { CaseFilesModal } from './CaseFilesModal';
@@ -87,14 +88,18 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                 Travel Report
               </h2>
               <p className="text-xs sm:text-sm text-[#55574c] mt-1 font-semibold">
-                {rt.line} train, {rt.origin} to {rt.terminusSign}. Ride #{runs.length}.
+                {G.isPractice
+                  ? `${rt.line} train to ${rt.terminusSign}. Practice run from Chapter ${CHAPTERS[practice.chapter - 1].numeral.split(' ')[1]}.`
+                  : `${rt.line} train, ${rt.origin} to ${rt.terminusSign}. Ride #${runs.length}.`}
               </p>
             </div>
             <div className="text-right hidden sm:block">
               <span className="font-mono text-[11px] font-bold text-[#55574c] uppercase tracking-widest block">
-                STATUS: FILED
+                {G.isPractice ? 'STATUS: NOT FILED' : 'STATUS: FILED'}
               </span>
-              <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#6cbe45] mt-1 shadow-[0_0_8px_rgba(108,190,69,0.8)]" />
+              <span
+                className={`inline-block w-2.5 h-2.5 rounded-full mt-1 ${G.isPractice ? 'bg-[#9f9883]' : 'bg-[#6cbe45] shadow-[0_0_8px_rgba(108,190,69,0.8)]'}`}
+              />
             </div>
           </div>
 
@@ -112,7 +117,21 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                 NIGHTMARE
               </span>
             )}
+            {G.isPractice && (
+              <span
+                data-testid="practice-tag"
+                className="inline-flex ml-2 mb-2 px-2 py-0.5 rounded bg-[#55574c] text-[#ece6d3] font-mono text-[11px] font-bold tracking-wider"
+              >
+                PRACTICE
+              </span>
+            )}
             <div className="font-semibold text-[#1b1d18]">{endingNarrative}</div>
+            {G.isPractice && (
+              <p data-testid="practice-note" className="mt-2 text-xs text-[#55574c] font-semibold">
+                Practice run: nothing from this ride is saved. Endings, badges, Case Files, tapes and prints
+                come only from full rides.
+              </p>
+            )}
           </div>
 
           {/* Core Evaluation Pillars */}

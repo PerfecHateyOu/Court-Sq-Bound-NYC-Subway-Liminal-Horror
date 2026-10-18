@@ -11,9 +11,14 @@ import { useProgressEpoch } from '../settings';
 import { useEscape } from '../ui/escape';
 import { CaseFilesModal } from './CaseFilesModal';
 import { GameEngine } from '../game/gameState';
+import { CHAPTERS } from '../constants';
+import { chapterOrigin } from '../game/practice';
+
+/** "SIGNAL DRIFT" → "Signal Drift" */
+const titleCase = (t: string) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 interface StartScreenProps {
-  onStart: (muted: boolean, debug: boolean, nightmare: boolean) => void;
+  onStart: (muted: boolean, debug: boolean, nightmare: boolean, startChapter: number) => void;
   onOpenSettings: () => void;
   isTouch: boolean;
   engine?: GameEngine;
@@ -23,7 +28,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   const [startMuted, setStartMuted] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
   const [nightmare, setNightmare] = React.useState(false);
-  // Nightmare unlocks after one completed ride (any ending).
+  // Chapter II and III are practice runs (nothing is saved); kept from the last ride's choice.
+  const [startChapter, setStartChapter] = React.useState(() => engine?.startChapter ?? 1);
+  // Nightmare and chapter select unlock after one completed ride (any ending; practice runs don't count).
   const nightmareUnlocked = React.useMemo(() => {
     try {
       return (JSON.parse(localStorage.getItem('gtrain-runs') || '[]') as unknown[]).length > 0;
@@ -112,7 +119,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         {/* Action Controls & Settings */}
         <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <button
-            onClick={() => onStart(startMuted, showDebug, nightmareUnlocked && nightmare)}
+            onClick={() => onStart(startMuted, showDebug, nightmareUnlocked && nightmare, nightmareUnlocked ? startChapter : 1)}
             className="px-6 py-3.5 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base sm:text-lg tracking-wide transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
           >
             Board the Train
@@ -147,7 +154,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
               </label>
             ) : (
               <span className="text-[#6d6a5c]" data-testid="nightmare-locked">
-                Nightmare mode: finish a ride to unlock
+                Nightmare mode and chapter select: finish a ride to unlock
               </span>
             )}
 
@@ -172,6 +179,30 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
             </label>
           </div>
         </div>
+
+        {nightmareUnlocked && (
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1.5 text-xs text-[#9a9684]">
+            <label className="flex items-center gap-2">
+              <span className="text-[#ece6d3] font-semibold">Start from</span>
+              <select
+                value={startChapter}
+                onChange={(e) => setStartChapter(Number(e.target.value))}
+                className="bg-[#101411] border border-white/20 rounded px-2 py-1.5 text-[#ece6d3] text-xs max-w-[17rem]"
+              >
+                {CHAPTERS.map((c) => (
+                  <option key={c.index} value={c.index}>
+                    {`Chapter ${c.numeral.split(' ')[1]}: ${titleCase(c.title)}, from ${chapterOrigin(c.index)}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {startChapter > 1 && (
+              <span data-testid="practice-note" className="text-[#e3a83a]">
+                Practice run: no endings, badges, Case Files or tapes are saved.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Case Files Dossier Modal */}
         {showLog && (
