@@ -12,7 +12,10 @@ concurrency:
 jobs:
   build:
     name: Type-check and build
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest, which moves to Ubuntu 26 from Oct 19, 2026. The browser
+    # tests depend on Playwright's system packages (--with-deps) and software WebGL timings, so
+    # change the OS on purpose, in its own PR, once the Playwright version in e2e/ supports it.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -79,7 +82,7 @@ jobs:
   e2e:
     name: Browser tests
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # see the build job
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
