@@ -1,0 +1,15 @@
+# Keep the Cloud Run build small and secrets out of the image.
+.git
+.github
+node_modules
+dist
+dist-test
+build
+coverage
+e2e
+test-results
+playwright-report
+.aistudio
+.env*
+*.log
+.DS_Store

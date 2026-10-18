@@ -41,6 +41,17 @@ GitHub Actions runs the type-check, the build, and the full browser suite on eve
 
 Google AI Studio puts back its original starter `bun.lock` every time it syncs to GitHub. So the root `package.json` keeps the starter's packages (`@google/genai`, `express`, `dotenv`, `motion`, `@types/express`, `autoprefixer`, `esbuild`, `tsx`) even though the game doesn't import them; they never reach the built game. Don't remove them, or the next sync breaks CI again. If a sync ever brings a different lock, CI's "Check bun.lock matches package.json" step fails and says what changed.
 
+## Deploy to Cloud Run
+
+The `Dockerfile` builds the game and serves it with nginx on port 8080. From Google Cloud Shell:
+
+```bash
+git clone https://github.com/PerfecHateyOu/Court-Sq-Bound-NYC-Subway-Liminal-Horror && cd Court-Sq-Bound-NYC-Subway-Liminal-Horror
+gcloud run deploy court-sq-bound --source . --region us-central1 --allow-unauthenticated
+```
+
+To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
+
 ## How to play
 
 1. **Notice.** When something in the car changes, look at it and hold Flag. Flags are private.
