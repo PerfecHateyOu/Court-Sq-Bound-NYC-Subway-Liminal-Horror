@@ -118,8 +118,13 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
+      {/* Top bar. The left group (route, next stop) shrinks first, truncating the station name; on
+          a screen too narrow for both groups the buttons drop to a second row instead of covering
+          it. Hidden under the camera viewfinder, which has its own controls along the top. */}
+      {!polaroidManager.isViewfinderOpen && (
+      <div className="absolute inset-x-3 sm:inset-x-4 top-3 sm:top-4 flex flex-wrap items-start gap-2 pointer-events-none">
       {/* Top Left Bar: Route Bullet, Next Station, Consist Location */}
-      <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2 pointer-events-auto">
+      <div className="flex-1 min-w-[8rem] flex items-center gap-2 pointer-events-auto">
         <button
           type="button"
           onClick={onOpenRouteSelector}
@@ -127,52 +132,55 @@ export const HUD: React.FC<HUDProps> = ({
           aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
           aria-keyshortcuts="L"
           data-testid="hud-route-panel"
-          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+          className="min-w-0 h-10 flex items-center gap-2 px-2.5 sm:px-3 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
         >
           <span
-            className="w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
+            className="w-6 h-6 shrink-0 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
             style={{ backgroundColor: currentRoute.bulletColor, color: currentRoute.bulletTextColor }}
           >
             {currentRoute.id}
           </span>
-          <span className="text-[#9a9684]">Next:</span>
-          <b className="text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
-          <span className="w-px h-4 bg-white/15" aria-hidden="true" />
-          <HeartbeatTrace engine={G} />
+          <span className="hidden sm:inline shrink-0 text-[#9a9684]">Next:</span>
+          <b className="min-w-0 truncate text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
+          <span className="hidden sm:flex shrink-0 items-center gap-2">
+            <span className="w-px h-4 bg-white/15" aria-hidden="true" />
+            <HeartbeatTrace engine={G} />
+          </span>
         </button>
 
         {/* Chapter badge (wide screens; on phones the top bar is full and the rollsign carries it) */}
         <div
           data-testid="chapter-badge"
-          className="hidden lg:flex items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
+          className="hidden xl:flex shrink-0 items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
         >
           CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
           {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
         </div>
 
         {/* Consist Car Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
+        <div className="hidden lg:flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
           <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />
           <span>{carName}</span>
         </div>
       </div>
 
-      {/* Top Right Controls: Camera, Album, Mute and Pause */}
-      <div className="absolute right-4 top-4 flex items-center gap-2 pointer-events-auto">
+      {/* Top Right Controls: Camera, Album, Mute and Pause. Labels and key hints only on wide
+          screens (key hints only with a mouse); icons alone keep one row on a phone. */}
+      <div className="ml-auto shrink-0 flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
         {/* Polaroid Camera Viewfinder Trigger Button */}
         <button
           onClick={onToggleCamera}
           title="Equip Polaroid Camera [C]"
           aria-label="Polaroid Camera"
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+          className={`h-10 min-w-10 px-2.5 lg:px-3 flex items-center justify-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
             polaroidManager.isViewfinderOpen
               ? 'bg-red-600 text-white border-red-400'
               : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
           }`}
         >
           <Camera className="w-4 h-4 text-[#e3a83a]" />
-          <span className="hidden sm:inline">Camera</span>
-          <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden sm:inline">
+          <span className="hidden lg:inline">Camera</span>
+          <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden lg:pointer-fine:inline">
             C
           </span>
         </button>
@@ -184,13 +192,13 @@ export const HUD: React.FC<HUDProps> = ({
             title="Tape recorder [R]"
             aria-label="Recorder"
             aria-pressed={evp.raised}
-            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+            className={`h-10 min-w-10 px-2.5 lg:px-3 flex items-center justify-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
               evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
             }`}
           >
             <Mic className="w-4 h-4 text-[#e8a49a]" />
-            <span className="hidden sm:inline">Recorder</span>
-            <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden sm:inline">R</span>
+            <span className="hidden lg:inline">Recorder</span>
+            <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden lg:pointer-fine:inline">R</span>
           </button>
         )}
 
@@ -199,14 +207,14 @@ export const HUD: React.FC<HUDProps> = ({
           onClick={onToggleAlbum}
           title="Evidence Album [TAB]"
           aria-label="Evidence Album"
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+          className={`h-10 min-w-10 px-2.5 lg:px-3 flex items-center justify-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
             polaroidManager.isAlbumOpen
               ? 'bg-amber-600 text-white border-amber-400'
               : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
           }`}
         >
           <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
-          <span className="hidden sm:inline">Album</span>
+          <span className="hidden lg:inline">Album</span>
           <span className="text-[10px] text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
             {polaroidManager.photos.length}
           </span>
@@ -218,7 +226,8 @@ export const HUD: React.FC<HUDProps> = ({
           title="Route lines (L)"
           aria-label="Route Lines"
           aria-keyshortcuts="L"
-          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+          // On a narrow screen the route panel (left) opens the same selector.
+          className="hidden sm:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
         >
           <GitBranch className="w-4 h-4 text-[#9a9684]" />
         </button>
@@ -227,12 +236,12 @@ export const HUD: React.FC<HUDProps> = ({
         <button
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute' : 'Mute'}
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
+          className={`h-10 min-w-10 px-2.5 lg:px-3 flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
             isMuted ? 'text-[#e3a83a] border-[#e3a83a]/40' : 'text-[#ece6d3]'
           }`}
         >
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Sound'}</span>
+          <span className="hidden lg:inline">{isMuted ? 'Muted' : 'Sound'}</span>
         </button>
 
         {/* Full screen (wide screens; phones go full screen on boarding, or from the pause menu) */}
@@ -256,6 +265,8 @@ export const HUD: React.FC<HUDProps> = ({
           <Pause className="w-4 h-4" />
         </button>
       </div>
+      </div>
+      )}
 
       {/* Inter-Car Gangway Door Open Prompt */}
       {G.nearGangwayDoor && (
@@ -301,7 +312,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Choice Buttons Bar (Doors & Mask Checks) */}
       {showChoices && choice && (
-        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100vw-32px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 border border-white/15 shadow-2xl transit-sign-flicker">
+        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100%-24px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 border border-white/15 shadow-2xl transit-sign-flicker">
           {/* Progress Time Bar */}
           {isFinite(choice.window) && (
             <div className="w-full h-1 bg-white/15 rounded-full overflow-hidden mb-1">
@@ -328,9 +339,11 @@ export const HUD: React.FC<HUDProps> = ({
       )}
 
       {/* Touch: walking stick (bottom left), where the keyboard hints sit on desktop. Hidden at
-          the same times WASD is ignored: answer prompts and the restraint. */}
+          the same times WASD is ignored: answer prompts and the restraint. The camera viewfinder
+          covers the screen edges, so the touch controls step aside while it's up. */}
       {G.isTouch &&
         !showChoices &&
+        !polaroidManager.isViewfinderOpen &&
         !isRestraint &&
         !G.paused &&
         (G.phase === 'ride' || G.phase === 'stop' || G.phase === 'haven' || G.phase === 'intro') && (
@@ -354,7 +367,7 @@ export const HUD: React.FC<HUDProps> = ({
       {evp.raised && !showChoices && <EvpRecorder engine={G} />}
 
       {/* Hold / Flag Button (Bottom Right) */}
-      {!showChoices && !evp.raised && (
+      {!showChoices && !evp.raised && !(G.isTouch && polaroidManager.isViewfinderOpen) && (
         <div className="absolute right-4 bottom-5 pointer-events-auto">
           <button
             onPointerDown={(e) => {

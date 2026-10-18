@@ -61,7 +61,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
   return (
     <div
       data-testid="evp-recorder"
-      className="absolute right-4 bottom-5 w-[min(300px,calc(100vw-160px))] pointer-events-auto select-none rounded-lg border border-[#4a4438] bg-[#15130f]/95 shadow-2xl text-[#d9d1bd] p-3"
+      className="absolute right-4 bottom-5 w-[min(300px,calc(100%-160px))] pointer-events-auto select-none rounded-lg border border-[#4a4438] bg-[#15130f]/95 shadow-2xl text-[#d9d1bd] p-3"
     >
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] tracking-[0.25em] text-[#8d8371]">MICROCASSETTE</span>
@@ -73,7 +73,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
           <button
             onClick={() => engine.toggleRecorder()}
             aria-label="Lower recorder"
-            className="w-7 h-7 -mr-1 flex items-center justify-center rounded-full text-[#8d8371] hover:text-[#ece6d3] hover:bg-white/10"
+            className="w-7 h-7 pointer-coarse:w-10 pointer-coarse:h-10 -mr-1 flex items-center justify-center rounded-full text-[#8d8371] hover:text-[#ece6d3] hover:bg-white/10"
           >
             <X className="w-4 h-4" />
           </button>
@@ -124,7 +124,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <button
           aria-label="Tune down 5 kHz"
           onClick={() => evp.tune(-5.0)}
-          className="px-1.5 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          className="px-1.5 pointer-coarse:px-2 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
           title="-5 kHz"
         >
           -5k
@@ -132,7 +132,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <button
           aria-label="Tune down"
           onClick={() => evp.tune(-0.5)}
-          className="w-7 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+          className="w-7 pointer-coarse:w-9 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -175,14 +175,14 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <button
           aria-label="Tune up"
           onClick={() => evp.tune(0.5)}
-          className="w-7 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+          className="w-7 pointer-coarse:w-9 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
         <button
           aria-label="Tune up 5 kHz"
           onClick={() => evp.tune(5.0)}
-          className="px-1.5 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          className="px-1.5 pointer-coarse:px-2 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
           title="+5 kHz"
         >
           +5k

@@ -35,8 +35,8 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
   useEscape(() => setConfirmRestart(false), confirmRestart);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="w-full max-w-sm p-6 rounded-lg bg-[#101411] border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden">
+    <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto safe-pad bg-black/80 backdrop-blur-md">
+      <div className="w-full max-w-sm my-auto p-6 rounded-lg bg-[#101411] border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden">
         {/* Subtle illuminated transit sign raster scanlines */}
         <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-40" />
 

@@ -36,9 +36,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md select-none animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-pad sm:safe-pad-lg bg-black/80 backdrop-blur-md select-none animate-in fade-in duration-200">
       {/* Album Container */}
-      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-full flex flex-col bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden">
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#191d1a]">
           <div className="flex items-center gap-3">

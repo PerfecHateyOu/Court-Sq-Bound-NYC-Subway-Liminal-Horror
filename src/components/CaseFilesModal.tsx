@@ -52,7 +52,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center safe-pad safe-pad-sm sm:safe-pad-lg bg-black/85 backdrop-blur-md"
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -61,7 +61,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="case-files-title"
-        className="w-full max-w-2xl max-h-[88vh] flex flex-col bg-[#e8e2cf] text-[#1b1d18] rounded-sm shadow-2xl border border-[#9f9883] overflow-hidden relative"
+        className="w-full max-w-2xl max-h-full flex flex-col bg-[#e8e2cf] text-[#1b1d18] rounded-sm shadow-2xl border border-[#9f9883] overflow-hidden relative"
       >
         {/* Subtle scanline overlay */}
         <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-20" />

@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Full-screen overlays: at least --pad on every side, more under a notch, rounded corners or the
+   home indicator (full screen and the home-screen app draw under them; see viewport-fit=cover). */
+@utility safe-pad {
+  padding: max(var(--pad, 1rem), env(safe-area-inset-top, 0px)) max(var(--pad, 1rem), env(safe-area-inset-right, 0px))
+    max(var(--pad, 1rem), env(safe-area-inset-bottom, 0px)) max(var(--pad, 1rem), env(safe-area-inset-left, 0px));
+}
+@utility safe-pad-none {
+  --pad: 0px;
+}
+@utility safe-pad-sm {
+  --pad: 0.75rem;
+}
+@utility safe-pad-lg {
+  --pad: 1.5rem;
+}
+
 :root {
   --tunnel: #0a0d0b;
   --ink: #ece6d3;

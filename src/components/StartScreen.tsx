@@ -49,7 +49,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   const endingCount = React.useMemo(() => Object.keys(loadEndingsArchive()).length, [showLog, progressEpoch]);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 sm:p-6 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto safe-pad sm:safe-pad-lg bg-black/80 backdrop-blur-md">
       <div className="w-full max-w-xl my-auto animate-in fade-in zoom-in-95 duration-400">
         {/* MTA Station Mosaic Tablet */}
         <div className="relative rounded-sm p-4 bg-[#e8e2cf] text-[#1b1d18] shadow-2xl border-4 border-[#1c241e]">

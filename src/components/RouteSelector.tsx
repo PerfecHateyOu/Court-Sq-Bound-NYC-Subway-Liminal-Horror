@@ -54,17 +54,17 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center safe-pad sm:safe-pad-lg bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="route-selector-title"
         onKeyDown={onKeyDown}
-        className="relative w-full max-w-2xl bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-full bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#191d1a]">
+        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between gap-3 bg-[#191d1a]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#6cbe45]/15 border border-[#6cbe45]/30 flex items-center justify-center text-[#6cbe45]">
               <GitBranch className="w-5 h-5" />
@@ -83,14 +83,14 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
             type="button"
             onClick={onClose}
             aria-label="Close route selector"
-            className="w-9 h-9 rounded-lg bg-black/50 border border-white/10 hover:bg-black/80 flex items-center justify-center text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+            className="shrink-0 w-10 h-10 rounded-lg bg-black/50 border border-white/10 hover:bg-black/80 flex items-center justify-center text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Route Cards List */}
-        <div className="p-6 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
           {allRoutes.map((r) => {
             const isSelected = r.id === currentRoute.id;
 
@@ -159,7 +159,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
         </div>
 
         {/* Footer Guidance */}
-        <div className="px-6 py-3 bg-[#101311] border-t border-white/5 text-[11px] text-[#9a9684] flex items-center justify-between">
+        <div className="shrink-0 px-4 sm:px-6 py-3 bg-[#101311] border-t border-white/5 text-[11px] text-[#9a9684] flex items-center justify-between">
           <span>Route switches take effect upon leaving the current haven station.</span>
           <span className="text-white/40 font-mono">COURT SQ-BOUND v5.2</span>
         </div>
