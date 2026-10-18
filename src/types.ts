@@ -164,6 +164,8 @@ export interface RunHistoryRecord {
   acc: { correct: number; miss: number; fp: number };
   trials: number;
   endingId?: string;
+  /** Ridden in Nightmare mode. */
+  nightmare?: boolean;
 }
 
 export interface PolaroidPhoto {
