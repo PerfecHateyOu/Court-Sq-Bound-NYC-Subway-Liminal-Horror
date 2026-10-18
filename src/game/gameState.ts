@@ -9,6 +9,7 @@ import {
   BREATH_MAX_FLAGS,
   BREATH_PER_FLAG_DEG,
   BREATH_TIERS,
+  CALM_CHATS,
   CFG,
   CHATS,
   DRIFT,
@@ -152,6 +153,7 @@ export class GameEngine {
 
   public trial: TrialState | null = null;
   public trials: TrialRecord[] = [];
+  private chatSwap: Record<number, [number, string][]> = {};
   public misleadUsed: boolean = false;
   public misleadStop: number = 9;
 
@@ -457,6 +459,12 @@ export class GameEngine {
     this.trial = null;
     this.trials = [];
     this.misleadUsed = false;
+    // Swap some calm exchanges (chat slots 0-2) for extra small talk, each extra used at most once a ride.
+    const extra = [...CALM_CHATS];
+    this.chatSwap = {};
+    for (const i of [0, 1, 2]) {
+      if (extra.length && Math.random() < 0.5) this.chatSwap[i] = extra.splice(Math.floor(Math.random() * extra.length), 1)[0];
+    }
     this.heartBpm = HEART_BPM[0];
     this.heartNextAt = 0;
     this.heartBeats = [];
@@ -668,7 +676,7 @@ export class GameEngine {
     }
 
     if (seg.chat !== undefined) {
-      const c = this.tier >= 2 && seg.chat < 3 ? CHATS[3] : CHATS[seg.chat];
+      const c = this.tier >= 2 && seg.chat < 3 ? CHATS[3] : this.chatSwap[seg.chat] ?? CHATS[seg.chat];
       this.sched(15.0, () => this.chatDialogue(c[0]));
       this.sched(18.6, () => this.chatDialogue(c[1]));
     }
