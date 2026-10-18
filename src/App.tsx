@@ -55,7 +55,8 @@ function hudNeedsLiveRefresh(G: GameEngine): boolean {
     !!G.restraint ||
     G.debug ||
     G.GT < G.hintUntil ||
-    G.GT - G.notedT < 0.7
+    G.GT - G.notedT < 0.7 ||
+    !G.shutterReady // the shutter button shows EJECTING until the print is out
   );
 }
 
@@ -575,8 +576,7 @@ export default function App() {
       // Polaroid Viewfinder [C] toggle (hands busy: raising the camera lowers the recorder)
       if (e.code === 'KeyC') {
         e.preventDefault();
-        evp.lower();
-        polaroidManager.toggleViewfinder();
+        if (!e.repeat) G.toggleCamera();
         triggerUpdate();
         return;
       }
@@ -593,7 +593,8 @@ export default function App() {
       // Snap photo if viewfinder is active
       if (polaroidManager.isViewfinderOpen && (e.code === 'Space' || e.code === 'Enter')) {
         e.preventDefault();
-        G.takePolaroidPhoto();
+        // One shot per press: holding the key doesn't fire the shutter again.
+        if (!e.repeat) G.takePolaroidPhoto();
         triggerUpdate();
         return;
       }
@@ -798,8 +799,7 @@ export default function App() {
           onFlagDown={handleFlagDown}
           onFlagUp={handleFlagUp}
           onToggleCamera={() => {
-            evp.lower();
-            polaroidManager.toggleViewfinder();
+            engineRef.current?.toggleCamera();
             triggerUpdate();
           }}
           onToggleAlbum={() => {

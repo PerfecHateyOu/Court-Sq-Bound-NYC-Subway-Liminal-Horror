@@ -171,11 +171,15 @@ export const HUD: React.FC<HUDProps> = ({
           {/* Polaroid Camera Viewfinder Trigger Button */}
           <button
             onClick={onToggleCamera}
-            title="Equip Polaroid Camera [C]"
+            // While an answer or the restraint needs you, the camera can't come up; pressing it says why.
+            title={G.handsBusy && !polaroidManager.isViewfinderOpen ? `Camera: ${G.handsBusy}` : 'Equip Polaroid Camera [C]'}
             aria-label="Polaroid Camera"
+            aria-disabled={(!!G.handsBusy && !polaroidManager.isViewfinderOpen) || undefined}
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
               polaroidManager.isViewfinderOpen
                 ? 'bg-red-600 text-white border-red-400'
+                : G.handsBusy
+                ? 'bg-black/50 border-white/10 text-[#ece6d3]/40'
                 : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
             }`}
           >
@@ -190,11 +194,16 @@ export const HUD: React.FC<HUDProps> = ({
           {evp.hasRecorder && (
             <button
               onClick={() => G.toggleRecorder()}
-              title="Tape recorder [R]"
+              title={G.handsBusy && !evp.raised ? `Recorder: ${G.handsBusy}` : 'Tape recorder [R]'}
               aria-label="Recorder"
               aria-pressed={evp.raised}
+              aria-disabled={(!!G.handsBusy && !evp.raised) || undefined}
               className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
-                evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+                evp.raised
+                  ? 'bg-[#5a2a24] text-white border-red-400/60'
+                  : G.handsBusy
+                  ? 'bg-black/50 border-white/10 text-[#ece6d3]/40'
+                  : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
               }`}
             >
               <Mic className="w-4 h-4 text-[#e8a49a]" />

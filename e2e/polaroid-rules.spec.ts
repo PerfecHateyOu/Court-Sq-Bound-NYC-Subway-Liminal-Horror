@@ -31,7 +31,7 @@ test.describe('Polaroid follows the rules', () => {
     const r = await game(`ride(0); await sleep(300); ${LOOK_AWAY}
       // A shot taken before the anomaly appeared doesn't count; one after does.
       const realRandom = Math.random; Math.random = () => 0.99;
-      const early = G.takePolaroidPhoto(); G.active.push(${FAKE('G.GT + 0.5')}); advance(0.6);
+      const early = G.takePolaroidPhoto(); G.active.push(${FAKE('G.GT + 0.5')}); advance(1); // past the anomaly and the shutter's eject
       const late = G.takePolaroidPhoto(); Math.random = realRandom;
       const correct0 = G.acc.correct; G.arrive();
       const rec = G.stopLog[G.stopLog.length - 1].anoms.find((a) => a.id === 'testanom');
@@ -64,7 +64,7 @@ test.describe('Polaroid follows the rules', () => {
     expect(watched.susDelta).toBe(10);
     expect(watched.reason).toMatch(/flash photo while .* was watching/);
 
-    const unwatched = await game(`${LOOK_AWAY} const sus0 = G.sus;
+    const unwatched = await game(`advance(1); ${LOOK_AWAY} const sus0 = G.sus; // past the last print's eject
       const realRandom = Math.random; Math.random = () => 0.1; // the flash catches an eye
       G.takePolaroidPhoto(); Math.random = realRandom;
       return { susDelta: G.sus - sus0, looking: G.carBuilder.parents.filter((p) => p.mode === 'player').length };`);

@@ -38,7 +38,7 @@ test.describe('polaroid camera', () => {
 
   test('Restart Ride resets film, photos, viewfinder and route', async ({ page, game }) => {
     const before = await game(`ride(0); await sleep(300);
-      const P = window.__P; G.takePolaroidPhoto(); G.takePolaroidPhoto();
+      const P = window.__P; G.takePolaroidPhoto(); advance(1); G.takePolaroidPhoto();
       window.__RT.setRoute('L'); P.setViewfinder(true);
       return { film: P.remainingFilm, photos: P.photos.length, route: window.__RT.routeId };`);
     expect(before).toEqual({ film: 6, photos: 2, route: 'L' });

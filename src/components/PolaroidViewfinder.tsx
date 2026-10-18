@@ -28,6 +28,10 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
   const handleSnap = () => {
     engine.takePolaroidPhoto();
   };
+  // What the shutter button says when it can't fire: the last print is still coming out, or the
+  // pack is empty.
+  const ejecting = remainingFilm > 0 && !engine.shutterReady;
+  const shutterStatus = remainingFilm <= 0 ? 'OUT OF FILM' : ejecting ? 'EJECTING\u2026' : null;
 
   return (
     <>
@@ -115,7 +119,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
                     : 'bg-red-900/40 text-red-400 border border-red-500/40'
                 }`}
               >
-                0{remainingFilm} / 10
+                {String(remainingFilm).padStart(2, '0')} / 10
               </span>
               <span className="text-[10px] text-white/40 hidden sm:inline">600 INSTANT CARTRIDGE</span>
             </div>
@@ -124,15 +128,20 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             <button
               onClick={handleSnap}
               disabled={remainingFilm <= 0}
+              aria-disabled={ejecting || undefined}
+              aria-label={shutterStatus ? `SNAP PHOTO: ${shutterStatus.toLowerCase()}` : 'SNAP PHOTO'}
+              data-testid="shutter"
               className={`shrink-0 flex items-center gap-2.5 px-5 sm:px-6 py-3 rounded-full font-bold text-sm tracking-wide transition-all shadow-2xl active:scale-95 ${
-                remainingFilm > 0
-                  ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/60 hover:shadow-[0_0_24px_rgba(220,38,38,0.7)]'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/10'
+                remainingFilm <= 0
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/10'
+                  : ejecting
+                  ? 'bg-red-900 text-white/60 cursor-wait'
+                  : 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/60 hover:shadow-[0_0_24px_rgba(220,38,38,0.7)]'
               }`}
             >
               <Camera className="w-5 h-5" />
-              <span>SNAP PHOTO</span>
-              <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono hidden sm:pointer-fine:inline">
+              <span>{shutterStatus ?? 'SNAP PHOTO'}</span>
+              <span className={`text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono hidden ${shutterStatus ? '' : 'sm:pointer-fine:inline'}`}>
                 CLICK / SPACE
               </span>
             </button>

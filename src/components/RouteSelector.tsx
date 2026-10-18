@@ -160,7 +160,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
 
         {/* Footer Guidance */}
         <div className="shrink-0 px-4 sm:px-6 py-3 bg-[#101311] border-t border-white/5 text-[11px] text-[#9a9684] flex items-center justify-between gap-3">
-          <span>Route switches take effect upon leaving the current haven station.</span>
+          <span>Switching renames the stops and announcements ahead, from now on. Every new ride starts on the G.</span>
           <span className="shrink-0 whitespace-nowrap text-white/40 font-mono">COURT SQ-BOUND v5.2</span>
         </div>
       </div>
