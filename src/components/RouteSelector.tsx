@@ -3,10 +3,11 @@
  * Allows switching between MTA transit lines (G Crosstown, L Canarsie, 7 Ghost Line)
  * with authentic MTA strip map bullets and environmental profiles.
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { routeManager, ROUTES } from '../game/routeManager';
 import { TransitLineRoute } from '../types';
 import { X, GitBranch, ArrowRight, ShieldCheck, AlertOctagon } from 'lucide-react';
+import { useEscape } from '../ui/escape';
 
 interface RouteSelectorProps {
   onClose: () => void;
@@ -17,6 +18,35 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
   const currentRoute = routeManager.activeRoute;
   const allRoutes = routeManager.getAllRoutes();
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const currentRef = useRef<HTMLButtonElement>(null);
+  useEscape(onClose);
+
+  // Focus starts on the line you're on, and goes back to whatever opened the selector.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    currentRef.current?.focus();
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
+  }, []);
+
+  // Keep Tab inside the dialog.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab' || !dialogRef.current) return;
+    const items = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled])');
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   const handleSelect = (r: TransitLineRoute) => {
     routeManager.setRoute(r.id);
     if (onSelectRoute) onSelectRoute(r);
@@ -25,7 +55,14 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="route-selector-title"
+        onKeyDown={onKeyDown}
+        className="relative w-full max-w-2xl bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#191d1a]">
           <div className="flex items-center gap-3">
@@ -33,7 +70,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
               <GitBranch className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base sm:text-lg text-[#ece6d3] tracking-tight">
+              <h2 id="route-selector-title" className="font-bold text-base sm:text-lg text-[#ece6d3] tracking-tight">
                 MTA Transit Line Switching
               </h2>
               <p className="text-xs text-[#9a9684]">
@@ -43,8 +80,10 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-lg bg-black/50 border border-white/10 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
+            aria-label="Close route selector"
+            className="w-9 h-9 rounded-lg bg-black/50 border border-white/10 hover:bg-black/80 flex items-center justify-center text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -56,17 +95,22 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
             const isSelected = r.id === currentRoute.id;
 
             return (
-              <div
+              <button
+                type="button"
                 key={r.id}
+                ref={isSelected ? currentRef : undefined}
                 onClick={() => handleSelect(r)}
-                className={`relative p-4 rounded-lg border cursor-pointer transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                aria-current={isSelected ? 'true' : undefined}
+                aria-label={`${r.name}${isSelected ? ' (current line)' : ''}`}
+                aria-describedby={`route-desc-${r.id}`}
+                className={`relative w-full text-left p-4 rounded-lg border cursor-pointer transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141715] ${
                   isSelected
                     ? 'bg-white/10 border-white/40 shadow-lg'
                     : 'bg-[#181b19] hover:bg-[#202521] border-white/10 hover:border-white/25'
                 }`}
               >
                 {/* Route Bullet & Name */}
-                <div className="flex items-start sm:items-center gap-3.5">
+                <span className="flex items-start sm:items-center gap-3.5">
                   <span
                     className="w-10 h-10 rounded-full font-extrabold text-base flex items-center justify-center shrink-0 shadow-md"
                     style={{ backgroundColor: r.bulletColor, color: r.bulletTextColor }}
@@ -74,29 +118,31 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
                     {r.id}
                   </span>
 
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm sm:text-base text-[#ece6d3] tracking-tight">
+                  <span className="block">
+                    <span className="flex items-center gap-2">
+                      <span className="font-bold text-sm sm:text-base text-[#ece6d3] tracking-tight">
                         {r.name}
-                      </h3>
+                      </span>
                       {isSelected && (
                         <span className="text-[10px] font-mono font-bold bg-[#6cbe45]/20 text-[#6cbe45] border border-[#6cbe45]/40 px-2 py-0.5 rounded">
                           CURRENT
                         </span>
                       )}
-                    </div>
-                    <p className="text-xs text-[#9a9684] mt-0.5 leading-relaxed max-w-md">
-                      {r.description}
-                    </p>
-                    <div className="text-[10px] font-mono text-white/50 mt-1">
-                      Terminals: {r.stops[1]} → {r.stops[r.stops.length - 1]}
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                    <span id={`route-desc-${r.id}`} className="block">
+                      <span className="block text-xs text-[#9a9684] mt-0.5 leading-relaxed max-w-md">
+                        {r.description}
+                      </span>
+                      <span className="block text-[10px] font-mono text-white/50 mt-1">
+                        Terminals: {r.stops[1]} → {r.stops[r.stops.length - 1]}
+                      </span>
+                    </span>
+                  </span>
+                </span>
 
                 {/* Switch Action Button */}
-                <div className="self-end sm:self-center shrink-0">
-                  <button
+                <span className="self-end sm:self-center shrink-0" aria-hidden="true">
+                  <span
                     className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
                       isSelected
                         ? 'bg-white/20 text-white cursor-default'
@@ -105,9 +151,9 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
                   >
                     <span>{isSelected ? 'Active Line' : 'Switch Line'}</span>
                     {!isSelected && <ArrowRight className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
+                  </span>
+                </span>
+              </button>
             );
           })}
         </div>

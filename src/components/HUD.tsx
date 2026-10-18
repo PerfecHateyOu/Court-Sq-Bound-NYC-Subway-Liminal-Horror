@@ -120,10 +120,13 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Top Left Bar: Route Bullet, Next Station, Consist Location */}
       <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2 pointer-events-auto">
-        <div
+        <button
+          type="button"
           onClick={onOpenRouteSelector}
-          title="Click to Switch Route Line"
-          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle"
+          title="Switch route line"
+          aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
+          data-testid="hud-route-panel"
+          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
         >
           <span
             className="w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
@@ -135,7 +138,7 @@ export const HUD: React.FC<HUDProps> = ({
           <b className="text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
           <span className="w-px h-4 bg-white/15" aria-hidden="true" />
           <HeartbeatTrace engine={G} />
-        </div>
+        </button>
 
         {/* Chapter badge (wide screens; on phones the top bar is full and the rollsign carries it) */}
         <div
@@ -213,7 +216,7 @@ export const HUD: React.FC<HUDProps> = ({
           onClick={onOpenRouteSelector}
           title="Branching Line Selector"
           aria-label="Route Lines"
-          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
         >
           <GitBranch className="w-4 h-4 text-[#9a9684]" />
         </button>
