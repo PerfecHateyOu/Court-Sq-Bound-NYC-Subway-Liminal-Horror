@@ -81,7 +81,19 @@ export class SubwayCarBuilder {
   };
 
   // Game world elements
+  /**
+   * The 12 ceiling lights, 4 per car. Game code sets their intensity and colour as before, but
+   * they aren't rendered: every point light in the scene costs every lit pixel, near or far.
+   * `lightPool` holds the few real lights, which copy the ceiling lights nearest the camera each
+   * frame (see updateLightPool).
+   */
   public carLights: THREE.PointLight[] = [];
+  public lightPool: THREE.PointLight[] = [];
+  private poolSlot: number[] = [];
+  private poolFade: number[] = [];
+  private readonly lightWorld: THREE.Vector3[] = [];
+  private readonly lightOrder: number[] = [];
+  private readonly tmpV = new THREE.Vector3();
   public hemiLight!: THREE.HemisphereLight;
   public ambLight!: THREE.AmbientLight;
   public outLights: THREE.PointLight[] = [];
@@ -131,6 +143,68 @@ export class SubwayCarBuilder {
     this.worldGroup.add(this.tunnelGroup);
   }
 
+  /** Real lights standing in for the nearest ceiling lights. A fixed count: no shader recompiles. */
+  public static readonly LIGHT_POOL_SIZE = 4;
+  /** Seconds for a light to fade in when it takes over a new ceiling slot. */
+  private static readonly POOL_FADE_S = 0.2;
+
+  private buildLightPool() {
+    this.carLights.forEach((l) => {
+      l.visible = false; // stays in its car for position and game logic; not rendered
+      this.lightWorld.push(new THREE.Vector3());
+      this.lightOrder.push(this.lightOrder.length);
+    });
+    for (let i = 0; i < SubwayCarBuilder.LIGHT_POOL_SIZE; i++) {
+      const pl = new THREE.PointLight(0xfff0d4, 0, 9.5, 1.6);
+      this.worldGroup.add(pl);
+      this.lightPool.push(pl);
+      this.poolSlot.push(-1);
+      this.poolFade.push(1);
+    }
+  }
+
+  /** Point the pool at the ceiling lights nearest `camWorld`, copying their intensity, colour and range. */
+  public updateLightPool(camWorld: THREE.Vector3, dt: number) {
+    const n = this.carLights.length;
+    if (!n || !this.lightPool.length) return;
+    const lit = (i: number) => {
+      const p = this.carLights[i].parent;
+      return !!p && p.visible;
+    };
+    for (let i = 0; i < n; i++) {
+      this.carLights[i].getWorldPosition(this.lightWorld[i]);
+      this.lightOrder[i] = i;
+    }
+    const d = (i: number) => (lit(i) ? this.lightWorld[i].distanceToSquared(camWorld) : Infinity);
+    this.lightOrder.sort((a, b) => d(a) - d(b));
+    const K = this.lightPool.length;
+    const wanted = this.lightOrder.slice(0, K).filter((i) => d(i) < Infinity);
+    // Pool lights keep slots that are still wanted; free ones take the new slots and fade in.
+    for (let p = 0; p < K; p++) if (!wanted.includes(this.poolSlot[p])) this.poolSlot[p] = -1;
+    for (const slot of wanted) {
+      if (this.poolSlot.includes(slot)) continue;
+      const free = this.poolSlot.indexOf(-1);
+      if (free < 0) break;
+      this.poolSlot[free] = slot;
+      this.poolFade[free] = 0;
+    }
+    for (let p = 0; p < K; p++) {
+      const pl = this.lightPool[p];
+      const slot = this.poolSlot[p];
+      if (slot < 0) {
+        pl.intensity = 0;
+        continue;
+      }
+      const src = this.carLights[slot];
+      this.poolFade[p] = Math.min(1, this.poolFade[p] + dt / SubwayCarBuilder.POOL_FADE_S);
+      pl.position.copy(this.worldGroup.worldToLocal(this.tmpV.copy(this.lightWorld[slot])));
+      pl.intensity = src.intensity * this.poolFade[p];
+      pl.color.copy(src.color);
+      pl.distance = src.distance;
+      pl.decay = src.decay;
+    }
+  }
+
   public registerTarget(root: THREE.Object3D, tid: string, label: string, keep: () => boolean = () => true) {
     const meshes: THREE.Mesh[] = [];
     root.traverse((m) => {
@@ -157,6 +231,7 @@ export class SubwayCarBuilder {
     this.setupLighting();
     this.buildCar();
     this.buildAdjacentCars();
+    this.buildLightPool(); // after every car's ceiling lights exist
     this.buildGangways();
     this.buildAds();
     this.buildRouteMaps();
