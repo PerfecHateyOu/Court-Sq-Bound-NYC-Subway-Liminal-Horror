@@ -38,27 +38,27 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
 
       {/* Viewfinder Overlay Frame */}
       {isViewfinder && (
-        <div className="fixed inset-0 z-30 pointer-events-none select-none flex flex-col justify-between">
+        <div className="fixed inset-0 z-30 pointer-events-none select-none flex flex-col justify-between pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
           {/* Matte Dark Camera Viewfinder Border */}
           <div className="absolute inset-0 border-[36px] sm:border-[48px] md:border-[64px] border-black/80 backdrop-blur-[1px] pointer-events-auto" />
 
           {/* Viewfinder Header Controls */}
-          <div className="relative z-40 px-6 pt-6 flex items-center justify-between text-xs pointer-events-auto">
-            <div className="flex items-center gap-3 bg-black/75 px-4 py-2 rounded-md border border-white/15 text-[#ece6d3] font-mono tracking-wider shadow-lg">
+          <div className="relative z-40 px-3 pt-3 sm:px-6 sm:pt-6 flex items-center justify-between gap-2 text-xs pointer-events-auto">
+            <div className="min-w-0 flex items-center gap-3 bg-black/75 px-3 sm:px-4 py-2 rounded-md border border-white/15 text-[#ece6d3] font-mono tracking-wider shadow-lg">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
               <span>POLAROID 600 VIEW</span>
-              <span className="text-white/40">|</span>
-              <span className="text-[#e3a83a]">EXP 1/125s • f/11</span>
+              <span className="hidden sm:inline text-white/40">|</span>
+              <span className="hidden sm:inline text-[#e3a83a]">EXP 1/125s • f/11</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="shrink-0 flex items-center gap-2 sm:gap-3">
               <button
                 onClick={onOpenAlbum}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-md bg-black/75 border border-white/20 hover:border-white/50 text-[#ece6d3] text-xs font-semibold backdrop-blur-md transition-all active:scale-95"
+                className="h-10 flex items-center gap-2 px-3.5 rounded-md bg-black/75 border border-white/20 hover:border-white/50 text-[#ece6d3] text-xs font-semibold backdrop-blur-md transition-all active:scale-95"
               >
                 <ImageIcon className="w-4 h-4 text-[#e3a83a]" />
                 <span>Album ({polaroidManager.photos.length})</span>
-                <span className="hidden sm:inline text-[10px] text-white/50 bg-white/10 px-1.5 py-0.5 rounded font-mono">
+                <span className="hidden sm:pointer-fine:inline text-[10px] text-white/50 bg-white/10 px-1.5 py-0.5 rounded font-mono">
                   TAB
                 </span>
               </button>
@@ -66,7 +66,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
               <button
                 onClick={onClose}
                 aria-label="Lower Camera"
-                className="w-9 h-9 flex items-center justify-center rounded-md bg-black/75 border border-white/20 hover:bg-black/90 text-white transition-all active:scale-95"
+                className="w-10 h-10 flex items-center justify-center rounded-md bg-black/75 border border-white/20 hover:bg-black/90 text-white transition-all active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -74,9 +74,9 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
           </div>
 
           {/* Center Viewfinder Framing Crosshairs & Reticle */}
-          <div className="relative flex-1 flex items-center justify-center pointer-events-none">
+          <div className="relative flex-1 min-h-0 flex items-center justify-center pointer-events-none">
             {/* 1:1 Square Format Framing Box */}
-            <div className="relative w-[min(72vw,72vh)] h-[min(72vw,72vh)] border-2 border-dashed border-white/30 rounded-sm">
+            <div className="relative w-[min(72vw,72vh,100dvh-170px)] h-[min(72vw,72vh,100dvh-170px)] border-2 border-dashed border-white/30 rounded-sm">
               {/* Corner framing brackets */}
               <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/80" />
               <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/80" />
@@ -102,7 +102,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
           </div>
 
           {/* Viewfinder Bottom Controls & Film Cartridge Counter */}
-          <div className="relative z-40 px-6 pb-6 flex items-center justify-between pointer-events-auto">
+          <div className="relative z-40 px-3 pb-3 sm:px-6 sm:pb-6 flex items-center justify-between gap-2 pointer-events-auto">
             {/* Film Cartridge Counter */}
             <div className="flex items-center gap-2.5 px-4 py-2 rounded-md bg-black/80 border border-white/15 font-mono text-xs shadow-lg">
               <span className="text-[#9a9684]">FILM:</span>
@@ -124,7 +124,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             <button
               onClick={handleSnap}
               disabled={remainingFilm <= 0}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-full font-bold text-sm tracking-wide transition-all shadow-2xl active:scale-95 ${
+              className={`shrink-0 flex items-center gap-2.5 px-5 sm:px-6 py-3 rounded-full font-bold text-sm tracking-wide transition-all shadow-2xl active:scale-95 ${
                 remainingFilm > 0
                   ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/60 hover:shadow-[0_0_24px_rgba(220,38,38,0.7)]'
                   : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/10'
@@ -132,7 +132,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             >
               <Camera className="w-5 h-5" />
               <span>SNAP PHOTO</span>
-              <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono hidden sm:inline">
+              <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono hidden sm:pointer-fine:inline">
                 CLICK / SPACE
               </span>
             </button>

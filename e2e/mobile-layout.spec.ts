@@ -92,4 +92,41 @@ test.describe('with a notch and a home indicator', () => {
     await page.getByRole('button', { name: /Settings/ }).first().click();
     await inside(page.getByRole('dialog', { name: 'Settings' }).getByRole('heading', { name: 'Settings' }));
   });
+
+  test('the camera viewfinder stays inside the safe area, on screen, and clear of the HUD and touch controls', async ({ page, game }) => {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride' as never, { insets: INSET } as never);
+    await game(`G.Q = []; G.startSegment(2); window.__P.toggleViewfinder(); G.notifyUI();`);
+    const lower = page.getByRole('button', { name: 'Lower Camera' });
+    await expect(lower).toBeVisible();
+    for (const el of [lower, page.getByRole('button', { name: /^Album/ }), page.getByRole('button', { name: /SNAP PHOTO/ })]) {
+      const b = (await el.boundingBox())!;
+      expect(b.x).toBeGreaterThanOrEqual(INSET.left);
+      expect(b.x + b.width).toBeLessThanOrEqual(844 - INSET.right);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      expect(b.y + b.height).toBeLessThanOrEqual(390 - INSET.bottom);
+    }
+    // The HUD's own top bar and the touch WALK / FLAG controls step aside under the viewfinder.
+    await expect(page.getByTestId('hud-route-panel')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeHidden();
+    await expect(page.getByText('hold to catch')).toHaveCount(0);
+    // Lowering the camera brings them back.
+    await lower.click();
+    await expect(page.getByTestId('hud-route-panel')).toBeVisible();
+    await expect(page.getByText('hold to catch')).toBeVisible();
+  });
+});
+
+test.describe('on a short landscape phone', () => {
+  test.use({ viewport: { width: 640, height: 360 }, hasTouch: true, isMobile: true });
+  test('the viewfinder’s Snap Photo button and the recorder’s buttons fit and are big enough to tap', async ({ page, game }) => {
+    await game(`G.Q = []; G.startSegment(2); window.__P.toggleViewfinder(); G.notifyUI();`);
+    const snap = (await page.getByRole('button', { name: /SNAP PHOTO/ }).boundingBox())!;
+    expect(snap.y + snap.height).toBeLessThanOrEqual(360);
+    await game(`window.__P.setViewfinder(false); window.__EVP.hasRecorder = true; G.toggleRecorder(); G.notifyUI();`);
+    for (const name of ['Lower recorder', 'Tune down', 'Tune up', 'Tune down 5 kHz', 'Tune up 5 kHz']) {
+      const b = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
+      expect(Math.min(b.width, b.height), name).toBeGreaterThanOrEqual(34);
+    }
+  });
 });
