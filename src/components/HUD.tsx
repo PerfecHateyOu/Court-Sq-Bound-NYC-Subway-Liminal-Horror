@@ -118,148 +118,155 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
-      {/* Top Left Bar: Route Bullet, Next Station, Consist Location */}
-      <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2 pointer-events-auto">
-        <button
-          type="button"
-          onClick={onOpenRouteSelector}
-          title="Switch route line (L)"
-          aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
-          aria-keyshortcuts="L"
-          data-testid="hud-route-panel"
-          className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
-        >
-          <span
-            className="w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
-            style={{ backgroundColor: currentRoute.bulletColor, color: currentRoute.bulletTextColor }}
-          >
-            {currentRoute.id}
-          </span>
-          <span className="text-[#9a9684]">Next:</span>
-          <b className="text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
-          <span className="w-px h-4 bg-white/15" aria-hidden="true" />
-          <HeartbeatTrace engine={G} />
-        </button>
-
-        {/* Chapter badge (wide screens; on phones the top bar is full and the rollsign carries it) */}
-        <div
-          data-testid="chapter-badge"
-          className="hidden lg:flex items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
-        >
-          CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
-          {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
-        </div>
-
-        {/* Consist Car Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />
-          <span>{carName}</span>
-        </div>
-      </div>
-
-      {/* Top Right Controls: Camera, Album, Mute and Pause */}
-      <div className="absolute right-4 top-4 flex items-center gap-2 pointer-events-auto">
-        {/* Polaroid Camera Viewfinder Trigger Button */}
-        <button
-          onClick={onToggleCamera}
-          title="Equip Polaroid Camera [C]"
-          aria-label="Polaroid Camera"
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
-            polaroidManager.isViewfinderOpen
-              ? 'bg-red-600 text-white border-red-400'
-              : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
-          }`}
-        >
-          <Camera className="w-4 h-4 text-[#e3a83a]" />
-          <span className="hidden sm:inline">Camera</span>
-          <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden sm:inline">
-            C
-          </span>
-        </button>
-
-        {/* Dad's tape recorder (once he's given it to you) */}
-        {evp.hasRecorder && (
+      {/*
+        Top bar: one row, so the route panel and the controls can't overlap. The controls keep
+        their size; the route panel gives way (the station name truncates last). On narrow
+        (portrait) screens the route panel drops to a second row, under the controls.
+      */}
+      <div className="absolute inset-x-4 top-4 flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-end sm:justify-between gap-2 pointer-events-none">
+        {/* Route Bullet, Next Station, Consist Location */}
+        <div className="order-last basis-full sm:order-none sm:basis-auto min-w-0 flex items-center gap-2 *:pointer-events-auto">
           <button
-            onClick={() => G.toggleRecorder()}
-            title="Tape recorder [R]"
-            aria-label="Recorder"
-            aria-pressed={evp.raised}
+            type="button"
+            onClick={onOpenRouteSelector}
+            title="Switch route line (L)"
+            aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
+            aria-keyshortcuts="L"
+            data-testid="hud-route-panel"
+            className="min-w-0 flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+          >
+            <span
+              className="shrink-0 w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
+              style={{ backgroundColor: currentRoute.bulletColor, color: currentRoute.bulletTextColor }}
+            >
+              {currentRoute.id}
+            </span>
+            <span className="hidden lg:inline text-[#9a9684]">Next:</span>
+            <b className="min-w-0 truncate text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
+            <span className="shrink-0 w-px h-4 bg-white/15" aria-hidden="true" />
+            <HeartbeatTrace engine={G} />
+          </button>
+
+          {/* Chapter badge (wide screens; elsewhere the top bar is full and the rollsign carries it) */}
+          <div
+            data-testid="chapter-badge"
+            className="hidden xl:flex shrink-0 items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
+          >
+            CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
+            {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
+          </div>
+
+          {/* Consist Car Badge */}
+          <div className="hidden md:flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />
+            <span>{carName}</span>
+          </div>
+        </div>
+
+        {/* Controls: Camera, Album, Mute and Pause (icons only until there's room for labels) */}
+        <div className="shrink-0 flex items-center gap-2 pointer-events-auto">
+          {/* Polaroid Camera Viewfinder Trigger Button */}
+          <button
+            onClick={onToggleCamera}
+            title="Equip Polaroid Camera [C]"
+            aria-label="Polaroid Camera"
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
-              evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+              polaroidManager.isViewfinderOpen
+                ? 'bg-red-600 text-white border-red-400'
+                : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
             }`}
           >
-            <Mic className="w-4 h-4 text-[#e8a49a]" />
-            <span className="hidden sm:inline">Recorder</span>
-            <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden sm:inline">R</span>
+            <Camera className="w-4 h-4 text-[#e3a83a]" />
+            <span className="hidden xl:inline">Camera</span>
+            <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">
+              C
+            </span>
           </button>
-        )}
 
-        {/* Polaroid Evidence Album Trigger Button */}
-        <button
-          onClick={onToggleAlbum}
-          title="Evidence Album [TAB]"
-          aria-label="Evidence Album"
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
-            polaroidManager.isAlbumOpen
-              ? 'bg-amber-600 text-white border-amber-400'
-              : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
-          }`}
-        >
-          <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
-          <span className="hidden sm:inline">Album</span>
-          <span className="text-[10px] text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
-            {polaroidManager.photos.length}
-          </span>
-        </button>
+          {/* Dad's tape recorder (once he's given it to you) */}
+          {evp.hasRecorder && (
+            <button
+              onClick={() => G.toggleRecorder()}
+              title="Tape recorder [R]"
+              aria-label="Recorder"
+              aria-pressed={evp.raised}
+              className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+                evp.raised ? 'bg-[#5a2a24] text-white border-red-400/60' : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+              }`}
+            >
+              <Mic className="w-4 h-4 text-[#e8a49a]" />
+              <span className="hidden xl:inline">Recorder</span>
+              <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">R</span>
+            </button>
+          )}
 
-        {/* Route Selector Button */}
-        <button
-          onClick={onOpenRouteSelector}
-          title="Route lines (L)"
-          aria-label="Route Lines"
-          aria-keyshortcuts="L"
-          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
-        >
-          <GitBranch className="w-4 h-4 text-[#9a9684]" />
-        </button>
-
-        {/* Mute Button */}
-        <button
-          onClick={onToggleMute}
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
-          className={`h-10 px-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
-            isMuted ? 'text-[#e3a83a] border-[#e3a83a]/40' : 'text-[#ece6d3]'
-          }`}
-        >
-          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Sound'}</span>
-        </button>
-
-        {/* Full screen (wide screens; phones go full screen on boarding, or from the pause menu) */}
-        {canFull && (
+          {/* Polaroid Evidence Album Trigger Button */}
           <button
-            onClick={toggleFullscreen}
-            aria-label={full ? 'Exit full screen' : 'Full screen'}
-            title={full ? 'Exit full screen' : 'Full screen'}
-            className="hidden lg:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+            onClick={onToggleAlbum}
+            title="Evidence Album [TAB]"
+            aria-label="Evidence Album"
+            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+              polaroidManager.isAlbumOpen
+                ? 'bg-amber-600 text-white border-amber-400'
+                : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+            }`}
           >
-            {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
+            <span className="hidden xl:inline">Album</span>
+            <span className="text-[10px] text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
+              {polaroidManager.photos.length}
+            </span>
           </button>
-        )}
 
-        {/* Pause Button */}
-        <button
-          onClick={onPause}
-          aria-label="Pause"
-          className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
-        >
-          <Pause className="w-4 h-4" />
-        </button>
+          {/* Route Selector Button */}
+          <button
+            onClick={onOpenRouteSelector}
+            title="Route lines (L)"
+            aria-label="Route Lines"
+            aria-keyshortcuts="L"
+            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+          >
+            <GitBranch className="w-4 h-4 text-[#9a9684]" />
+          </button>
+
+          {/* Mute Button */}
+          <button
+            onClick={onToggleMute}
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
+              isMuted ? 'text-[#e3a83a] border-[#e3a83a]/40' : 'text-[#ece6d3]'
+            }`}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            <span className="hidden xl:inline">{isMuted ? 'Muted' : 'Sound'}</span>
+          </button>
+
+          {/* Full screen (wide screens; phones go full screen on boarding, or from the pause menu) */}
+          {canFull && (
+            <button
+              onClick={toggleFullscreen}
+              aria-label={full ? 'Exit full screen' : 'Full screen'}
+              title={full ? 'Exit full screen' : 'Full screen'}
+              className="hidden lg:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+            >
+              {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+          )}
+
+          {/* Pause Button */}
+          <button
+            onClick={onPause}
+            aria-label="Pause"
+            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+          >
+            <Pause className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Inter-Car Gangway Door Open Prompt */}
       {G.nearGangwayDoor && (
-        <div className="absolute left-1/2 top-44 -translate-x-1/2 pointer-events-auto">
+        <div className="absolute left-1/2 top-56 sm:top-44 -translate-x-1/2 pointer-events-auto">
           <button
             onClick={() => G.interactGangwayDoor()}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/85 border border-[#6cbe45] text-[#ece6d3] font-bold text-xs sm:text-sm tracking-wide shadow-2xl hover:bg-black transition-all active:scale-95 animate-bounce"
@@ -275,7 +282,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Subway PA Announcement LED Display */}
       {G.paText && (
-        <div className="absolute left-1/2 top-16 -translate-x-1/2 max-w-[min(90vw,640px)] px-4 py-2 rounded bg-[#120d05] border border-[#e3a83a]/60 text-[#e3a83a] text-center font-bold text-sm sm:text-base tracking-wide shadow-[0_0_18px_rgba(227,168,58,0.25)] transit-sign-flicker relative overflow-hidden">
+        <div className="absolute left-1/2 top-28 sm:top-16 -translate-x-1/2 max-w-[min(90vw,640px)] px-4 py-2 rounded bg-[#120d05] border border-[#e3a83a]/60 text-[#e3a83a] text-center font-bold text-sm sm:text-base tracking-wide shadow-[0_0_18px_rgba(227,168,58,0.25)] transit-sign-flicker relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-30" />
           <span className="inline-block w-2 h-2 rounded-full bg-[#e3a83a] mr-2 animate-ping" />
           <span className="relative z-10">{G.paText}</span>
@@ -284,7 +291,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Contextual Hint */}
       {G.hintText && G.GT < G.hintUntil && (
-        <div className="absolute left-1/2 top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/80 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
+        <div className="absolute left-1/2 top-40 sm:top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/80 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
           {G.hintText}
         </div>
       )}

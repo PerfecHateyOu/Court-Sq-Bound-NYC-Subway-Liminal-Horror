@@ -69,7 +69,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex justify-center overflow-y-auto p-3 sm:p-6 bg-black/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-30 flex justify-center overflow-y-auto safe-pad bg-black/85 backdrop-blur-md">
       <div className="w-full max-w-xl my-auto py-4">
         {/* Paper Receipt / Travel Report Slip with flickering transit signage appearance */}
         <article className="ticket-slip bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded-sm shadow-2xl border border-[#9f9883] transit-sign-flicker relative overflow-hidden">
