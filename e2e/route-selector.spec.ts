@@ -55,4 +55,60 @@ test.describe('Route selector and HUD route panel work from the keyboard', () =>
     await expect(dialog).toHaveCount(0);
     expect(await game(`return window.__RT.routeId`)).toBe('L');
   });
+
+  test('L opens the selector mid-ride and L closes it; the ride keeps going and the album stays shut', async ({ page, game }) => {
+    await game(`ride(6);`);
+    await page.keyboard.press('KeyL');
+    const dialog = page.getByRole('dialog', { name: 'MTA Transit Line Switching' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /G Brooklyn–Queens Crosstown \(current line\)/ })).toBeFocused();
+    await page.keyboard.press('Tab'); // G -> L, not the album
+    expect(await game(`return [G.paused, window.__P.isAlbumOpen];`)).toEqual([false, false]);
+    await page.keyboard.press('KeyL');
+    await expect(dialog).toHaveCount(0);
+    expect(await game(`return [G.paused, window.__RT.routeId];`)).toEqual([false, 'G']);
+    await expect(page.getByRole('button', { name: 'Route Lines' })).toHaveAttribute('aria-keyshortcuts', 'L');
+
+    // L does nothing while paused.
+    await game(`G.pause();`);
+    await page.keyboard.press('KeyL');
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test('with the mouse captured, L frees it for the selector without pausing the ride', async ({ page, game }) => {
+    await game(`ride(6);`);
+    // Fake a captured mouse (headless browsers can't lock the pointer): exiting the lock fires
+    // pointerlockchange, as the browser would.
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      let locked: Element | null = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => locked });
+      document.exitPointerLock = () => {
+        locked = null;
+        document.dispatchEvent(new Event('pointerlockchange'));
+      };
+    });
+    await page.keyboard.press('KeyL');
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect(await game(`return [G.paused, !!document.pointerLockElement];`)).toEqual([false, false]);
+
+    // Close it; losing the mouse any other way (the browser's own Esc) still pauses.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
+    expect(await game(`return G.paused;`)).toBe(true);
+  });
+
+  test('the selector stays open as the train pulls out, and closes when it stops', async ({ page, game }) => {
+    await game(`G.startIntro();`);
+    await page.keyboard.press('KeyL');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await game(`advance(12); if (G.phase !== 'ride') throw new Error(G.phase);`); // the doors close, the ride starts
+    await page.waitForTimeout(300);
+    await expect(dialog).toBeVisible();
+    await game(`G.seg._masks = []; G.active.forEach((a) => (a.trigger = 999));
+      for (let i = 0; i < 4000 && G.phase === 'ride'; i++) advance(0.05); if (G.phase !== 'stop') throw new Error(G.phase);`);
+    await expect(dialog).toHaveCount(0);
+  });
 });
