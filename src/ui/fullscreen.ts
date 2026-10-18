@@ -1,0 +1,77 @@
+/**
+ * Browser full screen (hides the address bar and tabs).
+ *
+ * - Chrome, Edge, Firefox, Android and iPad Safari support the Fullscreen API. Entering must
+ *   happen inside a click or tap, so callers invoke enterFullscreen() from the handler itself.
+ * - iPhone Safari doesn't let pages go full screen. There, "Add to Home Screen" opens the game
+ *   full screen instead (public/manifest.webmanifest + the apple-mobile-web-app meta tags).
+ */
+import { useSyncExternalStore } from 'react';
+
+type WebkitDocument = Document & {
+  webkitFullscreenEnabled?: boolean;
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+};
+type WebkitElement = HTMLElement & {
+  webkitRequestFullscreen?: (opts?: FullscreenOptions) => Promise<void> | void;
+};
+
+const doc = () => document as WebkitDocument;
+
+/** Whether this browser lets the page go full screen. */
+export function fullscreenSupported(): boolean {
+  return !!(doc().fullscreenEnabled || doc().webkitFullscreenEnabled);
+}
+
+export function isFullscreen(): boolean {
+  return !!(doc().fullscreenElement || doc().webkitFullscreenElement);
+}
+
+/** Opened from the home screen (already full screen, with no browser bars). */
+export function isStandalone(): boolean {
+  return (
+    window.matchMedia?.('(display-mode: fullscreen)').matches ||
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+/** Go full screen. Call from a click/tap handler. Failures (an iframe without permission, a refusal) are ignored. */
+export function enterFullscreen(): void {
+  if (!fullscreenSupported() || isFullscreen()) return;
+  const el = document.documentElement as WebkitElement;
+  try {
+    const p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen?.();
+    (p as Promise<void> | undefined)?.catch?.(() => {});
+  } catch {
+    /* not allowed here */
+  }
+}
+
+export function exitFullscreen(): void {
+  if (!isFullscreen()) return;
+  try {
+    const p = document.exitFullscreen ? document.exitFullscreen() : doc().webkitExitFullscreen?.();
+    (p as Promise<void> | undefined)?.catch?.(() => {});
+  } catch {
+    /* already out */
+  }
+}
+
+export function toggleFullscreen(): void {
+  if (isFullscreen()) exitFullscreen();
+  else enterFullscreen();
+}
+
+const EVENTS = ['fullscreenchange', 'webkitfullscreenchange'];
+
+export function onFullscreenChange(fn: () => void): () => void {
+  EVENTS.forEach((e) => document.addEventListener(e, fn));
+  return () => EVENTS.forEach((e) => document.removeEventListener(e, fn));
+}
+
+/** Re-renders when the page enters or leaves full screen. */
+export function useFullscreen(): boolean {
+  return useSyncExternalStore(onFullscreenChange, isFullscreen, () => false);
+}

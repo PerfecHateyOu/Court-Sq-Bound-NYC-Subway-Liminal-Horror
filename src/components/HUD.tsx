@@ -11,7 +11,8 @@
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { STOPS, TIER_NAMES, CFG } from '../constants';
-import { Volume2, VolumeX, Pause, Camera, Image as ImageIcon, DoorOpen, GitBranch, Mic } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Camera, Image as ImageIcon, DoorOpen, GitBranch, Mic, Maximize2, Minimize2 } from 'lucide-react';
+import { fullscreenSupported, toggleFullscreen, useFullscreen } from '../ui/fullscreen';
 import { HeartbeatTrace } from './HeartbeatTrace';
 import { MoveStick } from './MoveStick';
 import { routeManager } from '../game/routeManager';
@@ -43,6 +44,8 @@ export const HUD: React.FC<HUDProps> = ({
   onToggleAlbum,
   onOpenRouteSelector,
 }) => {
+  const full = useFullscreen();
+  const canFull = fullscreenSupported();
   const G = engine;
   if (G.phase === 'menu' || G.phase === 'end') return null;
 
@@ -78,7 +81,16 @@ export const HUD: React.FC<HUDProps> = ({
       : 'CAR 2 (MID)';
 
   return (
-    <div className="fixed inset-0 pointer-events-none select-none z-20">
+    <div
+      className="fixed pointer-events-none select-none z-20"
+      // Inside the safe area: in full screen (or from the home screen) the view runs under notches.
+      style={{
+        top: 'env(safe-area-inset-top, 0px)',
+        right: 'env(safe-area-inset-right, 0px)',
+        bottom: 'env(safe-area-inset-bottom, 0px)',
+        left: 'env(safe-area-inset-left, 0px)',
+      }}
+    >
       {/* Chapter Transition Rollsign */}
       <AnalogRollsign engine={G} />
 
@@ -217,6 +229,18 @@ export const HUD: React.FC<HUDProps> = ({
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Sound'}</span>
         </button>
+
+        {/* Full screen (wide screens; phones go full screen on boarding, or from the pause menu) */}
+        {canFull && (
+          <button
+            onClick={toggleFullscreen}
+            aria-label={full ? 'Exit full screen' : 'Full screen'}
+            title={full ? 'Exit full screen' : 'Full screen'}
+            className="hidden lg:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+          >
+            {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        )}
 
         {/* Pause Button */}
         <button

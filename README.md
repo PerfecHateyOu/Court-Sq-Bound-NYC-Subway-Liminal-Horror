@@ -18,6 +18,7 @@ Other scripts:
 | Script | What it does |
 |---|---|
 | `build` | Production build into `dist/` |
+| `build:offline` | The offline copy: `dist-offline/Court-Sq-Bound/index.html` (one file that opens from a double-click) and `dist-offline/Court-Sq-Bound-offline.zip` |
 | `preview` | Serve the production build |
 | `lint` | Type-check with `tsc --noEmit` |
 | `test` | Browser tests (Playwright); `test:ui` opens them interactively |
@@ -52,6 +53,12 @@ gcloud run deploy court-sq-bound --source . --region us-central1 --allow-unauthe
 
 To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
 
+## Offline copy
+
+`bun run build:offline` (or `npm run build:offline`) builds the whole game into one `index.html` that opens from a double-click, with no internet, server or install. Scripts, styles and fonts are all inlined; the fonts come from `offline/fonts.css`, so the build doesn't need the internet either. The folder is zipped with a short `README.txt` from `offline/README.txt`.
+
+It's built from the same code as the web version, so every change applies to both. CI rebuilds it on every pull request and push, tests it with the network blocked (`e2e/offline.spec.ts`), and attaches it to the run: open the run on GitHub's **Actions** tab and download **Court-Sq-Bound-offline** under *Artifacts*.
+
 ## How to play
 
 1. **Notice.** When something in the car changes, look at it and hold Flag. Flags are private.
@@ -66,7 +73,9 @@ The ride is told in three chapters, announced by a rollsign as each one begins. 
 
 A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy, plus a Psychological Log: a case file of the 13 anomaly types that fills in across rides.
 
-**Settings** (from the start screen or the pause menu): look speed, invert vertical look, game and pause-music volume, screen effects (match your device's reduced-motion setting, always on, or reduced), vibration, and erasing saved progress. Settings are saved on the device.
+**Full screen:** boarding the train goes full screen (where the browser allows it; turn it off in Settings). Leave with Esc or the pause menu, which pauses the ride. On wide screens there's also a full-screen button in the top bar. iPhones don't let web pages go full screen: tap Share, then **Add to Home Screen**, and the game opens full screen from there.
+
+**Settings** (from the start screen or the pause menu): look speed, invert vertical look, game and pause-music volume, screen effects (match your device's reduced-motion setting, always on, or reduced), full screen when boarding, vibration, and erasing saved progress. Settings are saved on the device.
 
 ### Controls
 

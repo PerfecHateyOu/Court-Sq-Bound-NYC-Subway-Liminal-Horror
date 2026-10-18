@@ -3,6 +3,7 @@
  * Opens over the start screen or the pause menu. Every change applies at once and is saved
  * on this device.
  */
+import { fullscreenSupported } from '../ui/fullscreen';
 import React from 'react';
 import { X } from 'lucide-react';
 import { settings, useSettings, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
@@ -187,6 +188,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               Screen tearing, anxious breathing, and the moving heartbeat line. {effectsNote}
             </p>
           </Section>
+
+          {fullscreenSupported() && (
+            <Section title="Display">
+              <Check
+                label="Full screen when boarding"
+                hint="Hides the browser's bars during the ride. Press Esc (or use the pause menu) to leave."
+                checked={s.fullscreenOnBoard}
+                onChange={(v) => settings.set({ fullscreenOnBoard: v })}
+              />
+            </Section>
+          )}
 
           {canVibrate && (
             <Section title="Vibration">

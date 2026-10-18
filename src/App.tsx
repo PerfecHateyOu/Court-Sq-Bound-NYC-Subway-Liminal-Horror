@@ -11,6 +11,7 @@ import { settings } from './settings';
 import { KeyLook } from './input/keyLook';
 import { evp } from './game/evpManager';
 import { passengerBehavior } from './game/passengerBehavior';
+import { enterFullscreen, isFullscreen, onFullscreenChange } from './ui/fullscreen';
 import { resolveEnding, ENDINGS } from './game/endings';
 import { shakeCoverScale, SHAKE_BLEED_PX } from './graphics/shakeCover';
 import { haptics } from './game/haptics';
@@ -451,6 +452,10 @@ export default function App() {
       if (!document.pointerLockElement) pauseGame();
     };
     document.addEventListener('pointerlockchange', handleLockChange);
+    // Leaving full screen mid-ride (Esc, a swipe, the browser's button) pauses, like losing the mouse.
+    const offFullscreen = onFullscreenChange(() => {
+      if (!isFullscreen()) pauseGame();
+    });
 
     return () => {
       container.removeEventListener('pointerdown', handlePointerDown);
@@ -459,6 +464,7 @@ export default function App() {
       container.removeEventListener('pointercancel', handlePointerEnd);
       container.removeEventListener('pointerleave', handlePointerEnd);
       document.removeEventListener('pointerlockchange', handleLockChange);
+      offFullscreen();
     };
   }, [isTouch, requestLock, pauseGame]);
 
@@ -663,6 +669,8 @@ export default function App() {
   }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys]);
 
   const handleStartGame = (startMuted: boolean, showDebug: boolean) => {
+    // Inside the click, as browsers require: go full screen for the ride.
+    if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
     audioEngine.wake();
     setIsMuted(startMuted);

@@ -1,0 +1,16 @@
+{
+  "name": "Court Sq-Bound: NYC Subway Liminal Horror",
+  "short_name": "Court Sq-Bound",
+  "description": "A first-person liminal horror ride on the NYC G train.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0d110e",
+  "theme_color": "#0d110e",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
