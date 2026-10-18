@@ -668,7 +668,7 @@ export default function App() {
     };
   }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys]);
 
-  const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false) => {
+  const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false, startChapter = 1) => {
     // Inside the click, as browsers require: go full screen for the ride.
     if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
@@ -679,6 +679,7 @@ export default function App() {
     if (G) {
       G.debug = showDebug;
       G.nightmare = nightmare; // kept for Ride Again / Restart until the next start screen
+      G.startChapter = startChapter; // likewise; Chapter II and III are practice runs
       G.startIntro();
       triggerUpdate();
     }

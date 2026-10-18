@@ -54,6 +54,8 @@ export interface DoorLeaf {
 export interface StationObject {
   g: THREE.Group;
   baseX: number;
+  /** The name on the station's signs. */
+  name: string;
   setName: (name: string) => void;
   /** Elevated, open-air platform (21 St on the trestle): no tiled back wall. */
   setOpenAir: (on: boolean) => void;
@@ -792,7 +794,9 @@ export class SubwayCarBuilder {
     const stationObj: StationObject = {
       g,
       baseX: 0,
+      name: '',
       setName: (name: string) => {
+        stationObj.name = name;
         this.textureGen.drawStationSign(signCanvas.getContext('2d')!, name);
         signTex.needsUpdate = true;
       },

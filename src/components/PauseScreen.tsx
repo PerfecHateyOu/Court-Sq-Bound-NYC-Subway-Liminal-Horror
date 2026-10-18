@@ -44,6 +44,11 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
         {engine.nightmare && (
           <p className="mt-1 font-mono text-[11px] font-bold tracking-[0.2em] text-[#e8705e]">NIGHTMARE MODE</p>
         )}
+        {engine.isPractice && (
+          <p className="mt-1 font-mono text-[11px] font-bold tracking-[0.2em] text-[#e3a83a]">
+            PRACTICE RUN: NOTHING IS SAVED
+          </p>
+        )}
         <p className="mt-2 text-sm text-[#9a9684]">
           Next approaching station:{' '}
           <span className="text-[#ece6d3] font-bold inline-flex items-center gap-1">
