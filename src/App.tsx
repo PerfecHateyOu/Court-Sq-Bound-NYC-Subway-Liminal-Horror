@@ -673,10 +673,18 @@ export default function App() {
 
     const handleVisibility = () => {
       const G = engineRef.current;
+      const outsideRide = !G || G.phase === 'menu' || G.phase === 'end';
       if (document.hidden) {
-        if (G && G.paused) audioEngine.suspend(); // already paused: stop the pause music too
+        if (outsideRide) {
+          // Start screen or report: nothing to pause, but a tape playing on the report stops
+          // and the audio goes quiet while the tab is away.
+          G?.stopTape();
+          audioEngine.suspend();
+        } else if (G.paused) audioEngine.suspend(); // already paused: stop the pause music too
         else pauseGame();
-      } else if (G && G.paused) {
+      } else if (outsideRide) {
+        audioEngine.wake();
+      } else if (G.paused) {
         // Back on the tab while paused: bring the pause music back.
         audioEngine.wake();
         audioEngine.enterPause(G.tier);

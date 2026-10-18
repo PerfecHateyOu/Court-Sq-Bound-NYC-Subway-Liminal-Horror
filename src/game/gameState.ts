@@ -1493,6 +1493,10 @@ export class GameEngine {
   public endGame() {
     this.phase = 'end';
     evp.lower();
+    // The report replaces the ride: put the camera down and close the evidence log, so neither
+    // is left over (or covering) the report. Its prints and tapes are on the report itself.
+    polaroidManager.setViewfinder(false);
+    polaroidManager.setAlbum(false);
     this.stopTape();
     this.flagHeld = false;
     audioEngine.setMasterLevel(0.2, 0.8);
