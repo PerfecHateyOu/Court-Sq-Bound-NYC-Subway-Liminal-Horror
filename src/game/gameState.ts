@@ -35,7 +35,7 @@ import {
   ChapterDef,
   chapterForStop,
 } from '../constants';
-import { recordRide, PsychLogResult } from './psychLog';
+import { recordRide, PsychLogResult, entryState } from './psychLog';
 import { audioEngine } from '../audio/audioEngine';
 import { SubwayCarBuilder } from '../graphics/subwayCarBuilder';
 import { TrialBuilder } from '../graphics/trialBuilder';
@@ -204,6 +204,9 @@ export class GameEngine {
    */
   public tapePlaying: { signalId: string; inRide: boolean; charged: boolean; endsAt: number } | null = null;
   private tapeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** The trestle badge has been checked this ride. */
+  private trestleBadgeChecked = false;
 
   /** This ride began with "Get back on" after The Eternal Commute. */
   public looped: boolean = false;
@@ -499,6 +502,7 @@ export class GameEngine {
     this.lastShownChapterIndex = 0;
     this.finalExitChoice = null;
     this.resolvedEnding = null;
+    this.trestleBadgeChecked = false;
     this.stopTape();
 
     // Reset world entities
@@ -1465,9 +1469,9 @@ export class GameEngine {
     if (this.acc.correct > 0) {
       unlockAchievement('first_anomaly');
     }
-    const documentedCount = Object.values(this.psychLog?.archive ?? {}).filter(
-      (entry) => entry && typeof entry === 'object' && 'seen' in entry && (entry as any).seen > 0
-    ).length;
+    // "Documented" as the Case Files count it (caught at least once), not merely seen.
+    const archive = this.psychLog?.archive ?? {};
+    const documentedCount = Object.values(archive).filter((rec) => entryState(rec) === 'documented').length;
     if (documentedCount >= 6) {
       unlockAchievement('master_archivist');
     }
@@ -2256,7 +2260,8 @@ export class GameEngine {
     });
 
     cb.trestle.update(this.GT, dt, pos, speed, this.trestleShow, (x) => !this.inTunnelAt(x, pos), settings.effectsReduced(), this.trestleOutside);
-    if (this.trestleOutside > 0.4) {
+    if (this.trestleOutside > 0.4 && !this.trestleBadgeChecked) {
+      this.trestleBadgeChecked = true; // once per ride, not every frame (it reads saved data)
       unlockAchievement('trestle_cross');
     }
     // Fog: black tunnel murk inside, dusk haze in the open (interior distances stay unfogged).

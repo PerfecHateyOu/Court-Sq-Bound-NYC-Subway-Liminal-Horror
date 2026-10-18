@@ -226,6 +226,8 @@ export interface PersonObject {
   mode?: 'phone' | 'other' | 'player' | 'down';
   until?: number;
   holdUntil?: number;
+  /** Seconds the player has been staring at this passenger (decays when they look away). */
+  stareT?: number;
   force?: boolean;
   frozen?: boolean;
   yaw?: number;

@@ -27,6 +27,51 @@ export function loadPersistentPolaroids(): PolaroidPhoto[] {
   }
 }
 
+/** Prints kept on the device for the Case Files, newest first. */
+export const KEPT_PHOTOS = 12;
+const THUMB_PX = 240;
+
+/** Shrink a print to a small JPEG (about 10–20 KB) so the archive stays far under the storage quota. */
+function thumbnail(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    if (!dataUrl) return resolve('');
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = THUMB_PX;
+        c.getContext('2d')!.drawImage(img, 0, 0, THUMB_PX, THUMB_PX);
+        resolve(c.toDataURL('image/jpeg', 0.7));
+      } catch {
+        resolve('');
+      }
+    };
+    img.onerror = () => resolve('');
+    img.src = dataUrl;
+  });
+}
+
+/** Save developed prints as thumbnails, newest first, capped at KEPT_PHOTOS. Private framing data isn't kept. */
+export async function persistThumbnails(photos: PolaroidPhoto[]): Promise<void> {
+  if (!photos.length) return;
+  try {
+    const fresh = await Promise.all(
+      photos.map(async (p) => ({ ...p, framed: [], dataUrl: await thumbnail(p.dataUrl) }))
+    );
+    // Prints saved full-size by an earlier build are shrunk too.
+    const older = await Promise.all(
+      loadPersistentPolaroids().map(async (p) =>
+        p.dataUrl && p.dataUrl.length > 60_000 ? { ...p, framed: [], dataUrl: await thumbnail(p.dataUrl) } : p
+      )
+    );
+    const combined = [...fresh, ...older];
+    const kept = combined.filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i).slice(0, KEPT_PHOTOS);
+    localStorage.setItem(POLAROID_STORAGE_KEY, JSON.stringify(kept));
+  } catch {
+    /* storage blocked or full: the prints still show on this ride's report */
+  }
+}
+
 /** Film loaded at the start of every ride. */
 export const STARTING_FILM = 8;
 
@@ -280,15 +325,8 @@ export class PolaroidManager {
       unlockAchievement('photo_evidence');
     }
 
-    // Persist developed photos into gallery archive (max 24)
-    try {
-      const existing = loadPersistentPolaroids();
-      const combined = [...this.photos, ...existing];
-      const dedupe = combined.filter((p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx).slice(0, 24);
-      localStorage.setItem('gtrain-polaroids', JSON.stringify(dedupe));
-    } catch {
-      /* ignore storage errors */
-    }
+    // Keep this ride's prints for the Case Files, as small thumbnails (see persistThumbnails).
+    void persistThumbnails(this.photos);
 
     this.notify();
   }

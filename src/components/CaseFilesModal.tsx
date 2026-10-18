@@ -9,8 +9,8 @@
 import React, { useState } from 'react';
 import { X, Volume2, ShieldCheck, Eye, Award, Image as ImageIcon, Radio, CheckCircle2, Lock } from 'lucide-react';
 import { GameEngine } from '../game/gameState';
-import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
-import { EVP_SIGNALS, loadEvpArchive, transcriptOf, EvpTape } from '../game/evpManager';
+import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState, loadArchive } from '../game/psychLog';
+import { EVP_SIGNALS, loadEvpArchive, transcriptOf, titleOf, EvpTape } from '../game/evpManager';
 import { ENDINGS, ENDING_IDS, loadEndingsArchive, endingText } from '../game/endings';
 import { loadPersistentPolaroids, polaroidManager } from '../game/polaroidManager';
 import { ACHIEVEMENTS, ACHIEVEMENT_IDS, loadAchievements } from '../game/achievements';
@@ -31,7 +31,8 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
   const [activeTab, setActiveTab] = useState<'anomalies' | 'polaroids' | 'tapes' | 'endings'>(initialTab);
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
 
-  const archive = engine?.psychLog?.archive ?? {};
+  // What's saved on this device (the last ride's result only exists after a ride ends).
+  const archive = loadArchive();
   const documentedCount = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
 
   const evpArchive = loadEvpArchive();
@@ -321,7 +322,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                   // Create dummy tape object for player
                   const tapeObj: EvpTape = {
                     signalId: sig.id,
-                    title: sig.title,
+                    title: titleOf(sig),
                     stop: `Stops ${sig.stops.join('-')}`,
                     freq: 'Carrier Wave',
                     transcript,
@@ -346,7 +347,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                               </span>
                             )}
                           </div>
-                          <h4 className="font-bold text-sm text-[#1b1d18] mt-0.5">{sig.title}</h4>
+                          <h4 className="font-bold text-sm text-[#1b1d18] mt-0.5">{titleOf(sig)}</h4>
                         </div>
                         {discovered && engine && (
                           <TapePlayButton engine={engine} tape={tapeObj} tone="paper" />
@@ -376,10 +377,10 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-black text-sm uppercase tracking-tight text-[#1b1d18]">
-                    Classified Escape Endings ({endingCount} of 8 Unlocked)
+                    Classified Escape Endings ({endingCount} of {ENDING_IDS.length} Unlocked)
                   </h3>
                   <span className="font-mono text-xs text-[#55574c]">
-                    {Math.round((endingCount / 8) * 100)}% COMPLETE
+                    {Math.round((endingCount / ENDING_IDS.length) * 100)}% COMPLETE
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -400,7 +401,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                       >
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <span className="font-mono font-bold text-[9px] uppercase tracking-wider text-[#55574c]">
-                            {def.badge}
+                            {isReached ? def.badge : '[REDACTED]'}
                           </span>
                           {isReached ? (
                             <span className="font-mono text-[9px] font-bold text-[#204a18]">
@@ -410,10 +411,8 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                             <Lock className="w-3 h-3 text-[#8d8371]" />
                           )}
                         </div>
-                        <h4 className="font-bold text-xs text-[#1b1d18]">{def.title}</h4>
-                        <p className="mt-1 text-[11px] leading-snug">
-                          {isReached ? text.summary : '[Parameters unfulfilled or undiscovered]'}
-                        </p>
+                        <h4 className="font-bold text-xs text-[#1b1d18]">{isReached ? def.title : 'Undocumented Outcome'}</h4>
+                        {isReached && <p className="mt-1 text-[11px] leading-snug">{text.summary}</p>}
                       </div>
                     );
                   })}
@@ -451,17 +450,17 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                               : 'bg-black/10 text-[#8d8371]'
                           }`}
                         >
-                          {ach.badge}
+                          {unlocked || !ach.secret ? ach.badge : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
-                            <h4 className="font-bold text-xs truncate text-[#1b1d18]">{ach.title}</h4>
+                            <h4 className="font-bold text-xs truncate text-[#1b1d18]">{unlocked || !ach.secret ? ach.title : '???'}</h4>
                             {unlocked && (
                               <CheckCircle2 className="w-3.5 h-3.5 text-[#6cbe45] shrink-0" />
                             )}
                           </div>
                           <p className="mt-0.5 text-[11px] leading-snug text-[#55574c]">
-                            {ach.description}
+                            {unlocked ? ach.description : 'Not yet earned.'}
                           </p>
                         </div>
                       </div>
