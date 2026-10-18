@@ -73,6 +73,8 @@ export default function App() {
   const settingsOpenRef = useRef(false);
   settingsOpenRef.current = settingsOpen;
   const [routeSelectorOpen, setRouteSelectorOpen] = useState(false);
+  const routeSelectorOpenRef = useRef(false);
+  routeSelectorOpenRef.current = routeSelectorOpen;
 
   // Held arrow keys; the render loop turns the view while they're down.
   const keyLookRef = useRef(new KeyLook());
@@ -483,6 +485,9 @@ export default function App() {
         }
         if (e.code !== 'KeyM') return;
       }
+      // The route selector can open mid-ride; while it's up, keys belong to it (Tab moves
+      // focus, Enter/Space pick a line, Esc closes it via ui/escape.ts). Only M still mutes.
+      if (routeSelectorOpenRef.current && e.code !== 'KeyM') return;
 
       if ((e.code === 'KeyP' || e.code === 'Escape') && G.phase !== 'menu' && G.phase !== 'end') {
         if (G.paused) resumeGame();
