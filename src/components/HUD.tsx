@@ -121,9 +121,12 @@ export const HUD: React.FC<HUDProps> = ({
       {/*
         Top bar: one row, so the route panel and the controls can't overlap. The controls keep
         their size; the route panel gives way (the station name truncates last). On narrow
-        (portrait) screens the route panel drops to a second row, under the controls.
+        (portrait) screens the route panel drops to a second row, under the controls. Hidden under
+        the camera viewfinder, which has its own Album and Lower buttons along the top.
       */}
-      <div className="absolute inset-x-4 top-4 flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-end sm:justify-between gap-2 pointer-events-none">
+      <div
+        className={`absolute inset-x-4 top-4 ${polaroidManager.isViewfinderOpen ? 'hidden' : 'flex'} flex-wrap sm:flex-nowrap items-start sm:items-center justify-end sm:justify-between gap-2 pointer-events-none`}
+      >
         {/* Route Bullet, Next Station, Consist Location */}
         <div className="order-last basis-full sm:order-none sm:basis-auto min-w-0 flex items-center gap-2 *:pointer-events-auto">
           <button
@@ -335,9 +338,11 @@ export const HUD: React.FC<HUDProps> = ({
       )}
 
       {/* Touch: walking stick (bottom left), where the keyboard hints sit on desktop. Hidden at
-          the same times WASD is ignored: answer prompts and the restraint. */}
+          the same times WASD is ignored: answer prompts and the restraint. The camera viewfinder
+          covers the screen edges, so the touch controls step aside while it's up. */}
       {G.isTouch &&
         !showChoices &&
+        !polaroidManager.isViewfinderOpen &&
         !isRestraint &&
         !G.paused &&
         (G.phase === 'ride' || G.phase === 'stop' || G.phase === 'haven' || G.phase === 'intro') && (
@@ -361,7 +366,7 @@ export const HUD: React.FC<HUDProps> = ({
       {evp.raised && !showChoices && <EvpRecorder engine={G} />}
 
       {/* Hold / Flag Button (Bottom Right) */}
-      {!showChoices && !evp.raised && (
+      {!showChoices && !evp.raised && !(G.isTouch && polaroidManager.isViewfinderOpen) && (
         <div className="absolute right-4 bottom-5 pointer-events-auto">
           <button
             onPointerDown={(e) => {
