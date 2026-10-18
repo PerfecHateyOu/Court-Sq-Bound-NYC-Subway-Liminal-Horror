@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Full-screen overlays: keep content clear of notches and the home indicator (in full screen or
+   from the home screen the page runs under them; see viewport-fit=cover in index.html). */
+@utility safe-pad {
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  @media (width >= 40rem) {
+    padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
+      max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+  }
+}
+
 :root {
   --tunnel: #0a0d0b;
   --ink: #ece6d3;

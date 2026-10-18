@@ -33,7 +33,7 @@ export const AnalogRollsign: React.FC<AnalogRollsignProps> = ({ engine }) => {
       aria-label={`${chapter.numeral}: ${title} — ${subtitle}`}
       data-testid="chapter-rollsign"
       data-chapter={chapter.index}
-      className={`fixed left-1/2 top-[72px] sm:top-20 -translate-x-1/2 z-40 pointer-events-none transition-all duration-500 ease-out ${
+      className={`fixed left-1/2 top-[120px] sm:top-20 -translate-x-1/2 z-40 pointer-events-none transition-all duration-500 ease-out ${
         isReduced ? 'opacity-100' : 'animate-in fade-in slide-in-from-top-6 duration-300'
       }`}
     >

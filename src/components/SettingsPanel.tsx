@@ -102,7 +102,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto p-3 sm:p-6 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto safe-pad bg-black/70 backdrop-blur-sm"
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

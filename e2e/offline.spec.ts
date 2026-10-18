@@ -43,7 +43,7 @@ test.describe('offline copy', () => {
     await page.locator('text=/Board the train/i').click();
     await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
     // The ride starts: the HUD shows the next stop and the 3D view draws.
-    await expect(page.getByText('Next:')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('hud-route-panel')).toBeVisible({ timeout: 20_000 });
     await page.waitForTimeout(3000);
     const drawn = await page.evaluate(() => {
       const c = document.querySelector('canvas') as HTMLCanvasElement;
