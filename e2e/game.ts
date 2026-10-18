@@ -40,8 +40,15 @@ export async function board(page: Page, opts: { keepStorage?: boolean } = {}): P
   await page.goto('/');
   if (!opts.keepStorage) {
     await page.evaluate(() => localStorage.clear());
-    await page.reload();
   }
+  // Boarding goes full screen by default; the suite plays windowed (resizing the viewport
+  // would leave full screen and pause). e2e/fullscreen.spec.ts covers full screen itself.
+  await page.evaluate(() => {
+    const k = 'gtrain-settings';
+    const s = JSON.parse(localStorage.getItem(k) || '{}');
+    if (!('fullscreenOnBoard' in s)) localStorage.setItem(k, JSON.stringify({ ...s, fullscreenOnBoard: false }));
+  });
+  await page.reload();
   await page.locator('text=/Board the train/i').click();
   await page.waitForFunction(() => {
     const w = window as any;

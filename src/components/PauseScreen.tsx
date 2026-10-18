@@ -2,7 +2,8 @@
  * Pause Screen Overlay for Court Sq-Bound
  */
 import React from 'react';
-import { Play, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
+import { Play, RotateCcw, Settings as SettingsIcon, Maximize2, Minimize2 } from 'lucide-react';
+import { fullscreenSupported, isStandalone, toggleFullscreen, useFullscreen } from '../ui/fullscreen';
 import { STOPS } from '../constants';
 import { GameEngine } from '../game/gameState';
 import { useEscape } from '../ui/escape';
@@ -18,6 +19,10 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
   const nextStop = engine.seg ? STOPS[engine.seg.stop] : STOPS[2];
   // Restarting throws away the current ride, so it takes a second, explicit click.
   const [confirmRestart, setConfirmRestart] = React.useState(false);
+  const full = useFullscreen();
+  const canFull = fullscreenSupported();
+  // iPhone Safari can't go full screen from a page; the home-screen app can.
+  const showHomeScreenTip = !canFull && engine.isTouch && !isStandalone();
   // Esc on the confirmation cancels it (rather than resuming the ride).
   useEscape(() => setConfirmRestart(false), confirmRestart);
 
@@ -62,6 +67,21 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
             <SettingsIcon className="w-4 h-4" />
             Settings
           </button>
+
+          {canFull && (
+            <button
+              onClick={toggleFullscreen}
+              className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-[#ece6d3] font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {full ? 'Exit Full Screen' : 'Full Screen'}
+            </button>
+          )}
+          {showHomeScreenTip && (
+            <p data-testid="home-screen-tip" className="text-xs text-[#9a9684] leading-snug text-center px-2">
+              To play full screen on iPhone: tap Share, then <strong className="text-[#ece6d3]">Add to Home Screen</strong>, and open the game from there.
+            </p>
+          )}
 
           {!confirmRestart ? (
             <button

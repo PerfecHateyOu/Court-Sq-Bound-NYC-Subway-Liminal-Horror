@@ -21,6 +21,8 @@ export interface Settings {
    * device's reduced-motion setting.
    */
   screenEffects: ScreenEffects;
+  /** Go full screen when boarding the train (where the browser allows it). */
+  fullscreenOnBoard: boolean;
 }
 
 export const SENSITIVITY_RANGE = [0.4, 2.0] as const;
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gameVolume: 1,
   musicVolume: 1,
   screenEffects: 'system',
+  fullscreenOnBoard: true,
 };
 
 const KEY = 'gtrain-settings';
@@ -57,6 +60,7 @@ function sanitize(raw: any): Settings {
     gameVolume: clamp(raw.gameVolume, 0, 1, d.gameVolume),
     musicVolume: clamp(raw.musicVolume, 0, 1, d.musicVolume),
     screenEffects: ['system', 'full', 'reduced'].includes(raw.screenEffects) ? raw.screenEffects : d.screenEffects,
+    fullscreenOnBoard: typeof raw.fullscreenOnBoard === 'boolean' ? raw.fullscreenOnBoard : d.fullscreenOnBoard,
   };
 }
 

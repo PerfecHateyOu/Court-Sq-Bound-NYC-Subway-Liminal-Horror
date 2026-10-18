@@ -3,30 +3,45 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
+  // `vite build --mode offline` (see scripts/build-offline.mjs): one script and one stylesheet,
+  // nothing split or left as a separate file, so they can be inlined into a single index.html
+  // that opens from a double-click (file://).
+  const offline = mode === 'offline';
   return {
+    base: offline ? './' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),
       },
     },
-    build: {
-      // three.js on its own is ~535 kB minified (~133 kB gzipped); warn about anything bigger.
-      chunkSizeWarningLimit: 600,
-      rolldownOptions: {
-        output: {
-          // Libraries go in their own chunks: they change far less often than the game, so
-          // browsers keep them cached across game updates.
-          codeSplitting: {
-            groups: [
-              { name: 'three', test: /node_modules[\\/]three[\\/]/ },
-              { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
-            ],
+    build: offline
+      ? {
+          outDir: 'dist-offline',
+          emptyOutDir: true,
+          assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+          cssCodeSplit: false,
+          chunkSizeWarningLimit: 4000,
+          copyPublicDir: false, // the manifest and home-screen icons only work from a web server
+          rolldownOptions: { output: { codeSplitting: false } },
+        }
+      : {
+          // three.js on its own is ~535 kB minified (~133 kB gzipped); warn about anything bigger.
+          chunkSizeWarningLimit: 600,
+          rolldownOptions: {
+            output: {
+              // Libraries go in their own chunks: they change far less often than the game, so
+              // browsers keep them cached across game updates.
+              codeSplitting: {
+                groups: [
+                  { name: 'three', test: /node_modules[\\/]three[\\/]/ },
+                  { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+                ],
+              },
+            },
           },
         },
-      },
-    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.

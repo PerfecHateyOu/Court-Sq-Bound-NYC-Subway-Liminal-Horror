@@ -93,8 +93,17 @@ jobs:
         working-directory: e2e
       - run: npx playwright install --with-deps chromium
         working-directory: e2e
+      # The offline copy (one index.html that opens from a double-click) is rebuilt on every
+      # change, tested by e2e/offline.spec.ts, and attached to the run as a download.
+      - name: Build the offline copy
+        run: bun run build:offline
       - run: npx playwright test
         working-directory: e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Court-Sq-Bound-offline
+          path: dist-offline/Court-Sq-Bound/
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

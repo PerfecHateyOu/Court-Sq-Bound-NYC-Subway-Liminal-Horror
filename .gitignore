@@ -13,3 +13,4 @@ playwright-report/
 
 # AI Studio's working notes (implementation plans etc.)
 .aistudio/
+dist-offline/
