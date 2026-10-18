@@ -1,4 +1,5 @@
 import { test, expect } from './game';
+import { ENDING_IDS } from '../src/game/endings';
 
 // Run a segment to its arrival choice, stepping game time.
 const ARRIVE = (seg: number) => `G.Q = []; G.startSegment(${seg}); G.active.forEach((a) => (a.trigger = 999)); G.seg._masks = [];
@@ -146,7 +147,8 @@ test.describe('Endings', () => {
 
     await page.goto('/');
     await page.getByRole('button', { name: /Case Files/ }).click();
-    await expect(page.getByTestId('case-files-endings')).toHaveText('Endings: 2 of 8 reached.');
+    const files = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
+    await expect(files.getByText(/^Endings: /)).toHaveText(`Endings: 2/${ENDING_IDS.length}`);
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'Settings' }).click();
