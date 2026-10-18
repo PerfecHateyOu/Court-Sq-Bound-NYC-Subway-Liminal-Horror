@@ -171,6 +171,15 @@ export const CHATS: Array<[number, string][]> = [
   [[1, 'Is it always this empty?'], [0, 'It\u2019s always this empty.']],
 ];
 
+// Extra small talk for the calm exchanges (rides into stops 2, 4 and 6). Each ride, some of those
+// exchanges are swapped for one of these, never the same one twice. Low tier still collapses every
+// earlier exchange into the Stop 9 line, and Stops 9 and 11 always keep their own exchanges.
+export const CALM_CHATS: Array<[number, string][]> = [
+  [[0, 'Don\u2019t lean against the doors.'], [1, 'Should be in Queens in twenty minutes.']],
+  [[0, 'Did they change the schedule?'], [1, 'It feels slower today.']],
+  [[0, 'I always hated this curve.'], [1, 'Check your bag.']],
+];
+
 export interface MaskDialogue {
   who: number; // 0: Mom, 1: Dad
   line: string;
@@ -187,6 +196,7 @@ export const MASK_DIALOGUES: MaskDialogue[][] = [
     { who: 0, line: 'Did you eat anything today?', calm: 'Had a bagel earlier.', off: ['Why does everyone keep asking that?', 'Sorry, what?'] },
     { who: 0, line: 'You look warm. Are you warm?', calm: 'Just stuffy in here.', off: ['Is it hot to you?', 'Stop looking at me like that.'] },
     { who: 1, line: 'You\u2019re staring at something.', calm: 'Just zoning out.', off: ['No I\u2019m not.', 'Don\u2019t you see it?'], needsSus: true },
+    { who: 0, line: 'Did you drop something on the floor?', calm: 'No, just adjusting my bag.', off: ['Why are you staring?', 'Leave me alone.'] },
   ],
   // Medium/Low tier (Uneasy set)
   [
