@@ -41,6 +41,9 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
         <h2 className="text-2xl font-black text-[#ece6d3] uppercase tracking-wide transit-sign-header drop-shadow-md">
           Train Paused
         </h2>
+        {engine.nightmare && (
+          <p className="mt-1 font-mono text-[11px] font-bold tracking-[0.2em] text-[#e8705e]">NIGHTMARE MODE</p>
+        )}
         <p className="mt-2 text-sm text-[#9a9684]">
           Next approaching station:{' '}
           <span className="text-[#ece6d3] font-bold inline-flex items-center gap-1">

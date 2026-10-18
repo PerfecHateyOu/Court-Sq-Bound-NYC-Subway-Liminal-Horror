@@ -13,7 +13,7 @@ import { CaseFilesModal } from './CaseFilesModal';
 import { GameEngine } from '../game/gameState';
 
 interface StartScreenProps {
-  onStart: (muted: boolean, debug: boolean) => void;
+  onStart: (muted: boolean, debug: boolean, nightmare: boolean) => void;
   onOpenSettings: () => void;
   isTouch: boolean;
   engine?: GameEngine;
@@ -22,6 +22,15 @@ interface StartScreenProps {
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, isTouch, engine }) => {
   const [startMuted, setStartMuted] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
+  const [nightmare, setNightmare] = React.useState(false);
+  // Nightmare unlocks after one completed ride (any ending).
+  const nightmareUnlocked = React.useMemo(() => {
+    try {
+      return (JSON.parse(localStorage.getItem('gtrain-runs') || '[]') as unknown[]).length > 0;
+    } catch {
+      return false;
+    }
+  }, []);
   const [showLog, setShowLog] = React.useState(false);
 
   // Re-read when the Case Files open and after saved progress is erased in Settings.
@@ -103,7 +112,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         {/* Action Controls & Settings */}
         <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <button
-            onClick={() => onStart(startMuted, showDebug)}
+            onClick={() => onStart(startMuted, showDebug, nightmareUnlocked && nightmare)}
             className="px-6 py-3.5 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base sm:text-lg tracking-wide transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
           >
             Board the Train
@@ -125,6 +134,22 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
               <SettingsIcon className="w-4 h-4" />
               Settings
             </button>
+
+            {nightmareUnlocked ? (
+              <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors" title="Faster train, flickering tubes, sharper-eyed parents, faster sanity loss">
+                <input
+                  type="checkbox"
+                  checked={nightmare}
+                  onChange={(e) => setNightmare(e.target.checked)}
+                  className="w-4 h-4 rounded accent-[#c9513f]"
+                />
+                <span className={nightmare ? 'text-[#e8705e] font-semibold' : ''}>Nightmare mode</span>
+              </label>
+            ) : (
+              <span className="text-[#6d6a5c]" data-testid="nightmare-locked">
+                Nightmare mode: finish a ride to unlock
+              </span>
+            )}
 
             <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
               <input

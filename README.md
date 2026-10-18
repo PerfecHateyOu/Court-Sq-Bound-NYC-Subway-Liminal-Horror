@@ -73,6 +73,8 @@ The ride is told in three chapters, announced by a rollsign as each one begins. 
 
 A run takes about 10 minutes and ends with a travel report scoring sanity retained, mask integrity, and anomaly accuracy, plus a Psychological Log: a case file of the 13 anomaly types that fills in across rides.
 
+**Nightmare mode** unlocks after your first finished ride (any ending): tick it on the start screen. Same ride, harder: a faster train and shorter gaps between stations, single ceiling tubes that flicker mid-ride (never the whole car, never on the approach, and not with Reduced screen effects), parents who look your way more often and for longer, and faster sanity loss within each stop's limits. The report marks Nightmare rides. Tuning lives in `NIGHTMARE` in `src/constants.ts`.
+
 **Full screen:** boarding the train goes full screen (where the browser allows it; turn it off in Settings). Leave with Esc or the pause menu, which pauses the ride. On wide screens there's also a full-screen button in the top bar. iPhones don't let web pages go full screen: tap Share, then **Add to Home Screen**, and the game opens full screen from there.
 
 **Settings** (from the start screen or the pause menu): look speed, invert vertical look, game and pause-music volume, screen effects (match your device's reduced-motion setting, always on, or reduced), full screen when boarding, vibration, and erasing saved progress. Settings are saved on the device.

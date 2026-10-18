@@ -104,6 +104,14 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
               <Compass className="w-3.5 h-3.5 text-[#e3a83a]" />
               <span>{endingBadge}</span>
             </div>
+            {G.nightmare && (
+              <span
+                data-testid="nightmare-tag"
+                className="inline-flex ml-2 mb-2 px-2 py-0.5 rounded bg-[#7a1f14] text-[#ffd9d2] font-mono text-[11px] font-bold tracking-wider"
+              >
+                NIGHTMARE
+              </span>
+            )}
             <div className="font-semibold text-[#1b1d18]">{endingNarrative}</div>
           </div>
 
