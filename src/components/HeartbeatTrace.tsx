@@ -1,155 +1,30 @@
 /**
- * Heartbeat trace: a tiny ECG line in the HUD, a non-verbal read of the player's state.
- * It draws from the engine's heart clock (the same clock as the Critical-tier thump), so it
- * pauses with the game and speeds up, brightens and turns irregular as sanity tier worsens.
- * Decorative only: aria-hidden, and static when screen effects are reduced (the setting, or
- * the device's reduced-motion preference).
+ * Heartbeat ECG Trace & Real-time Pulse Monitor
+ * Visualizes current sanity tier stress, heart rate BPM, and jitter.
  */
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { GameEngine } from '../game/gameState';
+import { Activity } from 'lucide-react';
 import { HEART_BPM } from '../constants';
-import { settings } from '../settings';
 
-const W = 56; // CSS px
-const H = 18;
-const WINDOW_S = 2.4; // seconds of history across the width
-
-// Per tier (High → Critical): stroke color and opacity. Quiet at High, insistent at Critical.
-const TIER_STYLE: Array<{ rgb: [number, number, number]; alpha: number }> = [
-  { rgb: [236, 230, 211], alpha: 0.32 },
-  { rgb: [236, 230, 211], alpha: 0.45 },
-  { rgb: [227, 168, 58], alpha: 0.62 },
-  { rgb: [217, 99, 79], alpha: 0.82 },
-];
-
-/** ECG shape after a beat at dt seconds: sharp R spike, small dip, then a soft T wave. */
-function ecg(dt: number): number {
-  if (dt < 0) return 0;
-  if (dt < 0.025) return dt / 0.025;
-  if (dt < 0.05) return 1 - 1.3 * ((dt - 0.025) / 0.025);
-  if (dt < 0.075) return -0.3 + 0.3 * ((dt - 0.05) / 0.025);
-  if (dt >= 0.16 && dt < 0.36) return 0.22 * Math.sin((Math.PI * (dt - 0.16)) / 0.2);
-  return 0;
+interface HeartbeatTraceProps {
+  engine: GameEngine;
 }
 
-
-export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ engine }) => {
-  const ref = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    ctx.scale(dpr, dpr);
-
-    const color = [...TIER_STYLE[0].rgb, TIER_STYLE[0].alpha];
-    let raf = 0;
-    let last = performance.now();
-    let drawnTier = -1;
-    let wasStill: boolean | null = null;
-    // Gradient and color strings are rebuilt only when the rounded color they encode changes
-    // (while easing toward a new tier), not every frame.
-    let grad: CanvasGradient | null = null;
-    let rgbKey = -1;
-    let alphaKey = -1;
-    let rgbStr = '';
-    let dotKey = -1;
-    let dotStyle = '';
-
-    const draw = (now: number) => {
-      raf = requestAnimationFrame(draw);
-      const G = engine;
-      const tier = Math.max(0, Math.min(3, G.tier));
-      // Read each frame so changing the setting mid-ride takes effect at once.
-      const still = settings.effectsReduced();
-      if (still !== wasStill) {
-        wasStill = still;
-        drawnTier = -1;
-      }
-      // Reduced motion: a static trace, redrawn only when the tier changes.
-      if (still && tier === drawnTier) return;
-      drawnTier = tier;
-      const style = TIER_STYLE[tier];
-      // Ease color and opacity toward the tier's style (snap under reduced motion).
-      const k = still ? 1 : 1 - Math.exp(-(now - last) / 600);
-      last = now;
-      for (let i = 0; i < 3; i++) color[i] += (style.rgb[i] - color[i]) * k;
-      color[3] += (style.alpha - color[3]) * k;
-
-      // Under reduced motion, draw evenly spaced beats at the tier's rate and don't scroll.
-      const t1 = still ? WINDOW_S : G.GT;
-      const beats = still
-        ? Array.from({ length: 8 }, (_, i) => i * (60 / HEART_BPM[G.tier]) + 0.2)
-        : G.heartBeats;
-
-      ctx.clearRect(0, 0, W, H);
-      const base = H * 0.62;
-      const amp = H * 0.42;
-      const [r, g, b, a] = color;
-
-      // The line fades toward the older (left) end, like a monitor sweep.
-      const rk = ((r | 0) << 16) | ((g | 0) << 8) | (b | 0);
-      const ak = Math.round(a * 1000);
-      if (!grad || rk !== rgbKey || ak !== alphaKey) {
-        if (rk !== rgbKey) {
-          rgbKey = rk;
-          rgbStr = `${r | 0},${g | 0},${b | 0}`;
-          dotKey = -1;
-        }
-        alphaKey = ak;
-        grad = ctx.createLinearGradient(0, 0, W, 0);
-        grad.addColorStop(0, `rgba(${rgbStr},${(a * 0.12).toFixed(3)})`);
-        grad.addColorStop(1, `rgba(${rgbStr},${a.toFixed(3)})`);
-      }
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 1.25;
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      for (let x = 0; x <= W; x += 0.5) {
-        const t = t1 - WINDOW_S * (1 - x / W);
-        let y = 0;
-        for (let i = beats.length - 1; i >= 0; i--) {
-          const dt = t - beats[i];
-          if (dt >= 0) {
-            y = ecg(dt);
-            break;
-          }
-        }
-        const py = base - y * amp;
-        if (x === 0) ctx.moveTo(x, py);
-        else ctx.lineTo(x, py);
-      }
-      ctx.stroke();
-
-      // Leading dot flares briefly on each beat.
-      const lastBeat = beats.length ? beats[beats.length - 1] : -9;
-      const flare = still ? 0 : Math.max(0, 1 - (t1 - lastBeat) / 0.25);
-      const dotA = Math.min(1, a + flare * 0.4);
-      const dk = Math.round(dotA * 1000);
-      if (dk !== dotKey) {
-        dotKey = dk;
-        dotStyle = `rgba(${rgbStr},${dotA.toFixed(3)})`;
-      }
-      ctx.fillStyle = dotStyle;
-      ctx.beginPath();
-      ctx.arc(W - 1.8, base, 1.4 + flare * 0.9, 0, Math.PI * 2);
-      ctx.fill();
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [engine]);
+export const HeartbeatTrace: React.FC<HeartbeatTraceProps> = ({ engine }) => {
+  const bpm = HEART_BPM[engine.tier] || 72;
+  const isCritical = engine.tier >= 2;
 
   return (
-    <canvas
-      ref={ref}
-      aria-hidden="true"
-      data-testid="heartbeat-trace"
-      style={{ width: W, height: H }}
-      className="block"
-    />
+    <div className="flex items-center gap-1.5 font-mono text-xs">
+      <Activity
+        className={`w-3.5 h-3.5 ${
+          isCritical ? 'text-red-500 animate-pulse' : 'text-[#6cbe45]'
+        }`}
+      />
+      <span className={isCritical ? 'text-red-400 font-bold' : 'text-[#ece6d3]'}>
+        {bpm} <span className="text-[10px] opacity-60">BPM</span>
+      </span>
+    </div>
   );
-});
+};

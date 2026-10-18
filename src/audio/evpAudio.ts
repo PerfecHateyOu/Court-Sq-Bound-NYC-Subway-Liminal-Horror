@@ -1,18 +1,13 @@
 /**
- * Sound of the EVP recorder: tape hiss while it's up, a heterodyne whistle that rises as you
- * tune toward any carrier (broadcast or decoy alike), motor hum while recording, and once
- * locked either garbled speech (a broadcast, using the intercom voice) or a flat carrier tone
- * (a decoy). Everything goes to the game bus, so it follows Game sounds, pause and mute.
+ * Sound of the EVP recorder
  */
 import { Intercom } from './intercom';
 
 export interface EvpSoundState {
   raised: boolean;
   recording: boolean;
-  /** 0..1 closeness to the nearest carrier. */
   meter: number;
   lock: 'signal' | 'decoy' | null;
-  /** Intercom voice tier for the locked broadcast. */
   voice: number;
 }
 
@@ -64,12 +59,6 @@ export class EvpAudio {
     const motor = ac.createOscillator();
     motor.type = 'triangle';
     motor.frequency.value = 58;
-    const flutter = ac.createOscillator();
-    flutter.frequency.value = 6.5;
-    const flutterAmt = ac.createGain();
-    flutterAmt.gain.value = 1.2;
-    flutter.connect(flutterAmt).connect(motor.frequency);
-    flutter.start();
     this.motorGain = ac.createGain();
     this.motorGain.gain.value = 0;
     motor.connect(this.motorGain).connect(this.bus);
@@ -86,21 +75,18 @@ export class EvpAudio {
     const tc = 0.06;
     this.bus.gain.setTargetAtTime(s.raised ? 1 : 0, t, 0.08);
     if (!s.raised) return;
-    // Whistle: audible while approaching a carrier, fades out once locked.
+
     const approach = s.lock ? 0 : s.meter;
     this.whistleGain.gain.setTargetAtTime(0.035 * approach, t, tc);
     this.whistle.frequency.setTargetAtTime(400 + (1 - s.meter) * 2400, t, tc);
     this.hissGain.gain.setTargetAtTime(s.lock ? 0.025 : 0.05, t, tc);
     this.carrierGain.gain.setTargetAtTime(s.lock === 'decoy' ? 0.03 : 0, t, tc);
     this.motorGain.gain.setTargetAtTime(s.recording ? 0.012 : 0, t, 0.1);
+
     if (s.lock === 'signal' && t >= this.nextVoiceAt) {
       const dur = this.voice.play(Math.max(0, Math.min(3, s.voice)), t + 0.05);
       this.nextVoiceAt = t + dur + 0.6;
     }
     if (s.lock !== 'signal') this.nextVoiceAt = Math.min(this.nextVoiceAt, t + 0.2);
-  }
-
-  public get level(): number {
-    return this.bus.gain.value;
   }
 }

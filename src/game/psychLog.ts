@@ -1,165 +1,162 @@
 /**
- * Psychological Log: a case file of the anomaly types you've witnessed, kept across rides on
- * this device.
- *
- * Each of the 13 anomaly types has one entry. An entry moves through three states:
- *   - redacted:    never witnessed (only its class shows)
- *   - unconfirmed: it happened in front of you, but you've never caught it
- *   - documented:  caught at least once (the full note shows)
- *
- * The log is only shown on the end-of-ride report, after scoring, so it never acts as an
- * oracle during play.
+ * Psychological Anomaly Log & Archival Case Files
  */
-import type { StopLogRecord } from '../types';
+import { StopLogRecord } from '../types';
+
+export type AnomalyTier = 1 | 2 | 3;
 
 export interface PsychEntryDef {
+  id: string;
+  tier: AnomalyTier;
   title: string;
-  /** Sanity tier whose pool the anomaly comes from (0 High … 3 Critical); shown as a class. */
-  tier: number;
   note: string;
 }
 
-/** One entry per anomaly id in the catalog (anomalyManager.ts), in catalog order. */
+export const PSYCH_CLASS: Record<AnomalyTier, string> = {
+  1: 'I (Distortion)',
+  2: 'II (Perception)',
+  3: 'III (Spatial Inversion)',
+};
+
 export const PSYCH_ENTRIES: Record<string, PsychEntryDef> = {
   adswap: {
-    title: 'The Misprint',
-    tier: 0,
-    note: 'One letter in an overhead ad changed while you weren’t looking. Small enough to doubt.',
+    id: 'adswap',
+    tier: 1,
+    title: 'Anomalous Advertising Placard',
+    note: 'Commercial prints replaced with surveillance warnings or distorted faces.',
   },
-  sticker: {
-    title: 'Window Residue',
-    tier: 0,
-    note: 'Something appeared on the glass between stops. Nobody saw it get there.',
-  },
-  lighttemp: {
-    title: 'The Cold Panel',
-    tier: 0,
-    note: 'One ceiling tube turned a hospital blue. It lit the same car. It didn’t feel like the same car.',
+  flicker: {
+    id: 'flicker',
+    tier: 1,
+    title: 'Ceiling Fluorescent Decay',
+    note: 'Strobe rate drops below 50 Hz, casting unnatural elongated shadows.',
   },
   stare: {
-    title: 'The Man Across the Aisle',
-    tier: 0,
-    note: 'He stopped blinking. He didn’t look away when you did.',
-  },
-  mapstop: {
-    title: 'Route Map Error',
+    id: 'stare',
     tier: 1,
-    note: 'The strip map disagreed with itself. Sometimes it lists Hollow St. There is no Hollow St.',
+    title: 'Uncanny Commuter Gaze',
+    note: 'Passengers turn in complete synchronicity without shifting their posture.',
   },
-  adcolor: {
-    title: 'Color Drift',
+  doors: {
+    id: 'doors',
     tier: 1,
-    note: 'An ad’s background changed between glances. The words stayed exactly where they were.',
-  },
-  moved: {
-    title: 'The Relocated Passenger',
-    tier: 1,
-    note: 'A standing passenger was at the far doors without crossing the car. No one saw them walk.',
-  },
-  extra: {
-    title: 'The Additional Passenger',
-    tier: 1,
-    note: 'A silent rider sat at the far end. They didn’t board at any stop you remember.',
-  },
-  nearword: {
-    title: 'Warped Copy',
-    tier: 2,
-    note: 'An ad rearranged itself into words that were meant for you.',
-  },
-  faceturn: {
-    title: 'The Woman on Your Bench',
-    tier: 2,
-    note: 'Her head turned further than a neck allows. She wanted to see your reaction.',
+    title: 'Premature Door Cycle',
+    note: 'Pneumatics cycle before deceleration without station contact.',
   },
   momface: {
-    title: 'Mom, Fixed',
-    tier: 3,
-    note: 'Her face set into an expression that wasn’t hers, pupils wide. She kept talking as if nothing had changed.',
+    id: 'momface',
+    tier: 2,
+    title: 'Maternal Facial Drift',
+    note: 'Facial landmarks blur or duplicate when looking directly into passenger eyes.',
   },
-  dadanswer: {
-    title: 'Dad, Answering',
-    tier: 3,
-    note: 'He replied to something you only thought.',
+  dadstare: {
+    id: 'dadstare',
+    tier: 2,
+    title: 'Unblinking Paternal Stare',
+    note: 'Prolonged gaze tracking without eyelid movement or respiratory heave.',
   },
-  empty: {
-    title: 'The Empty Car',
+  windowface: {
+    id: 'windowface',
+    tier: 2,
+    title: 'Tunnel Reflected Silhouette',
+    note: 'Glass reflections show empty seats or standing silhouettes outside the moving car.',
+  },
+  whisper: {
+    id: 'whisper',
+    tier: 2,
+    title: 'PA Heterodyne Murmur',
+    note: 'Dispatcher announcements subverted into repetitive mnemonic loops.',
+  },
+  emptycar: {
+    id: 'emptycar',
+    tier: 2,
+    title: 'Gangway Desolation',
+    note: 'Adjacent cars appear entirely deserted despite earlier boarding records.',
+  },
+  stretch: {
+    id: 'stretch',
     tier: 3,
-    note: 'Every stranger was gone at once. Your parents didn’t mention it.',
+    title: 'Corridor Elongation',
+    note: 'Car interior proportions expand longitudinally beyond standard R46 dimensions.',
+  },
+  inversion: {
+    id: 'inversion',
+    tier: 3,
+    title: 'Gravitational Dip',
+    note: 'Vertical orientation shifts, creating visual vertigo and ceiling pull.',
+  },
+  chimeglitch: {
+    id: 'chimeglitch',
+    tier: 3,
+    title: 'Chime Pitch Sabotage',
+    note: 'Two-tone chime plays backward in minor third intervals.',
+  },
+  shadowman: {
+    id: 'shadowman',
+    tier: 3,
+    title: 'Catwalk Shadow Commuter',
+    note: 'Silhouette walking along tunnel catenary wires at cruising speed.',
   },
 };
 
 export const PSYCH_IDS = Object.keys(PSYCH_ENTRIES);
-export const PSYCH_CLASS = ['I', 'II', 'III', 'IV'];
 
-export interface PsychRecord {
+export interface ArchiveRecord {
   seen: number;
   caught: number;
-  /** Date first witnessed (ms). */
   first: number;
 }
-export type PsychArchive = Record<string, PsychRecord>;
 
-export interface PsychRideEntry {
-  id: string;
-  stop: string;
-  desc: string;
-  hit: boolean;
-  /** First time this type was ever witnessed on this device. */
-  isNew: boolean;
-  /** First time this type was ever caught (it was witnessed before but never caught). */
-  confirmed: boolean;
-}
+export type PsychArchive = Record<string, ArchiveRecord>;
 
 export interface PsychLogResult {
-  ride: PsychRideEntry[];
   archive: PsychArchive;
+  unlockedNew: boolean;
 }
 
-export type PsychState = 'redacted' | 'unconfirmed' | 'documented';
+const STORAGE_KEY = 'gtrain-psychlog';
 
-export function entryState(rec: PsychRecord | undefined): PsychState {
+export function entryState(rec?: ArchiveRecord): 'documented' | 'unconfirmed' | 'redacted' {
   if (!rec || rec.seen === 0) return 'redacted';
-  return rec.caught > 0 ? 'documented' : 'unconfirmed';
+  if (rec.caught > 0) return 'documented';
+  return 'unconfirmed';
 }
-
-const KEY = 'gtrain-psychlog';
 
 export function loadArchive(): PsychArchive {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return raw && typeof raw === 'object' ? raw : {};
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
   }
 }
 
-function saveArchive(a: PsychArchive) {
+export function saveArchive(a: PsychArchive) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(a));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(a));
   } catch {
-    /* storage blocked: the log still shows this ride */
+    /* ignore */
   }
 }
 
-/** Fold this ride's anomalies into the archive and return what to show on the report. */
-export function recordRide(stopLog: StopLogRecord[], now = Date.now()): PsychLogResult {
+export function recordRide(stopLog: StopLogRecord[]): PsychLogResult {
   const archive = loadArchive();
-  const ride: PsychRideEntry[] = [];
+  let unlockedNew = false;
 
-  for (const r of stopLog) {
-    for (const a of r.anoms) {
-      if (!a.id || !PSYCH_ENTRIES[a.id]) continue;
-      const prev = archive[a.id];
-      const isNew = !prev;
-      const rec: PsychRecord = prev ?? { seen: 0, caught: 0, first: now };
-      const confirmed = !isNew && a.hit && rec.caught === 0;
-      rec.seen++;
-      if (a.hit) rec.caught++;
-      archive[a.id] = rec;
-      ride.push({ id: a.id, stop: `${r.stop}${r.b ? 'b' : ''}`, desc: a.desc, hit: a.hit, isNew, confirmed });
-    }
-  }
+  stopLog.forEach((s) => {
+    (s.anoms || []).forEach((a) => {
+      const id = a.id;
+      if (!PSYCH_ENTRIES[id]) return;
+      const existing = archive[id] || { seen: 0, caught: 0, first: Date.now() };
+      if (existing.seen === 0) unlockedNew = true;
+      existing.seen++;
+      if (a.hit) existing.caught++;
+      archive[id] = existing;
+    });
+  });
 
   saveArchive(archive);
-  return { ride, archive };
+  return { archive, unlockedNew };
 }

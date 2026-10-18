@@ -1,62 +1,56 @@
 /**
- * Keyboard look with the arrow keys. (WASD walks between cars; see App.tsx.)
- *
- * Keys are tracked while held and the view turns every frame at a steady rate, scaled by the
- * Look speed setting, instead of stepping on each OS key-repeat. At 2x look speed the fastest
- * turn (3.6 rad/s) is still below the head-whip threshold (5.5 rad/s), so keyboard turning
- * never raises suspicion on its own.
+ * Smooth Keyboard Look Controller for Arrow Keys
+ * Provides calibrated turn rate of ~1.8 rad/s scaled by sensitivity.
  */
-import type { GameEngine } from '../game/gameState';
-
-/** Turn rate in rad/s at 1x look speed. */
-export const KEY_LOOK_RATE = { yaw: 1.8, pitch: 1.2 };
-
-const DIRS: Record<string, [number, number]> = {
-  ArrowLeft: [1, 0],
-  ArrowRight: [-1, 0],
-  ArrowUp: [0, 1],
-  ArrowDown: [0, -1],
-};
-
 export class KeyLook {
   private held = new Set<string>();
 
   public static isLookKey(code: string): boolean {
-    return code in DIRS;
+    return (
+      code === 'ArrowLeft' ||
+      code === 'ArrowRight' ||
+      code === 'ArrowUp' ||
+      code === 'ArrowDown'
+    );
   }
 
-  public press(code: string) {
-    if (code in DIRS) this.held.add(code);
-  }
-
-  public release(code: string) {
-    this.held.delete(code);
-  }
-
-  /** Forget held keys (pause, lost focus): their keyup may never arrive. */
   public clear() {
     this.held.clear();
   }
 
-  public get active(): boolean {
-    return this.held.size > 0;
+  public down(code: string): boolean {
+    if (KeyLook.isLookKey(code)) {
+      this.held.add(code);
+      return true;
+    }
+    return false;
   }
 
-  /** Turn the view for this frame. */
-  public apply(G: GameEngine, dt: number, lookSpeed: number) {
-    if (!this.held.size) return;
-    let x = 0;
-    let y = 0;
-    for (const code of this.held) {
-      x += DIRS[code][0];
-      y += DIRS[code][1];
+  public up(code: string): boolean {
+    if (KeyLook.isLookKey(code)) {
+      this.held.delete(code);
+      return true;
     }
-    // Opposite arrows cancel out.
-    x = Math.max(-1, Math.min(1, x));
-    y = Math.max(-1, Math.min(1, y));
-    if (!x && !y) return;
-    const limit = G.phase === 'trial' ? 1.2 : 1.75;
-    G.ty = Math.max(-limit, Math.min(limit, G.ty + x * KEY_LOOK_RATE.yaw * lookSpeed * dt));
-    G.tp = Math.max(-0.6, Math.min(0.72, G.tp + y * KEY_LOOK_RATE.pitch * lookSpeed * dt));
+    return false;
+  }
+
+  public isHeld(code: string): boolean {
+    return this.held.has(code);
+  }
+
+  /**
+   * Returns yaw and pitch deltas in radians for this frame
+   */
+  public update(dt: number, sensitivity: number = 1.0): { dty: number; dtp: number } {
+    const baseSpeed = 1.8; // rad/s
+    let dty = 0;
+    let dtp = 0;
+
+    if (this.held.has('ArrowLeft')) dty += baseSpeed * sensitivity * dt;
+    if (this.held.has('ArrowRight')) dty -= baseSpeed * sensitivity * dt;
+    if (this.held.has('ArrowUp')) dtp += baseSpeed * sensitivity * dt;
+    if (this.held.has('ArrowDown')) dtp -= baseSpeed * sensitivity * dt;
+
+    return { dty, dtp };
   }
 }

@@ -1,91 +1,71 @@
 /**
- * On-screen thumbstick for walking on touch devices (WASD is the keyboard equivalent).
- *
- * Analog: the further the knob is pushed, the faster you walk. It sits in its own corner,
- * outside the 3D view, so one thumb can walk while the other drags the view to look.
- * Unmounting (pause, prompts, the restraint) stops walking.
+ * On-Screen Virtual Joystick for Touch Device Movement
+ * Emits normalized fwd and right movement vectors to the GameEngine.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { GameEngine } from '../game/gameState';
 
-const BASE = 112; // px, base diameter
-const TRAVEL = 40; // px, how far the knob moves from centre at full speed
-const DEADZONE = 0.18; // fraction of travel ignored, so a resting thumb doesn't creep
+interface MoveStickProps {
+  engine: GameEngine;
+}
 
-export const MoveStick: React.FC<{ engine: GameEngine }> = ({ engine }) => {
-  const baseRef = useRef<HTMLDivElement>(null);
-  const pointerRef = useRef<number | null>(null);
-  const [knob, setKnob] = useState({ x: 0, y: 0 });
+export const MoveStick: React.FC<MoveStickProps> = ({ engine }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(false);
+  const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
 
-  const stop = () => {
-    if (pointerRef.current === null) return;
-    pointerRef.current = null;
-    setKnob({ x: 0, y: 0 });
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setActive(true);
+    handlePointerMove(e);
+  };
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!active || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const radius = rect.width / 2;
+
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+
+      const clampedDist = Math.min(dist, radius);
+      const kx = Math.cos(angle) * clampedDist;
+      const ky = Math.sin(angle) * clampedDist;
+      setKnobPos({ x: kx, y: ky });
+
+      // Normalized input: forward is -ky / radius, right is kx / radius
+      const fwd = -ky / radius;
+      const right = kx / radius;
+      engine.setMoveInput(fwd, right);
+    },
+    [active, engine]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    setActive(false);
+    setKnobPos({ x: 0, y: 0 });
     engine.setMoveInput(0, 0);
-  };
-
-  const track = (clientX: number, clientY: number) => {
-    const el = baseRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    let dx = clientX - (r.left + r.width / 2);
-    let dy = clientY - (r.top + r.height / 2);
-    const len = Math.hypot(dx, dy);
-    if (len > TRAVEL) {
-      dx = (dx / len) * TRAVEL;
-      dy = (dy / len) * TRAVEL;
-    }
-    setKnob({ x: dx, y: dy });
-    // Rescale past the deadzone so walking starts smoothly from zero.
-    const mag = Math.min(1, len / TRAVEL);
-    const k = mag <= DEADZONE ? 0 : (mag - DEADZONE) / (1 - DEADZONE) / (mag || 1);
-    engine.setMoveInput((-dy / TRAVEL) * k, (dx / TRAVEL) * k);
-  };
-
-  // Hidden (pause, prompt, restraint) while a thumb is down: stop walking.
-  useEffect(() => stop, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engine]);
 
   return (
     <div
-      ref={baseRef}
-      data-testid="move-stick"
-      role="group"
-      aria-label="Walk: drag the stick"
-      className="absolute left-4 bottom-5 rounded-full border border-white/25 bg-black/45 pointer-events-auto touch-none select-none"
-      style={{ width: BASE, height: BASE }}
-      onPointerDown={(e) => {
-        e.preventDefault();
-        if (pointerRef.current !== null) return;
-        pointerRef.current = e.pointerId;
-        try {
-          e.currentTarget.setPointerCapture(e.pointerId);
-        } catch {
-          /* synthetic or already-ended pointer: tracking still works while over the stick */
-        }
-        track(e.clientX, e.clientY);
-      }}
-      onPointerMove={(e) => {
-        if (e.pointerId === pointerRef.current) track(e.clientX, e.clientY);
-      }}
-      onPointerUp={(e) => {
-        if (e.pointerId === pointerRef.current) stop();
-      }}
-      onPointerCancel={(e) => {
-        if (e.pointerId === pointerRef.current) stop();
-      }}
-      onLostPointerCapture={(e) => {
-        if (e.pointerId === pointerRef.current) stop();
-      }}
-      onContextMenu={(e) => e.preventDefault()}
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className="absolute left-6 bottom-6 w-24 h-24 rounded-full bg-black/50 border border-white/20 touch-none pointer-events-auto flex items-center justify-center select-none"
     >
-      <span className="absolute inset-x-0 top-2 text-center text-[9px] font-bold tracking-[0.2em] text-[#9a9684]">
-        WALK
-      </span>
       <div
-        className={`absolute left-1/2 top-1/2 w-12 h-12 -ml-6 -mt-6 rounded-full border shadow-lg ${
-          pointerRef.current !== null ? 'bg-[#6cbe45]/35 border-[#6cbe45]' : 'bg-[#ece6d3]/15 border-white/40'
-        }`}
-        style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
+        className="w-10 h-10 rounded-full bg-[#6cbe45]/60 border border-[#6cbe45] transition-transform duration-75"
+        style={{
+          transform: `translate(${knobPos.x}px, ${knobPos.y}px)`,
+        }}
       />
     </div>
   );

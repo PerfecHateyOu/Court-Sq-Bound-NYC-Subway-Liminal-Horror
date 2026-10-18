@@ -1,33 +1,75 @@
-/** Play / Stop for one saved tape (Evidence Log and report). */
-import React from 'react';
-import { Play, Square } from 'lucide-react';
-import type { GameEngine } from '../game/gameState';
-import type { EvpTape } from '../game/evpManager';
+/**
+ * Microcassette Audio Tape Playback Control Button
+ * Triggers procedural speech synthesis through tape playback filters.
+ */
+import React, { useState, useEffect } from 'react';
+import { Play, Square, Volume2 } from 'lucide-react';
+import { audioEngine } from '../audio/audioEngine';
+import { EvpTape, EVP_SIGNALS } from '../game/evpManager';
+import { GameEngine } from '../game/gameState';
 
-export const TapePlayButton: React.FC<{ engine: GameEngine; tape: EvpTape; tone?: 'dark' | 'paper' }> = ({
-  engine,
+interface TapePlayButtonProps {
+  engine?: GameEngine;
+  tape: EvpTape;
+  tone?: 'paper' | 'metal' | 'dark';
+}
+
+export const TapePlayButton: React.FC<TapePlayButtonProps> = ({
   tape,
-  tone = 'dark',
+  tone = 'paper',
 }) => {
-  const playing = engine.tapePlaying?.signalId === tape.signalId;
-  const look =
-    tone === 'dark'
-      ? playing
-        ? 'bg-[#e3a83a] text-[#15130f] border-[#e3a83a]'
-        : 'bg-black/40 text-[#d9d1bd] border-[#4a4438] hover:border-[#8d8371]'
-      : playing
-        ? 'bg-[#1b1d18] text-[#ece6d3] border-[#1b1d18]'
-        : 'bg-transparent text-[#1b1d18] border-[#1b1d18]/50 hover:border-[#1b1d18]';
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (playing) {
+        audioEngine.stopTape();
+      }
+    };
+  }, [playing]);
+
+  const handleTogglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (playing) {
+      audioEngine.stopTape();
+      setPlaying(false);
+    } else {
+      const sigDef = EVP_SIGNALS.find((s) => s.id === tape.signalId);
+      const voiceTier = sigDef ? sigDef.voice : 1;
+      const duration = audioEngine.playTape(voiceTier);
+      setPlaying(true);
+      setTimeout(() => {
+        setPlaying(false);
+      }, duration * 1000);
+    }
+  };
+
+  const isPaper = tone === 'paper';
+
   return (
     <button
-      type="button"
-      onClick={() => (playing ? engine.stopTape() : engine.playTape(tape.signalId))}
-      aria-label={playing ? `Stop tape: ${tape.title}` : `Play tape: ${tape.title}`}
-      aria-pressed={playing}
-      className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded border font-mono text-[10px] font-bold tracking-wider ${look}`}
+      onClick={handleTogglePlay}
+      aria-label={playing ? 'Stop tape' : 'Play tape'}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold transition-all active:scale-95 shadow-sm ${
+        playing
+          ? 'bg-amber-600 text-white animate-pulse'
+          : isPaper
+          ? 'bg-[#1b1d18] text-[#ece6d3] hover:bg-[#33352d]'
+          : 'bg-black/70 text-white hover:bg-black/90'
+      }`}
     >
-      {playing ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-      {playing ? 'STOP' : 'PLAY'}
+      {playing ? (
+        <>
+          <Square className="w-3.5 h-3.5 fill-current" />
+          <span>STOPPING</span>
+        </>
+      ) : (
+        <>
+          <Play className="w-3.5 h-3.5 fill-current" />
+          <span>PLAY TAPE</span>
+        </>
+      )}
+      <Volume2 className="w-3 h-3 opacity-60" />
     </button>
   );
 };

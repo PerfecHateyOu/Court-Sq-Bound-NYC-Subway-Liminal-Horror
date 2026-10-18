@@ -1,25 +1,15 @@
 /**
  * Player settings, saved on this device.
- *
- * One small store that the audio engine, the render loop, the look controls and the HUD read
- * from. Changes apply immediately (including mid-ride, from the pause menu).
  */
 import { useSyncExternalStore } from 'react';
 
 export type ScreenEffects = 'system' | 'full' | 'reduced';
 
 export interface Settings {
-  /** Multiplier on mouse and touch look speed. */
   lookSensitivity: number;
   invertY: boolean;
-  /** Game sounds, ambience and the intercom (0–1). */
   gameVolume: number;
-  /** Pause-menu music (0–1). */
   musicVolume: number;
-  /**
-   * Screen tearing, breathing and the animated heartbeat trace. "system" follows the
-   * device's reduced-motion setting.
-   */
   screenEffects: ScreenEffects;
 }
 
@@ -34,7 +24,6 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const KEY = 'gtrain-settings';
-/** Saved progress the "Erase saved progress" button clears. */
 export const PROGRESS_KEYS = [
   'gtrain-psychlog',
   'gtrain-runs',
@@ -64,7 +53,6 @@ class SettingsStore {
   private value: Settings;
   private listeners = new Set<() => void>();
   private systemReduced = false;
-  /** Bumped when saved progress is erased, so screens showing it can re-read. */
   private progressEpoch = 0;
 
   constructor() {
@@ -72,7 +60,7 @@ class SettingsStore {
     try {
       raw = JSON.parse(localStorage.getItem(KEY) || 'null');
     } catch {
-      /* storage blocked or corrupt: use defaults */
+      /* use defaults */
     }
     this.value = sanitize(raw);
 
@@ -93,7 +81,7 @@ class SettingsStore {
     try {
       localStorage.setItem(KEY, JSON.stringify(this.value));
     } catch {
-      /* not saved, but still applies this session */
+      /* ignore */
     }
     this.emit();
   }
@@ -105,30 +93,25 @@ class SettingsStore {
     };
   };
 
-  /** True when screen tearing, breathing and the heartbeat animation should be off. */
-  public effectsReduced(): boolean {
-    const m = this.value.screenEffects;
-    return m === 'reduced' || (m === 'system' && this.systemReduced);
-  }
-
-  public systemPrefersReduced(): boolean {
+  public effectsReduced = (): boolean => {
+    if (this.value.screenEffects === 'reduced') return true;
+    if (this.value.screenEffects === 'full') return false;
     return this.systemReduced;
-  }
+  };
 
-  /** Clears the Psychological Log and ride history. */
+  public getEpoch = (): number => this.progressEpoch;
+
   public eraseProgress() {
-    for (const k of PROGRESS_KEYS) {
+    PROGRESS_KEYS.forEach((k) => {
       try {
         localStorage.removeItem(k);
       } catch {
         /* ignore */
       }
-    }
+    });
     this.progressEpoch++;
     this.emit();
   }
-
-  public getProgressEpoch = (): number => this.progressEpoch;
 
   private emit() {
     this.listeners.forEach((fn) => fn());
@@ -137,12 +120,10 @@ class SettingsStore {
 
 export const settings = new SettingsStore();
 
-/** React hook: current settings, re-rendering when they change. */
 export function useSettings(): Settings {
-  return useSyncExternalStore(settings.subscribe, settings.get, settings.get);
+  return useSyncExternalStore(settings.subscribe, settings.get, () => DEFAULT_SETTINGS);
 }
 
-/** React hook: changes whenever saved progress is erased. */
 export function useProgressEpoch(): number {
-  return useSyncExternalStore(settings.subscribe, settings.getProgressEpoch, settings.getProgressEpoch);
+  return useSyncExternalStore(settings.subscribe, settings.getEpoch, () => 0);
 }

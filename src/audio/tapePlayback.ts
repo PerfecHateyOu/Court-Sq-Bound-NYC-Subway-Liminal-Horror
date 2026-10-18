@@ -1,22 +1,15 @@
 /**
- * Playing a recorded tape back out loud: cassette hiss, a little motor hum, and the
- * broadcast's garbled voice (the intercom synth), from the recorder's tiny speaker.
- *
- * It plays on the Game volume channel, after the game bus: pausing or the report screen
- * doesn't silence it, but Game volume and mute still apply.
+ * Playing a recorded tape back out loud
  */
 import { Intercom } from './intercom';
 
-/** The intercom voice is mixed for the background; a recorder held up close is louder. */
 const VOICE_BOOST = 3;
 const TAIL_S = 0.6;
 
 export class TapePlayback {
   private ac: BaseAudioContext;
   private out: GainNode;
-  private sources: AudioScheduledSourceNode[] = [];
 
-  /** Builds and starts one playback. `duration` is how long it runs, in seconds. */
   public readonly duration: number;
 
   constructor(ac: BaseAudioContext, destination: AudioNode, noise: AudioBuffer, voiceTier: number) {
@@ -27,7 +20,6 @@ export class TapePlayback {
     this.out.gain.linearRampToValueAtTime(1, t + 0.08);
     this.out.connect(destination);
 
-    // Speaker: band-limited, like a palm-sized recorder.
     const speaker = ac.createBiquadFilter();
     speaker.type = 'bandpass';
     speaker.frequency.value = 1500;
@@ -59,28 +51,22 @@ export class TapePlayback {
     const end = t + this.duration;
     this.out.gain.setValueAtTime(1, end - 0.15);
     this.out.gain.linearRampToValueAtTime(0, end);
-    hiss.stop(end + 0.05);
-    motor.stop(end + 0.05);
-    this.sources = [hiss, motor];
-  }
 
-  /** Stop early (a short fade, so it doesn't click). */
-  public stop() {
-    const t = this.ac.currentTime;
-    this.out.gain.cancelScheduledValues(t);
-    this.out.gain.setValueAtTime(this.out.gain.value, t);
-    this.out.gain.linearRampToValueAtTime(0, t + 0.06);
-    for (const s of this.sources) {
+    setTimeout(() => {
       try {
-        s.stop(t + 0.08);
+        hiss.stop();
+        motor.stop();
       } catch {
-        /* already stopped */
+        /* ignore */
       }
-    }
-    setTimeout(() => this.out.disconnect(), 200);
+    }, this.duration * 1000 + 100);
   }
 
-  public get level(): number {
-    return this.out.gain.value;
+  public stop() {
+    try {
+      this.out.gain.setValueAtTime(0, this.ac.currentTime);
+    } catch {
+      /* ignore */
+    }
   }
 }
