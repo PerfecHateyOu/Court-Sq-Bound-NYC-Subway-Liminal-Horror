@@ -57,6 +57,60 @@ test.describe('full screen', () => {
     await expect.poll(() => page.evaluate(FS)).toBe(true);
   });
 
+  test('the buttons follow the browser: leaving another way shows Full screen again, and pauses', async ({ page }) => {
+    const errs = watchErrors(page);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await fresh(page, { fullscreenOnBoard: false });
+    await boardTrain(page);
+    await page.evaluate(() => { const G = (window as any).__G; G.Q = []; G.startSegment(2); });
+    await page.getByRole('button', { name: 'Full screen', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Exit full screen', exact: true })).toBeVisible();
+
+    // Esc, a swipe or the browser's own control: not the game's button.
+    await page.evaluate(() => document.exitFullscreen());
+    await expect(page.getByRole('button', { name: 'Full screen', exact: true })).toBeAttached();
+    await expect.poll(() => page.evaluate(() => (window as any).__G.paused)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Full Screen', exact: true })).toBeVisible(); // pause menu
+    expect(errs).toEqual([]);
+  });
+
+  test('the HUD’s Exit full screen leaves without pausing the ride', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await fresh(page, { fullscreenOnBoard: false });
+    await boardTrain(page);
+    await page.evaluate(() => { const G = (window as any).__G; G.Q = []; G.startSegment(2); });
+    await page.getByRole('button', { name: 'Full screen', exact: true }).click();
+    await expect.poll(() => page.evaluate(FS)).toBe(true);
+    await page.getByRole('button', { name: 'Exit full screen', exact: true }).click();
+    await expect.poll(() => page.evaluate(FS)).toBe(false);
+    await expect(page.getByRole('button', { name: 'Full screen', exact: true })).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (window as any).__G.paused)).toBe(false);
+
+    // Leaving another way afterwards still pauses (the button's request was used up).
+    await page.getByRole('button', { name: 'Full screen', exact: true }).click();
+    await expect.poll(() => page.evaluate(FS)).toBe(true);
+    await page.evaluate(() => document.exitFullscreen());
+    await expect.poll(() => page.evaluate(() => (window as any).__G.paused)).toBe(true);
+  });
+
+  test('when the browser refuses, the button stays as it was, with no pause and no error', async ({ page }) => {
+    const errs = watchErrors(page);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.addInitScript(() => {
+      Element.prototype.requestFullscreen = () => Promise.reject(new TypeError('Permissions check failed'));
+    });
+    await fresh(page, { fullscreenOnBoard: false });
+    await boardTrain(page);
+    await page.evaluate(() => { const G = (window as any).__G; G.Q = []; G.startSegment(2); });
+    await page.getByRole('button', { name: 'Full screen', exact: true }).click();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(FS)).toBe(false);
+    await expect(page.getByRole('button', { name: 'Full screen', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as any).__G.paused)).toBe(false);
+    expect(errs).toEqual([]);
+  });
+
   test('the HUD button is left off narrow screens (the pause menu has it)', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await fresh(page, { fullscreenOnBoard: false });

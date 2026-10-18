@@ -11,7 +11,7 @@ import { settings } from './settings';
 import { KeyLook } from './input/keyLook';
 import { evp } from './game/evpManager';
 import { passengerBehavior } from './game/passengerBehavior';
-import { enterFullscreen, isFullscreen, onFullscreenChange } from './ui/fullscreen';
+import { enterFullscreen, isFullscreen, leftFullscreenOnRequest, onFullscreenChange } from './ui/fullscreen';
 import { resolveEnding, ENDINGS } from './game/endings';
 import { shakeCoverScale, SHAKE_BLEED_PX } from './graphics/shakeCover';
 import { haptics } from './game/haptics';
@@ -464,8 +464,9 @@ export default function App() {
     };
     document.addEventListener('pointerlockchange', handleLockChange);
     // Leaving full screen mid-ride (Esc, a swipe, the browser's button) pauses, like losing the mouse.
+    // The game's own Exit full screen button doesn't: the player chose it and is still playing.
     const offFullscreen = onFullscreenChange(() => {
-      if (!isFullscreen()) pauseGame();
+      if (!isFullscreen() && !leftFullscreenOnRequest()) pauseGame();
     });
 
     return () => {

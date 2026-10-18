@@ -49,14 +49,30 @@ export function enterFullscreen(): void {
   }
 }
 
+/** The game's own button asked to leave full screen (so the change isn't the player escaping). */
+let leavingOnRequest = false;
+
 export function exitFullscreen(): void {
   if (!isFullscreen()) return;
+  leavingOnRequest = true;
   try {
     const p = document.exitFullscreen ? document.exitFullscreen() : doc().webkitExitFullscreen?.();
-    (p as Promise<void> | undefined)?.catch?.(() => {});
+    (p as Promise<void> | undefined)?.catch?.(() => {
+      leavingOnRequest = false;
+    });
   } catch {
-    /* already out */
+    leavingOnRequest = false; /* already out */
   }
+}
+
+/**
+ * Call when full screen ends: true if exitFullscreen() asked for it (a button in the game), false
+ * if the browser or the player did (Esc, a swipe, the browser's own control). Clears the flag.
+ */
+export function leftFullscreenOnRequest(): boolean {
+  const was = leavingOnRequest;
+  leavingOnRequest = false;
+  return was;
 }
 
 export function toggleFullscreen(): void {
