@@ -273,6 +273,7 @@ export class AnomalyManager {
             tids: [dad.tid],
             obj: null,
             desc: `Dad answered an unspoken thought aloud: "${line}"`,
+            line,
             ready: () => true,
             apply: () => {
               // Triggered via game state subtitle dispatcher
@@ -317,6 +318,7 @@ export class AnomalyManager {
       tids: inst.tids,
       obj: inst.obj,
       desc: inst.desc,
+      line: inst.line,
       trigger: triggerTime,
       at: null,
       apply: inst.apply,
