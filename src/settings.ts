@@ -141,6 +141,14 @@ class SettingsStore {
 
 export const settings = new SettingsStore();
 
+// The page's CSS animations (sign flicker, pulsing lights) follow the in-game Screen effects
+// setting, not only the device's reduced-motion setting (see index.css).
+if (typeof document !== 'undefined') {
+  const mark = () => document.documentElement.setAttribute('data-effects', settings.effectsReduced() ? 'reduced' : 'full');
+  mark();
+  settings.subscribe(mark);
+}
+
 /** React hook: current settings, re-rendering when they change. */
 export function useSettings(): Settings {
   return useSyncExternalStore(settings.subscribe, settings.get, settings.get);

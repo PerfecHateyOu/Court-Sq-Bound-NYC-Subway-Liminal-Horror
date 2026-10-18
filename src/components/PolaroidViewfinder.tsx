@@ -3,6 +3,7 @@
  * Displays authentic vintage camera HUD with viewfinder framing, exposure meter,
  * film cartridge counter, high-voltage flash burst flare, and chemical print development.
  */
+import { settings } from '../settings';
 import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { polaroidManager } from '../game/polaroidManager';
@@ -33,7 +34,13 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
     <>
       {/* High-Voltage Xenon Flash Screen Burst */}
       {flashActive && (
-        <div className="fixed inset-0 z-50 pointer-events-none bg-white/95 animate-out fade-out duration-300" />
+        // With screen effects reduced, a soft glow instead of a full white burst.
+        <div
+          data-testid="camera-flash"
+          className={`fixed inset-0 z-50 pointer-events-none animate-out fade-out duration-300 ${
+            settings.effectsReduced() ? 'bg-white/25' : 'bg-white/95'
+          }`}
+        />
       )}
 
       {/* Viewfinder Overlay Frame */}
