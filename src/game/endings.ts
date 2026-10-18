@@ -1,10 +1,16 @@
 /**
- * Endings (Operation Skyward, Phase 3 & 4)
+ * Endings (Operation Skyward, Phase 3).
+ *
+ * Endings are earned by how you rode: composure (peak Suspicion), sanity, accuracy, the
+ * restraint, the False Stop Trials and the tapes you recorded. The exit you take at Court Sq
+ * only decides which earned ending you walk into; the menu never says what's open.
+ *
+ * Checked in priority order; the first match wins. `resolveEnding` is a pure function of an
+ * `EndingSummary`, so the rules are testable without the 3D scene.
  */
 import type { GameEngine } from './gameState';
 import { evp } from './evpManager';
 import { SUS } from '../constants';
-import { fillRoute } from './routeText';
 
 export type EndingId =
   | 'secret_mask'
@@ -18,30 +24,39 @@ export type EndingId =
 
 export type ExitChoice = 'escalators' | 'lower_level' | 'surface_hatch';
 
+import { fillRoute } from './routeText';
+
 export interface EndingDefinition {
   id: EndingId;
   priority: number;
   title: string;
   badge: string;
   narrative: string;
+  /** Shown in the archive only once this ending has been reached. */
   summary: string;
 }
 
+/** An ending's narrative and summary with the current route's place names (see routeText.ts). */
 export function endingText(def: EndingDefinition): { narrative: string; summary: string } {
   return { narrative: fillRoute(def.narrative), summary: fillRoute(def.summary) };
 }
 
+/** Everything an ending depends on, taken from the engine when the ride ends. */
 export interface EndingSummary {
   peak: number;
   interventions: number;
+  /** Stops where a False Stop Trial happened. */
   trialStops: number[];
+  /** Sanity Retained, 0–100. */
   sanPct: number;
+  /** Anomaly accuracy, 0–100 (100 when the ride had no anomalies). */
   accPct: number;
   restraintOK: boolean;
   tapes: string[];
   exit: ExitChoice;
 }
 
+/** Composure threshold for the quieter endings: half the intervention threshold. */
 export const COMPOSED_PEAK = SUS.intervene / 2;
 
 export const ENDINGS: Record<EndingId, EndingDefinition> = {
@@ -121,6 +136,7 @@ export const ENDINGS: Record<EndingId, EndingDefinition> = {
 
 export const ENDING_IDS = (Object.keys(ENDINGS) as EndingId[]).sort((a, b) => ENDINGS[a].priority - ENDINGS[b].priority);
 
+/** The bait False Stop at 21 St. */
 const BAIT_STOP = 12;
 
 export function resolveEnding(s: EndingSummary): EndingDefinition {
@@ -155,7 +171,10 @@ export function endingSummary(G: GameEngine): EndingSummary {
   };
 }
 
+// --- Archive (kept on the device; cleared by Erase saved progress) ---
+
 export const ENDINGS_ARCHIVE_KEY = 'gtrain-endings';
+/** Key used by the first Phase 3 build; read once and migrated. */
 export const LEGACY_ENDINGS_ARCHIVE_KEY = 'courtSq_endingsArchive';
 
 export interface EndingArchiveEntry {
@@ -172,6 +191,7 @@ export function loadEndingsArchive(): EndingsArchive {
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return {};
+    // Keep only endings that still exist.
     const out: EndingsArchive = {};
     for (const id of ENDING_IDS) if (parsed[id]) out[id] = parsed[id];
     return out;
@@ -188,7 +208,8 @@ export function recordEndingToArchive(id: EndingId): EndingsArchive {
     localStorage.setItem(ENDINGS_ARCHIVE_KEY, JSON.stringify(archive));
     localStorage.removeItem(LEGACY_ENDINGS_ARCHIVE_KEY);
   } catch {
-    /* storage blocked */
+    /* storage blocked: the ending still shows on this report */
   }
   return archive;
 }
+

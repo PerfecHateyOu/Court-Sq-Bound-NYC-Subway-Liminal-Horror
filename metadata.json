@@ -1,8 +1,6 @@
 {
-  "name": "Court Sq-Bound",
-  "description": "Liminal horror psychological survival on the NYC subway G train.",
-  "permissions": [],
-  "capabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "name": "Court Sq-Bound: NYC Subway Liminal Horror",
+  "description": "A first-person liminal horror ride on the NYC G train. Spot subtle anomalies, maintain your composure in front of your parents, and learn the doors' tell grammar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }
