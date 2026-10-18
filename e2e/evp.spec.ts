@@ -52,15 +52,22 @@ test.describe('EVP recorder', () => {
     expect(r.still).toEqual({ meter: 0, kind: null });
   });
 
-  test('frequencies are reshuffled every ride and kept apart', async ({ game }) => {
+  test('frequencies are reshuffled every ride and kept apart within each stretch, every ride', async ({ game }) => {
     const r = await game(`${E} const runs = [];
       for (let k = 0; k < 4; k++) { E.newRun(); runs.push(['dispatch-hold','passenger-hoyt','conductor','mom-voice'].map((id) => E.khzOf(id))); }
-      E.newRun(); let ok = true;
-      for (let stop = 6; stop <= 13; stop++) { const cs = E.carriers(stop).map((c) => c.khz).sort((a, b) => a - b);
-        for (let i = 1; i < cs.length; i++) if (cs[i] - cs[i - 1] < 4.99) ok = false; }
-      return { distinct: new Set(runs.map((x) => x.join())).size, ok };`);
+      // Broadcasts sharing a stretch: 8 kHz apart; decoys: 5 kHz from everything in their stretch.
+      let bad = 0;
+      for (let k = 0; k < 300; k++) {
+        E.newRun();
+        for (let stop = 6; stop <= 13; stop++) { const cs = E.carriers(stop);
+          for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) {
+            const gap = cs[i].kind === 'signal' && cs[j].kind === 'signal' ? 8 : 5;
+            if (Math.abs(cs[i].khz - cs[j].khz) < gap - 1e-9) bad++;
+          } }
+      }
+      return { distinct: new Set(runs.map((x) => x.join())).size, bad };`);
     expect(r.distinct).toBe(4);
-    expect(r.ok).toBe(true);
+    expect(r.bad).toBe(0);
   });
 
   test('holding record on a broadcast for 1.5 s saves a tape; a decoy or a short hold saves nothing', async ({ page, game }) => {

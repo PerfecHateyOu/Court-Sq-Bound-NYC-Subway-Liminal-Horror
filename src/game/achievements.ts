@@ -19,6 +19,8 @@ export interface AchievementDef {
   category: 'observation' | 'signals' | 'composure' | 'survival';
   description: string;
   badge: string;
+  /** Named after something the game keeps hidden (the secret ending): no name until earned. */
+  secret?: boolean;
 }
 
 export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
@@ -56,6 +58,7 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
     category: 'composure',
     description: 'Complete a full ride with 0 peak suspicion from your parents.',
     badge: 'MASK',
+    secret: true,
   },
   trestle_cross: {
     id: 'trestle_cross',

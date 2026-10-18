@@ -9,7 +9,7 @@
  *   {terminus}    last stop, as people say it:  Court Square
  *   {terminusSign} last stop, as signed:        Court Sq
  *   {bait}        the Stop 12 False Stop:       21 St
- *   {s10} {s11}   Stops 10 and 11, as people say them
+ *   {s1}…{s13}    any stop, as people say it (the signed name unless a shorter one is set)
  *   {opposite}    the other direction's terminal, for platform signs
  *   {street}      the street outside the last stop
  *   {area}        the neighborhood around it
@@ -20,8 +20,8 @@ import type { TransitLineRoute } from '../types';
 interface RouteWords {
   originShort: string;
   terminus: string;
-  s10?: string;
-  s11?: string;
+  /** Spoken names where they differ from the sign, by stop number. */
+  short?: Record<number, string>;
   opposite: string;
   street: string;
   area: string;
@@ -31,8 +31,7 @@ const WORDS: Record<TransitLineRoute['id'], RouteWords> = {
   G: {
     originShort: 'Hoyt',
     terminus: 'Court Square',
-    s10: 'Nassau',
-    s11: 'Greenpoint',
+    short: { 5: 'Bedford–Nostrand', 10: 'Nassau', 11: 'Greenpoint' },
     opposite: 'Church Av',
     street: '45th Road',
     area: 'Long Island City',
@@ -53,29 +52,27 @@ const WORDS: Record<TransitLineRoute['id'], RouteWords> = {
   },
 };
 
-export type RouteText = Record<
-  'line' | 'origin' | 'originShort' | 'terminus' | 'terminusSign' | 'bait' | 's10' | 's11' | 'opposite' | 'street' | 'area',
-  string
->;
+export type RouteText = Record<'line' | 'origin' | 'originShort' | 'terminus' | 'terminusSign' | 'bait' | 'opposite' | 'street' | 'area', string> &
+  Record<`s${number}`, string>;
 
 export function routeText(route: TransitLineRoute = routeManager.activeRoute): RouteText {
   const w = WORDS[route.id];
-  return {
+  const rt: Record<string, string> = {
     line: route.id,
     origin: route.stops[1],
     originShort: w.originShort,
     terminus: w.terminus,
     terminusSign: route.stops[13],
     bait: route.stops[12],
-    s10: w.s10 ?? route.stops[10],
-    s11: w.s11 ?? route.stops[11],
     opposite: w.opposite,
     street: w.street,
     area: w.area,
   };
+  for (let i = 1; i < route.stops.length; i++) rt[`s${i}`] = w.short?.[i] ?? route.stops[i];
+  return rt as RouteText;
 }
 
 /** Fill `{token}`s with the route's place names (unknown tokens are left as they are). */
 export function fillRoute(text: string, rt: RouteText = routeText()): string {
-  return text.replace(/\{(\w+)\}/g, (m, k: string) => (k in rt ? rt[k as keyof RouteText] : m));
+  return text.replace(/\{(\w+)\}/g, (m, k: string) => (k in rt ? (rt as Record<string, string>)[k] : m));
 }

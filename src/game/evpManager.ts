@@ -25,6 +25,9 @@ export const EVP_RECORD_HOLD = 1.5;
 /** Seconds of listening to reveal a whole transcript. */
 const REVEAL_SECONDS = 3;
 const DECOYS_PER_SEGMENT = 2;
+/** Minimum spacing (kHz) between broadcasts heard in the same stretch, and around decoys. */
+export const SIGNAL_GAP = 8;
+export const DECOY_GAP = 5;
 
 export type EvpCategory = 'dispatch' | 'passenger' | 'conductor' | 'warning';
 
@@ -40,6 +43,8 @@ export interface EvpSignalDef {
   voice: number;
   /** Transcript on routes where the default doesn't fit (the L and 7 never surface). */
   transcriptOffG?: string;
+  /** Title on routes where the default doesn't fit. */
+  titleOffG?: string;
 }
 
 /** About one broadcast per stretch from the Safe Haven on. Chapter 3's sit on the trestle. */
@@ -103,7 +108,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
   },
   {
     id: 'station-bedford',
-    title: 'Bedford–Nostrand dispatch static',
+    title: '{s5} dispatch static',
     stops: [6, 7],
     category: 'dispatch',
     transcript: '…Dispatch 44 to all units on {line}… relay failure at {s5}. Unauthorized personnel on track bed… repeat: do not look at track bed…',
@@ -111,7 +116,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
   },
   {
     id: 'station-classon',
-    title: 'Classon Av phantom PA echo',
+    title: '{s4} phantom PA echo',
     stops: [6, 7, 8],
     category: 'warning',
     transcript: '…Please stand clear of the closing doors… the train following this one does not exist… return to your seat immediately…',
@@ -119,7 +124,7 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
   },
   {
     id: 'station-flushing',
-    title: 'Flushing Av night wiretap',
+    title: '{s7} night wiretap',
     stops: [7, 8, 9],
     category: 'passenger',
     transcript: '…Station log 02:14. Platform empty, but footsteps continue down the south stairs. Someone is whistling the wrong chime…',
@@ -128,12 +133,19 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
   {
     id: 'station-newtown',
     title: 'Newtown Creek emergency channel',
+    titleOffG: 'Track emergency channel',
     stops: [10, 11, 12],
     category: 'dispatch',
     transcript: '…Maritime security channel 16. Bridge clearance confirmed. Unscheduled train visible on upper trestle. Who authorized that train…',
+    transcriptOffG: '…Track security channel 16. Signals confirmed. Unscheduled train visible on a closed track. Who authorized that train…',
     voice: 2,
   },
 ];
+
+/** A broadcast's title on the current route. */
+export function titleOf(s: EvpSignalDef): string {
+  return fillRoute(routeManager.routeId !== 'G' && s.titleOffG ? s.titleOffG : s.title);
+}
 
 /** The words of a broadcast on the current route. */
 export function transcriptOf(s: EvpSignalDef): string {
@@ -215,28 +227,46 @@ export class EvpManager {
     this.heard = {};
     this.watchedCharged = false;
 
-    // Spread the broadcasts at least 8 kHz apart; decoys at least 5 kHz from anything audible
-    // in the same stretch.
-    const taken: number[] = [];
+    // Broadcasts that can be heard in the same stretch sit at least SIGNAL_GAP kHz apart;
+    // decoys at least DECOY_GAP from everything else in their stretch. Only stretches matter
+    // (two broadcasts that never overlap may share a frequency), which is what lets 11 fit.
+    // Lay out a whole ride, check it, and try again if anything is too close.
+    const share = (a: EvpSignalDef, b: EvpSignalDef) => a.stops.some((x) => b.stops.includes(x));
+    const rnd = () => Math.round((EVP_MIN_KHZ + 4 + rand() * (EVP_MAX_KHZ - EVP_MIN_KHZ - 8)) * 10) / 10;
     const pick = (minGap: number, against: number[]) => {
-      for (let tries = 0; tries < 200; tries++) {
-        const f = Math.round((EVP_MIN_KHZ + 4 + rand() * (EVP_MAX_KHZ - EVP_MIN_KHZ - 8)) * 10) / 10;
+      for (let tries = 0; tries < 300; tries++) {
+        const f = rnd();
         if (against.every((o) => Math.abs(o - f) >= minGap)) return f;
       }
-      return Math.round((EVP_MIN_KHZ + rand() * (EVP_MAX_KHZ - EVP_MIN_KHZ)) * 10) / 10;
+      return null;
     };
-    this.signalKhz = {};
-    for (const s of EVP_SIGNALS) {
-      const f = pick(8, taken);
-      this.signalKhz[s.id] = f;
-      taken.push(f);
-    }
-    this.decoyKhz = {};
-    for (let stop = 6; stop <= 13; stop++) {
-      const near = EVP_SIGNALS.filter((s) => s.stops.includes(stop)).map((s) => this.signalKhz[s.id]);
-      const ds: number[] = [];
-      for (let i = 0; i < DECOYS_PER_SEGMENT; i++) ds.push(pick(5, [...near, ...ds]));
-      this.decoyKhz[stop] = ds;
+    const layout = (): boolean => {
+      this.signalKhz = {};
+      // Most-overlapped broadcasts first: they have the least room.
+      const order = [...EVP_SIGNALS].sort(
+        (a, b) => EVP_SIGNALS.filter((x) => share(x, b)).length - EVP_SIGNALS.filter((x) => share(x, a)).length
+      );
+      for (const sig of order) {
+        const against = order.filter((o) => o !== sig && this.signalKhz[o.id] !== undefined && share(o, sig)).map((o) => this.signalKhz[o.id]);
+        const f = pick(SIGNAL_GAP, against);
+        if (f === null) return false;
+        this.signalKhz[sig.id] = f;
+      }
+      this.decoyKhz = {};
+      for (let stop = 6; stop <= 13; stop++) {
+        const near = EVP_SIGNALS.filter((x) => x.stops.includes(stop)).map((x) => this.signalKhz[x.id]);
+        const ds: number[] = [];
+        for (let i = 0; i < DECOYS_PER_SEGMENT; i++) {
+          const f = pick(DECOY_GAP, [...near, ...ds]);
+          if (f === null) return false;
+          ds.push(f);
+        }
+        this.decoyKhz[stop] = ds;
+      }
+      return true;
+    };
+    for (let attempt = 0; attempt < 50 && !layout(); attempt++) {
+      /* retry */
     }
     this.changed();
   }
@@ -325,7 +355,7 @@ export class EvpManager {
         this.recordT = 0;
         const tape: EvpTape = {
           signalId: sig.id,
-          title: sig.title,
+          title: titleOf(sig),
           stop: stopLabel,
           freq: `${this.khz.toFixed(1)} kHz`,
           transcript: transcriptOf(sig),

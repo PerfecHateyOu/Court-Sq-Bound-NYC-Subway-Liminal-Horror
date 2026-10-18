@@ -129,12 +129,7 @@ test.describe('Case Files on the start screen', () => {
     await expect(btn).toHaveText(/0\/13/);
   });
 
-  // KNOWN BUG (expected to fail until fixed): CaseFilesModal reads the anomaly archive from
-  // engine.psychLog, which is only set when a ride ends, so on a fresh visit the dossier shows
-  // "Anomalies: 0/13" and every entry REDACTED while the button says 2/13. When the modal reads
-  // the saved archive (loadArchive()), this test will pass and Playwright will flag it: remove test.fail then.
   test('the dossier lists the anomalies saved on this device', async ({ page }) => {
-    test.fail();
     await seedArchive(page);
     await page.getByRole('button', { name: /Case Files/ }).click();
     const dlg = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
