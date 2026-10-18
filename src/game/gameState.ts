@@ -59,6 +59,8 @@ const TRESTLE_FOG = new THREE.Color('#322018');
 const TAPE_GLANCE_CHANCE = 0.5;
 /** Chance a flash makes a parent who wasn't watching turn to look. */
 const FLASH_GLANCE_CHANCE = 0.5;
+/** Game seconds while the print ejects before the next shot (stops a double tap or a held key from burning film). */
+export const SHUTTER_COOLDOWN = 0.9;
 const HAPTIC_DELAY_S = 0.9; // after arrival, between the chime starting and the doors
 import {
   ActiveAnomaly,
@@ -476,6 +478,7 @@ export class GameEngine {
     this.trial = null;
     this.trials = [];
     this.misleadUsed = false;
+    this.nextShotAt = 0;
     // Swap some calm exchanges (chat slots 0-2) for extra small talk, each extra used at most once a ride.
     const extra = [...CALM_CHATS];
     this.chatSwap = {};
@@ -1059,6 +1062,10 @@ export class GameEngine {
       polaroidManager.setViewfinder(false);
       this.flagHeld = false;
       evp.raise();
+    } else if (this.phase === 'ride' || this.phase === 'stop' || this.phase === 'haven' || this.phase === 'intro') {
+      // Say why nothing happened.
+      if (!evp.hasRecorder) this.setHint('You don\u2019t have anything to record with.', 2.5);
+      else if (this.handsBusy) this.setHint(this.handsBusy, 2);
     }
     this.notifyUI();
     return evp.raised;
@@ -1134,6 +1141,7 @@ export class GameEngine {
 
   public startRestraintMoment() {
     evp.lower();
+    polaroidManager.setViewfinder(false);
     this.restraint = {
       t: 0,
       started: false,
@@ -1457,7 +1465,8 @@ export class GameEngine {
     reshuffle?: boolean;
     onPick: (val: any, rt: number) => void;
   }) {
-    evp.lower(); // you lower the recorder to answer
+    evp.lower(); // you lower the recorder (or the camera) to answer
+    polaroidManager.setViewfinder(false);
     this.choice = {
       items: options.items,
       window: options.window,
@@ -2444,7 +2453,37 @@ export class GameEngine {
    * The flash is a visible reaction: if a parent is watching it raises Suspicion, and if not,
    * it can still make one of them look over.
    */
+  /** Game time from which the camera can shoot again (the last print is still ejecting). */
+  public nextShotAt = 0;
+  public get shutterReady(): boolean {
+    return this.GT >= this.nextShotAt;
+  }
+
+  /**
+   * Why the camera or the recorder can't come up right now, for a hint and the buttons' labels:
+   * an answer prompt or the restraint needs your attention first. Null when they can.
+   */
+  public get handsBusy(): string | null {
+    if (this.choice) return 'Answer first.';
+    if (this.restraint) return 'Not now. Keep holding.';
+    return null;
+  }
+
+  /** Raise or lower the camera (C, or the HUD button). Not while an answer or the restraint needs you. */
+  public toggleCamera(): boolean {
+    if (!polaroidManager.isViewfinderOpen && this.handsBusy) {
+      this.setHint(this.handsBusy, 2);
+      return false;
+    }
+    evp.lower(); // hands busy: raising the camera lowers the recorder
+    return polaroidManager.toggleViewfinder();
+  }
+
   public takePolaroidPhoto() {
+    if (!this.shutterReady) return null;
+    if (polaroidManager.remainingFilm <= 0) {
+      this.setHint('Out of film.', 2.5);
+    }
     const seg = this.seg;
     const photo = polaroidManager.snapPhoto(
       this.scene,
@@ -2458,6 +2497,7 @@ export class GameEngine {
       seg ? `${seg.stop}${seg.b ? 'b' : ''}` : ''
     );
     if (!photo) return null;
+    this.nextShotAt = this.GT + SHUTTER_COOLDOWN;
 
     passengerBehavior.handleCameraFlash(this.carBuilder.getAllPassengers(), this.camera.position, this.GT);
 
