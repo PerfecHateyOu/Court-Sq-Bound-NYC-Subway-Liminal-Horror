@@ -54,6 +54,8 @@ export interface AnomalyDef {
     tids: string[];
     obj: THREE.Object3D | null;
     desc: string;
+    /** Words a parent says aloud when it happens (shown as a subtitle; the report quotes the same line). */
+    line?: string;
     apply: () => void;
     revert: () => void;
     ready?: () => boolean;
@@ -66,6 +68,8 @@ export interface ActiveAnomaly {
   tids: string[];
   obj: THREE.Object3D | null;
   desc: string;
+  /** See AnomalyDef: spoken when it happens. */
+  line?: string;
   trigger: number;
   at: number | null;
   apply: () => void;
