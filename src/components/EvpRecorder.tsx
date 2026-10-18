@@ -119,12 +119,20 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         </div>
       </div>
 
-      {/* Tuning: drag the strip, or nudge with the arrows */}
-      <div className="mt-2 flex items-center gap-1.5">
+      {/* Tuning: drag the strip, nudge with arrows, or jump 5 kHz */}
+      <div className="mt-2 flex items-center gap-1">
+        <button
+          aria-label="Tune down 5 kHz"
+          onClick={() => evp.tune(-5.0)}
+          className="px-1.5 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          title="-5 kHz"
+        >
+          -5k
+        </button>
         <button
           aria-label="Tune down"
           onClick={() => evp.tune(-0.5)}
-          className="w-8 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+          className="w-7 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -167,9 +175,17 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <button
           aria-label="Tune up"
           onClick={() => evp.tune(0.5)}
-          className="w-8 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+          className="w-7 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
         >
           <ChevronRight className="w-4 h-4" />
+        </button>
+        <button
+          aria-label="Tune up 5 kHz"
+          onClick={() => evp.tune(5.0)}
+          className="px-1.5 h-9 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          title="+5 kHz"
+        >
+          +5k
         </button>
       </div>
 

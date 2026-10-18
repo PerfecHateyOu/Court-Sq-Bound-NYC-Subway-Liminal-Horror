@@ -799,7 +799,12 @@ export default function App() {
 
       {/* Start / Briefing Screen */}
       {phase === 'menu' && (
-        <StartScreen onStart={handleStartGame} onOpenSettings={() => setSettingsOpen(true)} isTouch={isTouch} />
+        <StartScreen
+          onStart={handleStartGame}
+          onOpenSettings={() => setSettingsOpen(true)}
+          isTouch={isTouch}
+          engine={engineRef.current ?? undefined}
+        />
       )}
 
       {/* Pause Screen Overlay */}

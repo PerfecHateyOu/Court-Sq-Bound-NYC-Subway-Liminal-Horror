@@ -48,9 +48,10 @@ import { passengerBehavior } from './passengerBehavior';
 import { routeManager } from './routeManager';
 import { routeText, fillRoute } from './routeText';
 import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
+import { unlockAchievement } from './achievements';
 
-/** Dusk haze fog colour on the open trestle. */
-const TRESTLE_FOG = new THREE.Color('#2a2236');
+/** Foggy sodium-vapor night fog colour on the open trestle. */
+const TRESTLE_FOG = new THREE.Color('#322018');
 /** Chance a tape played out loud makes a parent who wasn't watching turn to look. */
 const TAPE_GLANCE_CHANCE = 0.5;
 /** Chance a flash makes a parent who wasn't watching turn to look. */
@@ -1454,6 +1455,23 @@ export class GameEngine {
     this.psychLog = recordRide(this.stopLog);
     polaroidManager.develop(); // prints develop now, after scoring
 
+    // Career achievements evaluation
+    if (this.peak === 0) {
+      unlockAchievement('iron_composure');
+    }
+    if (this.resolvedEnding.id !== 'civilian_extraction') {
+      unlockAchievement('loop_breaker');
+    }
+    if (this.acc.correct > 0) {
+      unlockAchievement('first_anomaly');
+    }
+    const documentedCount = Object.values(this.psychLog?.archive ?? {}).filter(
+      (entry) => entry && typeof entry === 'object' && 'seen' in entry && (entry as any).seen > 0
+    ).length;
+    if (documentedCount >= 6) {
+      unlockAchievement('master_archivist');
+    }
+
     if (this.onReportReady) {
       this.onReportReady(runs);
     }
@@ -1860,15 +1878,19 @@ export class GameEngine {
 
     // Train physical bounce, motion shake, and breathing
     const breathe = this.tier >= 2 ? Math.sin(this.GT * 0.5) * 0.01 * (this.tier - 1) : 0;
+    const windSway =
+      this.trestleOutside > 0 && !settings.effectsReduced()
+        ? Math.sin(this.GT * 1.8) * 0.016 * this.trestleOutside + Math.cos(this.GT * 2.7) * 0.012 * this.trestleOutside
+        : 0;
     this.camera.position.set(
-      this.eyePos.x + totalShakeX,
+      this.eyePos.x + totalShakeX + windSway * 0.15,
       this.eyePos.y + totalShakeY + gentleBobY,
       this.eyePos.z + totalShakeZ
     );
     this.camera.rotation.set(
       this.pitch + pitchJerk,
       this.yaw + yawTwitch,
-      rollSway + gentleRoll + breathe
+      rollSway + gentleRoll + breathe + windSway
     );
     this.camera.updateMatrixWorld();
 
@@ -2234,6 +2256,9 @@ export class GameEngine {
     });
 
     cb.trestle.update(this.GT, dt, pos, speed, this.trestleShow, (x) => !this.inTunnelAt(x, pos), settings.effectsReduced(), this.trestleOutside);
+    if (this.trestleOutside > 0.4) {
+      unlockAchievement('trestle_cross');
+    }
     // Fog: black tunnel murk inside, dusk haze in the open (interior distances stay unfogged).
     const fog = this.scene.fog as THREE.Fog | null;
     if (fog) {

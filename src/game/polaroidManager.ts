@@ -12,6 +12,20 @@
 import * as THREE from 'three';
 import { PolaroidPhoto } from '../types';
 import { audioEngine } from '../audio/audioEngine';
+import { unlockAchievement } from './achievements';
+
+export const POLAROID_STORAGE_KEY = 'gtrain-polaroids';
+
+export function loadPersistentPolaroids(): PolaroidPhoto[] {
+  try {
+    const raw = localStorage.getItem(POLAROID_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 /** Film loaded at the start of every ride. */
 export const STARTING_FILM = 8;
@@ -260,6 +274,22 @@ export class PolaroidManager {
       p.description = p.caught.length ? `Caught: ${p.caught.join('; ')}` : 'Nothing out of place.';
     });
     this.isDeveloping = false;
+
+    // Check for photo achievement
+    if (this.photos.some((p) => p.hasAnomalyInFrustum)) {
+      unlockAchievement('photo_evidence');
+    }
+
+    // Persist developed photos into gallery archive (max 24)
+    try {
+      const existing = loadPersistentPolaroids();
+      const combined = [...this.photos, ...existing];
+      const dedupe = combined.filter((p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx).slice(0, 24);
+      localStorage.setItem('gtrain-polaroids', JSON.stringify(dedupe));
+    } catch {
+      /* ignore storage errors */
+    }
+
     this.notify();
   }
 

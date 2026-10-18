@@ -9,14 +9,17 @@ import { loadEvpArchive, EVP_SIGNALS } from '../game/evpManager';
 import { loadEndingsArchive, ENDING_IDS } from '../game/endings';
 import { useProgressEpoch } from '../settings';
 import { useEscape } from '../ui/escape';
+import { CaseFilesModal } from './CaseFilesModal';
+import { GameEngine } from '../game/gameState';
 
 interface StartScreenProps {
   onStart: (muted: boolean, debug: boolean) => void;
   onOpenSettings: () => void;
   isTouch: boolean;
+  engine?: GameEngine;
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, isTouch }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, isTouch, engine }) => {
   const [startMuted, setStartMuted] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
   const [showLog, setShowLog] = React.useState(false);
@@ -147,110 +150,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
 
         {/* Case Files Dossier Modal */}
         {showLog && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md"
-            onPointerDown={(e) => {
-              if (e.target === e.currentTarget) setShowLog(false);
-            }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="case-files-title"
-              className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-[#e8e2cf] text-[#1b1d18] p-5 sm:p-7 rounded shadow-2xl border border-[#9f9883]"
-            >
-              <div className="flex items-start justify-between border-b-2 border-[#1b1d18] pb-3 mb-4">
-                <div>
-                  <h2 id="case-files-title" className="text-2xl font-black uppercase tracking-tight">Psychological Case Files</h2>
-                  <p className="text-xs text-[#55574c] mt-0.5">
-                    {documentedCount} of 13 cataloged anomaly types documented on this device.
-                  </p>
-                  <p className="text-xs text-[#55574c]" data-testid="case-files-tapes">
-                    Recordings: {tapeCount} of {EVP_SIGNALS.length} broadcasts on tape.
-                  </p>
-                  <p className="text-xs text-[#55574c]" data-testid="case-files-endings">
-                    Endings: {endingCount} of {ENDING_IDS.length} reached.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowLog(false)}
-                  className="p-1 rounded hover:bg-black/10 text-[#1b1d18] transition-colors"
-                  aria-label="Close Case Files"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <ul className="divide-y divide-[#c4bda7] text-xs">
-                {PSYCH_IDS.map((id) => {
-                  const def = PSYCH_ENTRIES[id];
-                  const state = entryState(archive[id]);
-                  const rec = archive[id];
-
-                  return (
-                    <li key={id} className="py-2.5">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="font-mono font-bold text-[10px] text-[#55574c] uppercase tracking-wider">
-                          Class {PSYCH_CLASS[def.tier]}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {state === 'documented' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#6cbe45]/30 text-[#204a18]">
-                              DOCUMENTED
-                            </span>
-                          )}
-                          {state === 'unconfirmed' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#e3a83a]/30 text-[#6d4b0f]">
-                              UNCONFIRMED
-                            </span>
-                          )}
-                          {state === 'redacted' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/10 text-[#55574c]">
-                              REDACTED
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {state === 'documented' && (
-                        <div className="mt-1">
-                          <strong className="font-extrabold text-[#1b1d18] text-sm">{def.title}</strong>
-                          <p className="mt-0.5 text-[#3a3b34] leading-relaxed">{def.note}</p>
-                          <div className="mt-1 text-[10px] text-[#55574c]">
-                            Encountered {rec.seen} time{rec.seen === 1 ? '' : 's'}, caught {rec.caught}.
-                          </div>
-                        </div>
-                      )}
-
-                      {state === 'unconfirmed' && (
-                        <div className="mt-1">
-                          <strong className="font-extrabold text-[#1b1d18] text-sm">{def.title}</strong>
-                          <p className="mt-0.5 italic text-[#55574c] leading-relaxed">
-                            Manifested before your eyes, but you failed to flag it in time. Notice what changes next time.
-                          </p>
-                        </div>
-                      )}
-
-                      {state === 'redacted' && (
-                        <div className="mt-1 italic text-[#777468]">
-                          [Anomaly parameters not yet witnessed]
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-
-              <div className="mt-5 pt-3 border-t border-[#9f9883] flex justify-end">
-                <button
-                  onClick={() => setShowLog(false)}
-                  className="px-4 py-2 bg-[#1b1d18] hover:bg-[#2e312b] text-[#ece6d3] text-xs font-bold rounded transition-colors"
-                >
-                  Return to Briefing
-                </button>
-              </div>
-            </div>
-          </div>
+          <CaseFilesModal engine={engine} onClose={() => setShowLog(false)} />
         )}
       </div>
     </div>

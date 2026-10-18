@@ -7,13 +7,14 @@ import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
 import { RESTRAINT_RAISE } from '../constants';
-import { RotateCcw, Camera, Sparkles, Compass, Lock, DoorOpen } from 'lucide-react';
+import { RotateCcw, Camera, Sparkles, Compass, Lock, DoorOpen, BookOpen } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import { TapePlayButton } from './TapePlayButton';
 import { resolveEnding, endingSummary, endingText, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
 import { routeText } from '../game/routeText';
+import { CaseFilesModal } from './CaseFilesModal';
 
 interface ReportScreenProps {
   engine: GameEngine;
@@ -23,6 +24,7 @@ interface ReportScreenProps {
 }
 
 export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlayAgain }) => {
+  const [showCaseFiles, setShowCaseFiles] = React.useState(false);
   const G = engine;
   const b = G.getBand(13);
   const secret = G.peak === 0;
@@ -527,8 +529,16 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
           </div>
         </article>
 
-        {/* Action Button */}
-        <div className="mt-5 flex justify-center">
+        {/* Action Buttons */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <button
+            onClick={() => setShowCaseFiles(true)}
+            className="px-5 py-3.5 rounded bg-[#1b1d18] hover:bg-[#2e312b] text-[#ece6d3] font-bold text-sm tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
+          >
+            <BookOpen className="w-4 h-4 text-[#6cbe45]" />
+            Case Files Dossier
+          </button>
+
           {endingDef.id === 'eternal_commute' ? (
             <button
               onClick={() => onPlayAgain(true)}
@@ -547,6 +557,11 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             </button>
           )}
         </div>
+
+        {/* Case Files Dossier Modal */}
+        {showCaseFiles && (
+          <CaseFilesModal engine={engine} onClose={() => setShowCaseFiles(false)} />
+        )}
       </div>
     </div>
   );

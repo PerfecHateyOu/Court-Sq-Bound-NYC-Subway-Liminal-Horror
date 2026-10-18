@@ -145,9 +145,22 @@ export class TrestleBuilder {
   }
 
   private buildWater() {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 256;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#070912';
+    g.fillRect(0, 0, 256, 256);
+    g.fillStyle = 'rgba(255, 145, 60, 0.14)';
+    for (let i = 0; i < 35; i++) {
+      g.fillRect(Math.random() * 256, Math.random() * 256, 14 + Math.random() * 32, 2);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(8, 8);
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(400, 400),
-      new THREE.MeshBasicMaterial({ color: 0x0a0c16, fog: false })
+      new THREE.MeshBasicMaterial({ map: tex, fog: false })
     );
     water.rotation.x = -Math.PI / 2;
     water.position.y = -12;

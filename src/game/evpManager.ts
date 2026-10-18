@@ -12,6 +12,7 @@
 
 import { routeManager } from './routeManager';
 import { fillRoute } from './routeText';
+import { unlockAchievement } from './achievements';
 
 export const EVP_MIN_KHZ = 70;
 export const EVP_MAX_KHZ = 180;
@@ -99,6 +100,38 @@ export const EVP_SIGNALS: EvpSignalDef[] = [
     category: 'passenger',
     transcript: '…honey, don’t look at the window. Look at me. Look at me…',
     voice: 0,
+  },
+  {
+    id: 'station-bedford',
+    title: 'Bedford–Nostrand dispatch static',
+    stops: [6, 7],
+    category: 'dispatch',
+    transcript: '…Dispatch 44 to all units on {line}… relay failure at {s5}. Unauthorized personnel on track bed… repeat: do not look at track bed…',
+    voice: 1,
+  },
+  {
+    id: 'station-classon',
+    title: 'Classon Av phantom PA echo',
+    stops: [6, 7, 8],
+    category: 'warning',
+    transcript: '…Please stand clear of the closing doors… the train following this one does not exist… return to your seat immediately…',
+    voice: 2,
+  },
+  {
+    id: 'station-flushing',
+    title: 'Flushing Av night wiretap',
+    stops: [7, 8, 9],
+    category: 'passenger',
+    transcript: '…Station log 02:14. Platform empty, but footsteps continue down the south stairs. Someone is whistling the wrong chime…',
+    voice: 1,
+  },
+  {
+    id: 'station-newtown',
+    title: 'Newtown Creek emergency channel',
+    stops: [10, 11, 12],
+    category: 'dispatch',
+    transcript: '…Maritime security channel 16. Bridge clearance confirmed. Unscheduled train visible on upper trestle. Who authorized that train…',
+    voice: 2,
   },
 ];
 
@@ -303,6 +336,12 @@ export class EvpManager {
         const a = loadEvpArchive();
         a[sig.id] = { first: a[sig.id]?.first ?? Date.now(), count: (a[sig.id]?.count ?? 0) + 1 };
         saveEvpArchive(a);
+        if (Object.keys(a).length >= 3) {
+          unlockAchievement('tuning_pro');
+        }
+        if (sig.id.startsWith('station-')) {
+          unlockAchievement('broadcaster_lore');
+        }
         this.changed();
         return tape;
       }

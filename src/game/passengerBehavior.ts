@@ -63,6 +63,14 @@ export class PassengerBehaviorManager {
       const dot = playerDir.dot(this.lookDir);
       const playerStaringAtMe = dot > 0.94 && distToPlayer < 7.0;
 
+      // Track prolonged player stare
+      if (playerStaringAtMe) {
+        p.holdUntil = (p.holdUntil || 0) + dt;
+      } else {
+        p.holdUntil = Math.max(0, (p.holdUntil || 0) - dt * 1.5);
+      }
+      const prolongedStare = (p.holdUntil || 0) > 1.2;
+
       // Calculate target head angle towards player
       const dx = playerPos.x - this.passengerWorldPos.x;
       const dz = playerPos.z - this.passengerWorldPos.z;
@@ -80,12 +88,20 @@ export class PassengerBehaviorManager {
         targetYaw = angleToPlayer;
         targetPitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
         p.uncannyAvert = false;
+      } else if (prolongedStare) {
+        // Prolonged stare: passenger slowly and coldly turns back to meet player's gaze
+        targetYaw = angleToPlayer;
+        targetPitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
+        p.uncannyAvert = false;
+        // Subtle pupil dilate
+        p.eyes.forEach((e) => e.scale.set(1.2, 1.2, 1.2));
       } else if (playerStaringAtMe) {
         if (sanityTier <= 1) {
           // Normal/High sanity: Avert eyes awkwardly downward / away
           targetYaw = p.pose[0] + (idx % 2 === 0 ? 0.35 : -0.35);
           targetPitch = 0.45; // Looking down at knees/phone
           p.uncannyAvert = true;
+          p.eyes.forEach((e) => e.scale.set(1, 1, 1));
         } else {
           // Low/Critical sanity: Dead-eyed lock onto player
           targetYaw = angleToPlayer;
@@ -96,6 +112,7 @@ export class PassengerBehaviorManager {
         // Player is nearby but looking away: passenger subtly looks up at player!
         targetYaw = THREE.MathUtils.lerp(p.pose[0], angleToPlayer, 0.65);
         targetPitch = THREE.MathUtils.lerp(p.pose[1], -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)), 0.5);
+        p.eyes.forEach((e) => e.scale.set(1, 1, 1));
       } else {
         // Idle commute behavior: reading, looking forward
         p.twitchTimer = (p.twitchTimer || 0) - dt;
