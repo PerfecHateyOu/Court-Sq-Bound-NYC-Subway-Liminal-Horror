@@ -3,11 +3,12 @@
  * Allows switching between MTA transit lines (G Crosstown, L Canarsie, 7 Ghost Line)
  * with authentic MTA strip map bullets and environmental profiles.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { routeManager, ROUTES } from '../game/routeManager';
 import { TransitLineRoute } from '../types';
 import { X, GitBranch, ArrowRight, ShieldCheck, AlertOctagon } from 'lucide-react';
 import { useEscape } from '../ui/escape';
+import { useFocusTrap } from '../ui/focus';
 
 interface RouteSelectorProps {
   onClose: () => void;
@@ -22,30 +23,8 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
   const currentRef = useRef<HTMLButtonElement>(null);
   useEscape(onClose);
 
-  // Focus starts on the line you're on, and goes back to whatever opened the selector.
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    currentRef.current?.focus();
-    return () => {
-      if (opener?.isConnected) opener.focus();
-    };
-  }, []);
-
-  // Keep Tab inside the dialog.
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== 'Tab' || !dialogRef.current) return;
-    const items = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled])');
-    if (!items.length) return;
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
+  // Focus starts on the line you're on, stays in the dialog, and goes back to whatever opened it.
+  useFocusTrap(dialogRef, () => currentRef.current);
 
   const handleSelect = (r: TransitLineRoute) => {
     routeManager.setRoute(r.id);
@@ -60,7 +39,6 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
         role="dialog"
         aria-modal="true"
         aria-labelledby="route-selector-title"
-        onKeyDown={onKeyDown}
         className="relative w-full max-w-2xl my-auto max-h-full bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col"
       >
         {/* Header */}

@@ -6,7 +6,7 @@
  * 3. Frequencies & Tapes (recorded broadcasts and secret station channels with audio player)
  * 4. Endings & Achievements (8 escape endings + career investigation badges)
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Volume2, ShieldCheck, Eye, Award, Image as ImageIcon, Radio, CheckCircle2, Lock } from 'lucide-react';
 import { GameEngine } from '../game/gameState';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState, loadArchive } from '../game/psychLog';
@@ -16,6 +16,7 @@ import { loadPersistentPolaroids, polaroidManager } from '../game/polaroidManage
 import { ACHIEVEMENTS, ACHIEVEMENT_IDS, loadAchievements } from '../game/achievements';
 import { TapePlayButton } from './TapePlayButton';
 import { useEscape } from '../ui/escape';
+import { useFocusTrap } from '../ui/focus';
 import { PolaroidPhoto } from '../types';
 
 interface CaseFilesModalProps {
@@ -34,6 +35,9 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
   // Esc closes an enlarged print first, then the Case Files, wherever they're opened from.
   useEscape(onClose);
   useEscape(() => setSelectedPhoto(null), !!selectedPhoto);
+  // Tab stays in the files; closing them puts focus back on the button that opened them.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef);
 
   // What's saved on this device (the last ride's result only exists after a ride ends).
   const archive = loadArchive();
@@ -62,6 +66,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="case-files-title"

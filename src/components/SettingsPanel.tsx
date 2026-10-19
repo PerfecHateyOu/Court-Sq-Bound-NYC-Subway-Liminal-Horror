@@ -9,6 +9,7 @@ import { X } from 'lucide-react';
 import { settings, useSettings, savedProgress, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
 import { haptics } from '../game/haptics';
 import { useEscape } from '../ui/escape';
+import { useFocusTrap } from '../ui/focus';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -91,6 +92,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
   // Esc closes the panel, or first cancels the erase confirmation if it's open.
   useEscape(onClose);
   useEscape(() => setConfirmErase(false), confirmErase);
+  // Tab stays in the panel; closing it puts focus back on the button that opened it.
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef);
   const pct = (v: number) => `${Math.round(v * 100)}%`;
 
   const effectsNote =
@@ -110,6 +114,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
