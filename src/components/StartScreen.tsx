@@ -101,7 +101,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
             <span>
               {isTouch
                 ? 'Drag the screen to look. Use the WALK stick (bottom left) to move between cars. Hold the round FLAG button. Tap choices when asked. Play in landscape for the best field of view.'
-                : 'Click inside the train to lock mouse (or use Arrows / WASD). Hold F to flag. Press 1, 2, or 3 to choose. Hold Space during restraint. Esc or P pauses, M mutes.'}
+                : 'Click inside the train to look with the mouse (or use the arrow keys). Hold F to flag. Press 1, 2 or 3 to answer. Hold Space when told to. C raises the camera, Tab opens the evidence log, WASD walks between cars. Esc or P pauses, M mutes.'}
             </span>
           </div>
 

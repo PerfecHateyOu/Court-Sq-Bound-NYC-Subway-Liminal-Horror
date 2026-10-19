@@ -122,7 +122,7 @@ test.describe('offline copy', () => {
       await expect(page.getByTestId('hud-route-panel')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByText('WALK')).toBeVisible(); // the touch stick
 
-      await page.getByRole('button', { name: 'Evidence Album' }).tap();
+      await page.getByRole('button', { name: 'Evidence Log' }).tap();
       await expect(page.getByRole('tablist', { name: 'Evidence' })).toBeVisible();
       await page.getByRole('button', { name: 'Close Album' }).tap();
       await expect(page.getByRole('tablist', { name: 'Evidence' })).toHaveCount(0);
