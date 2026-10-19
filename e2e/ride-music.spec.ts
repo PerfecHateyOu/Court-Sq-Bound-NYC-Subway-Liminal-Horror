@@ -102,8 +102,14 @@ test.describe('Ride music', () => {
     await game(`ride(7); G.Q = []; advance(5);`);
     await game(`G.peak = 5; G.finalExitChoice = 'escalators'; G.endGame(); advance(0.2);`);
     expect(await game(`${RM} return RM.target;`)).toBe(0);
+    const before = await game(`${RM} return RM.stats.bars;`);
+    expect(before).toBeGreaterThan(1);
     await page.getByRole('button', { name: /Ride Again|Get back on/ }).first().click();
-    expect(await game(`${RM} return [RM.pos, RM.stats.bars];`)).toEqual([0, 0]);
+    // Back at the top of the tune. The game keeps running between the click and this check, so
+    // allow the first bar to have started (it's written a moment ahead), but no further.
+    const after = await game(`${RM} return { pos: RM.pos, bars: RM.stats.bars };`);
+    expect(after.pos).toBeLessThan(4);
+    expect(after.bars).toBeLessThanOrEqual(1);
   });
 
   test('it plays real sound through the Music volume, which can turn it off', async ({ page, game }) => {
