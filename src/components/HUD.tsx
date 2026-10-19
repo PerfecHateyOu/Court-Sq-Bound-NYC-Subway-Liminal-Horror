@@ -145,7 +145,7 @@ export const HUD: React.FC<HUDProps> = ({
             >
               {currentRoute.id}
             </span>
-            <span className="hidden min-[420px]:inline font-mono text-[10px] tracking-widest text-[#6cbe45] uppercase font-bold">
+            <span className="hidden lg:inline font-mono text-[10px] tracking-widest text-[#6cbe45] uppercase font-bold">
               LAST LOCAL
             </span>
             <span className="hidden lg:inline text-[#9a9684]">Next:</span>
