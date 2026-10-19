@@ -174,12 +174,13 @@ export const HUD: React.FC<HUDProps> = ({
             // While an answer or the restraint needs you, the camera can't come up; pressing it says why.
             title={G.handsBusy && !polaroidManager.isViewfinderOpen ? `Camera: ${G.handsBusy}` : 'Equip Polaroid Camera [C]'}
             aria-label="Polaroid Camera"
+            aria-pressed={polaroidManager.isViewfinderOpen}
             aria-disabled={(!!G.handsBusy && !polaroidManager.isViewfinderOpen) || undefined}
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
               polaroidManager.isViewfinderOpen
                 ? 'bg-red-600 text-white border-red-400'
                 : G.handsBusy
-                ? 'bg-black/50 border-white/10 text-[#ece6d3]/40'
+                ? 'bg-black/50 border-white/10 text-[#ece6d3] opacity-40 cursor-not-allowed'
                 : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
             }`}
           >
@@ -202,7 +203,7 @@ export const HUD: React.FC<HUDProps> = ({
                 evp.raised
                   ? 'bg-[#5a2a24] text-white border-red-400/60'
                   : G.handsBusy
-                  ? 'bg-black/50 border-white/10 text-[#ece6d3]/40'
+                  ? 'bg-black/50 border-white/10 text-[#ece6d3] opacity-40 cursor-not-allowed'
                   : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
               }`}
             >
@@ -217,6 +218,7 @@ export const HUD: React.FC<HUDProps> = ({
             onClick={onToggleAlbum}
             title="Evidence Album [TAB]"
             aria-label="Evidence Album"
+            aria-pressed={polaroidManager.isAlbumOpen}
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
               polaroidManager.isAlbumOpen
                 ? 'bg-amber-600 text-white border-amber-400'
@@ -245,8 +247,8 @@ export const HUD: React.FC<HUDProps> = ({
           <button
             onClick={onToggleMute}
             aria-label={isMuted ? 'Unmute' : 'Mute'}
-            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
-              isMuted ? 'text-[#e3a83a] border-[#e3a83a]/40' : 'text-[#ece6d3]'
+            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
+              isMuted ? 'text-[#e3a83a] border-[#e3a83a]/60' : 'text-[#ece6d3] border-white/15'
             }`}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
