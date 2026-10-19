@@ -598,6 +598,9 @@ export default function App() {
         e.preventDefault();
         if (G.interactGangwayDoor()) {
           triggerUpdate();
+        } else if (!e.repeat && (G.phase === 'ride' || G.phase === 'stop' || G.phase === 'intro')) {
+          // Nothing to open here: say where the doors are.
+          G.setHint('Walk to the end of the car to open a gangway door.', 2.5);
         }
         return;
       }
@@ -862,7 +865,7 @@ export default function App() {
           onClose={() => setRouteSelectorOpen(false)}
           onSelectRoute={(route) => {
             if (engineRef.current) {
-              engineRef.current.setHint(`SWITCHED TRACK ROUTING TO ${route.name.toUpperCase()}`, 4.5);
+              engineRef.current.setHint(`Now on the ${route.id}: ${route.stops[1]} to ${route.stops[route.stops.length - 1]}.`, 4.5);
               triggerUpdate();
             }
           }}

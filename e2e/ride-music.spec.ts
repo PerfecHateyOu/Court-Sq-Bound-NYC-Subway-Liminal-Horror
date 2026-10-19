@@ -5,8 +5,11 @@ import { test, expect } from './game';
 // busy the machine is.
 
 const RM = `const RM = A.getRideMusic();`;
+// The music's imperfections are random per ride (seeded). Tests that count them pin the seed,
+// so they check the design, not the dice.
+const SEED = `RM.reset(7);`;
 // Ride every stretch for most of its length, logging the music's level at each stop.
-const RIDE_ALL = `${RM} const level = {};
+const RIDE_ALL = `${RM} ${SEED} const level = {};
   for (let i = 0; i < 13; i++) {
     G.Q = []; G.startSegment(i); G.seg._masks = []; G.active.forEach((a) => (a.trigger = 999));
     if (G.seg.restraint) G.restraintDone = true; // past the Greenpoint silence
@@ -80,10 +83,10 @@ test.describe('Ride music', () => {
   });
 
   test('Greenpoint Av goes silent until the restraint is over, then the tune comes back minor', async ({ game }) => {
-    const r = await game(`${RM} G.Q = []; G.startSegment(10); G.seg._masks = []; G.active.forEach((a) => (a.trigger = 999));
+    const r = await game(`${RM} ${SEED} G.Q = []; G.startSegment(10); G.seg._masks = []; G.active.forEach((a) => (a.trigger = 999));
       advance(3); const before = RM.target; const minor0 = (RM.stats.byStop[11] || {}).minor || 0;
       G.startRestraintMoment(); G.flagHeld = true; for (let i = 0; i < 2000 && G.restraint; i++) advance(0.05); G.flagHeld = false;
-      advance(0.2); const after = RM.target; advance(20);
+      advance(0.2); const after = RM.target; advance(40); // sparse by design: give it a few phrases
       return { before, after, minor0, minor: RM.stats.byStop[11].minor + ((RM.stats.byStop[12] || {}).minor || 0) };`);
     expect(r.before).toBe(0);
     expect(r.minor0).toBe(0);

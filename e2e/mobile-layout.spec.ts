@@ -39,7 +39,7 @@ for (const [width, height] of SIZES) {
       const controls = page.getByRole('button', { name: 'Polaroid Camera' }).locator('..');
       const [p, c] = [(await panel.boundingBox())!, (await controls.boundingBox())!];
       expect(overlap(p, c)).toBe(false);
-      for (const name of ['Polaroid Camera', 'Recorder', 'Evidence Album', 'Route Lines', 'Mute', 'Pause']) {
+      for (const name of ['Polaroid Camera', 'Recorder', 'Evidence Log', 'Route Lines', 'Mute', 'Pause']) {
         await expectReachable(page, page.getByRole('button', { name, exact: true }));
       }
       const fits = await panel.locator('b').evaluate((b) => b.scrollWidth <= b.clientWidth);
@@ -100,7 +100,7 @@ test.describe('with a notch and a home indicator', () => {
     await game(`G.Q = []; G.startSegment(2); window.__P.toggleViewfinder(); G.notifyUI();`);
     const lower = page.getByRole('button', { name: 'Lower Camera' });
     await expect(lower).toBeVisible();
-    for (const el of [lower, page.getByRole('button', { name: /^Album/ }), page.getByRole('button', { name: /SNAP PHOTO/ })]) {
+    for (const el of [lower, page.getByRole('button', { name: /^Evidence Log/ }), page.getByRole('button', { name: /SNAP PHOTO/ })]) {
       const b = (await el.boundingBox())!;
       expect(b.x).toBeGreaterThanOrEqual(INSET.left);
       expect(b.x + b.width).toBeLessThanOrEqual(844 - INSET.right);

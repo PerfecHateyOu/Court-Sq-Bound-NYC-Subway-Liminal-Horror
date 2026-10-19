@@ -29,7 +29,7 @@ test.describe('HUD toggles on a phone (icon-only buttons)', () => {
 
   test('camera, recorder and album say when they are on; Mute shows its ring', async ({ page, game }) => {
     await game(`window.__EVP.hasRecorder = true; ride(2); G.seg._masks = []; G.notifyUI();`);
-    const album = page.getByRole('button', { name: 'Evidence Album' });
+    const album = page.getByRole('button', { name: 'Evidence Log' });
     await expect(page.getByRole('button', { name: 'Polaroid Camera' })).toHaveAttribute('aria-pressed', 'false');
     await expect(album).toHaveAttribute('aria-pressed', 'false');
 

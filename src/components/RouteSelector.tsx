@@ -27,8 +27,11 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
   useFocusTrap(dialogRef, () => currentRef.current);
 
   const handleSelect = (r: TransitLineRoute) => {
-    routeManager.setRoute(r.id);
-    if (onSelectRoute) onSelectRoute(r);
+    // Picking the line you're on just closes the selector: nothing switched, so nothing to say.
+    if (r.id !== currentRoute.id) {
+      routeManager.setRoute(r.id);
+      if (onSelectRoute) onSelectRoute(r);
+    }
     onClose();
   };
 

@@ -214,11 +214,11 @@ export const HUD: React.FC<HUDProps> = ({
             </button>
           )}
 
-          {/* Polaroid Evidence Album Trigger Button */}
+          {/* The evidence log (prints and tapes): one name everywhere, "Evidence" on buttons */}
           <button
             onClick={onToggleAlbum}
-            title="Evidence Album [TAB]"
-            aria-label="Evidence Album"
+            title="Evidence log [Tab]"
+            aria-label="Evidence Log"
             aria-pressed={polaroidManager.isAlbumOpen}
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
               polaroidManager.isAlbumOpen
@@ -227,7 +227,7 @@ export const HUD: React.FC<HUDProps> = ({
             }`}
           >
             <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
-            <span className="hidden xl:inline">Album</span>
+            <span className="hidden xl:inline">Evidence</span>
             <span className="text-[10px] text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
               {polaroidManager.photos.length}
             </span>
@@ -364,13 +364,20 @@ export const HUD: React.FC<HUDProps> = ({
       {/* Bottom Controls / Key Hints Bar (Left) — keyboard only */}
       {!G.isTouch && (
       <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-[11px] text-[#9a9684] font-mono bg-black/70 px-3 py-1.5 rounded border border-white/10">
-        <span>[W][A][S][D] WALK</span>
+        {/* The essentials. The gangway door shows its own [E] prompt when you're at one. */}
+        <span>[F] FLAG</span>
         <span className="text-white/30">•</span>
         <span>[C] CAMERA</span>
+        {evp.hasRecorder && (
+          <>
+            <span className="text-white/30">•</span>
+            <span>[R] RECORDER</span>
+          </>
+        )}
         <span className="text-white/30">•</span>
-        <span>[TAB] ALBUM</span>
+        <span>[TAB] EVIDENCE</span>
         <span className="text-white/30">•</span>
-        <span>[E] GANGWAY DOOR</span>
+        <span>[WASD] WALK</span>
       </div>
       )}
 
