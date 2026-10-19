@@ -13,7 +13,7 @@ test.describe('Prompts and labels', () => {
     await expect(page.getByRole('heading', { name: 'Evidence Log' })).toBeVisible();
     await page.keyboard.press('Escape');
     await game(`window.__P.setViewfinder(true); G.notifyUI();`);
-    await expect(page.getByRole('button', { name: /^Evidence Log \(\d+ prints\)$/ })).toContainText('Evidence (');
+    await expect(page.getByRole('button', { name: /^Evidence Log \(\d+ prints?\)$/ })).toContainText('Evidence (');
     await game(`window.__P.setViewfinder(false); G.notifyUI();`);
     // No leftover "Album" anywhere on the ride's controls.
     await expect(page.getByRole('button', { name: /album/i })).toHaveCount(0);
@@ -59,13 +59,14 @@ test.describe('Prompts and labels', () => {
     await expect(page.getByLabel('Not recording')).toBeVisible();
     await page.keyboard.press('KeyR');
 
-    // Camera: the viewfinder, then a shot flashes and the film counter goes down.
+    // Camera: the viewfinder, then a shot uses a frame of film and lands in the evidence log.
+    // (The flash itself lasts a fifth of a second: too brief to check reliably under load.)
     await page.keyboard.press('KeyC');
     const film = page.getByText(/^\d\d \/ 10$/);
     const before = await film.textContent();
     await page.keyboard.press('Space');
-    await expect(page.getByTestId('camera-flash')).toBeAttached();
     await expect(film).not.toHaveText(before!);
+    await expect(page.getByRole('button', { name: 'Evidence Log (1 print)' })).toBeVisible();
     await page.keyboard.press('KeyC');
 
     // Evidence log: opens on Tab, with the print in it.

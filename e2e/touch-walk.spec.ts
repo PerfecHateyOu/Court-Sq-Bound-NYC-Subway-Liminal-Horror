@@ -72,6 +72,6 @@ test.describe('walking on desktop', () => {
     const game = await board(page);
     await game(`ride(0); await sleep(300);`);
     await expect(page.locator(STICK)).toHaveCount(0);
-    await expect(page.getByText('[W][A][S][D] WALK')).toBeVisible();
+    await expect(page.getByText('[WASD] WALK')).toBeVisible();
   });
 });

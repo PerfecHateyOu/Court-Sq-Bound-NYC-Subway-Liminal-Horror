@@ -65,7 +65,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             <div className="shrink-0 flex items-center gap-2 sm:gap-3">
               <button
                 onClick={onOpenAlbum}
-                aria-label={`Evidence Log (${polaroidManager.photos.length} prints)`}
+                aria-label={`Evidence Log (${polaroidManager.photos.length} ${polaroidManager.photos.length === 1 ? 'print' : 'prints'})`}
                 className="h-10 flex items-center gap-2 px-3.5 rounded-md bg-black/75 border border-white/20 hover:border-white/50 text-[#ece6d3] text-xs font-semibold backdrop-blur-md transition-all active:scale-95"
               >
                 <ImageIcon className="w-4 h-4 text-[#e3a83a]" />
