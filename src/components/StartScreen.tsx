@@ -49,6 +49,22 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto safe-pad bg-black/80 backdrop-blur-md">
       <div className="w-full max-w-xl my-auto animate-in fade-in zoom-in-95 duration-400">
+        {/* Game Title & Branding Header */}
+        <div className="mb-4 text-center select-none">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#101411]/90 border border-white/10 text-[10px] sm:text-[11px] font-mono tracking-[0.22em] text-[#9a9684] uppercase mb-1.5 shadow-md">
+            <span>A Liminal Subway Horror Game</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight uppercase text-white drop-shadow-md">
+            LAST LOCAL
+          </h1>
+          <p className="text-xs sm:text-sm font-mono text-[#6cbe45] tracking-wide mt-1">
+            Every stop takes you further from home.
+          </p>
+          <div className="text-[10px] sm:text-[11px] font-mono tracking-[0.2em] text-[#8d8371] uppercase mt-0.5">
+            New York City · Last Train · No Way Back
+          </div>
+        </div>
+
         {/* MTA Station Mosaic Tablet */}
         <div className="relative rounded-sm p-4 bg-[#e8e2cf] text-[#1b1d18] shadow-2xl border-4 border-[#1c241e]">
           {/* Mosaic Tile Texture Grid */}
@@ -66,9 +82,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
                style={{
                  borderImage: 'repeating-linear-gradient(90deg, #6cbe45 0 14px, #264a22 14px 28px, #e8e2cf 28px 42px) 8',
                }}>
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-none uppercase">
+            <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-none uppercase">
               Hoyt–<br />Schermerhorn
-            </h1>
+            </h2>
             <div className="mt-3 flex items-center gap-2 text-sm sm:text-base font-bold text-[#1b1d18]">
               <span className="w-6 h-6 rounded-full bg-[#6cbe45] text-black flex items-center justify-center text-xs font-black">
                 G

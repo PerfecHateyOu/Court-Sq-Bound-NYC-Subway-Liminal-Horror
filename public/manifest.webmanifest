@@ -1,7 +1,7 @@
 {
-  "name": "Court Sq-Bound: NYC Subway Liminal Horror",
-  "short_name": "Court Sq-Bound",
-  "description": "A first-person liminal horror ride on the NYC G train.",
+  "name": "LAST LOCAL: A Liminal Subway Horror Game",
+  "short_name": "LAST LOCAL",
+  "description": "Every stop takes you further from home. New York City · Last Train · No Way Back.",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
