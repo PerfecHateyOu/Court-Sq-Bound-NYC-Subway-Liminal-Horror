@@ -327,10 +327,18 @@ export class AnomalyManager {
     };
   }
 
-  public pickPoolTier(currentTier: number, stop: number): string {
+  /**
+   * A random anomaly id for this sanity tier, never one in `exclude` (already planned for this
+   * stretch). If every anomaly in the rolled tier is taken, it steps down a tier; null only when
+   * nothing is left at all.
+   */
+  public pickPoolTier(currentTier: number, stop: number, exclude: ReadonlySet<string> = new Set()): string | null {
     let t = Math.random() < 0.7 ? currentTier : Math.floor(Math.random() * (currentTier + 1));
     if (t === 3 && stop < 10) t = 2;
-    const pool = this.pools[t];
-    return pool[Math.floor(Math.random() * pool.length)];
+    for (let tt = t; tt >= 0; tt--) {
+      const pool = this.pools[tt].filter((id) => !exclude.has(id));
+      if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+    }
+    return null;
   }
 }

@@ -802,12 +802,11 @@ export class GameEngine {
 
     const tier = tierOf(this.san);
     for (let i = 0; i < seg.anoms; i++) {
-      // Don't repeat an anomaly already planned for this ride (e.g. Stop 10's forced parent
-      // anomaly being picked again from the Critical pool): one flag would count twice.
-      let id = this.anomalyMgr.pickPoolTier(tier, seg.stop);
-      for (let k = 0; k < 6 && this.active.some((a) => a.id === id); k++) {
-        id = this.anomalyMgr.pickPoolTier(tier, seg.stop);
-      }
+      // Never repeat an anomaly already planned for this stretch (e.g. Stop 10's forced parent
+      // anomaly picked again from the three-anomaly Critical pool): one flag would count twice.
+      // Re-rolling until it differed gave up after 7 tries, about 1 ride in 13,000.
+      const id = this.anomalyMgr.pickPoolTier(tier, seg.stop, new Set(this.active.map((a) => a.id)));
+      if (!id) continue;
       const anom = this.anomalyMgr.createAnomaly(id, times[ti++]);
       if (anom) {
         anom.tids.forEach((t) => this.usedTids.add(t));
