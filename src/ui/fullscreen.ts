@@ -21,11 +21,13 @@ const doc = () => document as WebkitDocument;
 
 /**
  * Whether going full screen is possible and would change anything. The home-screen app on
- * Android opens full screen already (display: fullscreen in the manifest), but still reports the
- * Fullscreen API as available, so a Full screen button there would do nothing visible.
+ * Android opens full screen already (display: fullscreen in the manifest), and so does a browser
+ * in its own full screen (F11), but both still report the Fullscreen API as available, so a Full
+ * screen button there would do nothing visible. (display-mode is fullscreen while the page itself
+ * is full screen too; then fullscreenElement is set and the button is needed, to leave.)
  */
 export function fullscreenSupported(): boolean {
-  if (window.matchMedia?.('(display-mode: fullscreen)').matches) return false;
+  if (window.matchMedia?.('(display-mode: fullscreen)').matches && !isFullscreen()) return false;
   return !!(doc().fullscreenEnabled || doc().webkitFullscreenEnabled);
 }
 
