@@ -15,6 +15,7 @@ import { ENDINGS, ENDING_IDS, loadEndingsArchive, endingText } from '../game/end
 import { loadPersistentPolaroids, polaroidManager } from '../game/polaroidManager';
 import { ACHIEVEMENTS, ACHIEVEMENT_IDS, loadAchievements } from '../game/achievements';
 import { TapePlayButton } from './TapePlayButton';
+import { useEscape } from '../ui/escape';
 import { PolaroidPhoto } from '../types';
 
 interface CaseFilesModalProps {
@@ -30,6 +31,9 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'anomalies' | 'polaroids' | 'tapes' | 'endings'>(initialTab);
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
+  // Esc closes an enlarged print first, then the Case Files, wherever they're opened from.
+  useEscape(onClose);
+  useEscape(() => setSelectedPhoto(null), !!selectedPhoto);
 
   // What's saved on this device (the last ride's result only exists after a ride ends).
   const archive = loadArchive();

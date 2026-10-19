@@ -8,7 +8,6 @@ import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '
 import { loadEvpArchive, EVP_SIGNALS } from '../game/evpManager';
 import { loadEndingsArchive, ENDING_IDS } from '../game/endings';
 import { useProgressEpoch } from '../settings';
-import { useEscape } from '../ui/escape';
 import { CaseFilesModal } from './CaseFilesModal';
 import { GameEngine } from '../game/gameState';
 import { CHAPTERS } from '../constants';
@@ -43,7 +42,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
   // Re-read when the Case Files open and after saved progress is erased in Settings.
   const progressEpoch = useProgressEpoch();
   const archive = React.useMemo(() => loadArchive(), [showLog, progressEpoch]);
-  useEscape(() => setShowLog(false), showLog);
   const documentedCount = PSYCH_IDS.filter((id) => entryState(archive[id]) === 'documented').length;
   const tapeCount = React.useMemo(() => Object.keys(loadEvpArchive()).length, [showLog, progressEpoch]);
   const endingCount = React.useMemo(() => Object.keys(loadEndingsArchive()).length, [showLog, progressEpoch]);
