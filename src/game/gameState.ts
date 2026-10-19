@@ -278,6 +278,35 @@ export class GameEngine {
     this.anomalyMgr = new AnomalyManager(this.carBuilder);
 
     this.misleadStop = Math.random() < CFG.misleadChance ? 9 : 0;
+
+    // Switching lines renames what's in view straight away, not at the next stretch.
+    routeManager.onRouteChanged = () => this.renameStations();
+  }
+
+  /**
+   * The two platforms in view take the current line's names: the one the train left (or is
+   * standing at, before a ride) and the one it's heading to. Otherwise, after a mid-ride switch,
+   * the HUD and the PA would name one station and the platform you pull into another.
+   */
+  private renameStations() {
+    const cb = this.carBuilder;
+    const seg = this.seg;
+    const from = seg ? (this.segIdx > 0 ? SEGS[this.segIdx - 1].stop : 1) : 1;
+    const to = seg ? seg.stop : 2;
+    cb.stA.setName(routeManager.getStopName(from));
+    cb.stB.setName(routeManager.getStopName(to));
+    // A chapter card still showing names the stretch's stations: follow the line too.
+    const card = this.chapterRollsign;
+    if (card) this.chapterRollsign = { ...card, ...this.rollsignLabels(card.chapter) };
+    this.notifyUI();
+  }
+
+  private rollsignLabels(chapter: ChapterDef): { title: string; subtitle: string } {
+    const route = routeManager.activeRoute;
+    return {
+      title: route.id !== 'G' && chapter.titleOffG ? chapter.titleOffG : chapter.title,
+      subtitle: `${route.stops[chapter.startStop]} to ${route.stops[chapter.endStop]}`,
+    };
   }
 
   public sched(delay: number, fn: () => void) {
@@ -311,14 +340,8 @@ export class GameEngine {
 
   /** Chapter card. Silent (the chime belongs to the doors), never pauses, and labels come from the route. */
   public triggerChapterRollsign(chapter: ChapterDef) {
-    const route = routeManager.activeRoute;
     this.currentChapter = chapter;
-    this.chapterRollsign = {
-      chapter,
-      title: route.id !== 'G' && chapter.titleOffG ? chapter.titleOffG : chapter.title,
-      subtitle: `${route.stops[chapter.startStop]} to ${route.stops[chapter.endStop]}`,
-      until: this.GT + 4.5,
-    };
+    this.chapterRollsign = { chapter, ...this.rollsignLabels(chapter), until: this.GT + 4.5 };
     this.notifyUI();
   }
 
