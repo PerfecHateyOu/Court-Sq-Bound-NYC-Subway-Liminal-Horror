@@ -8,6 +8,7 @@ import { routeManager } from '../game/routeManager';
 import { chapterOrigin } from '../game/practice';
 import { GameEngine } from '../game/gameState';
 import { useEscape } from '../ui/escape';
+import { useFocusTrap } from '../ui/focus';
 
 interface PauseScreenProps {
   engine: GameEngine;
@@ -33,10 +34,20 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
   const showHomeScreenTip = !canFull && engine.isTouch && !isStandalone();
   // Esc on the confirmation cancels it (rather than resuming the ride).
   useEscape(() => setConfirmRestart(false), confirmRestart);
+  // Keys go to the menu, starting on Resume, not to the HUD behind it.
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const resumeRef = React.useRef<HTMLButtonElement>(null);
+  useFocusTrap(panelRef, () => resumeRef.current);
 
   return (
     <div className="fixed inset-0 z-30 flex justify-center overflow-y-auto safe-pad bg-black/80 backdrop-blur-md">
-      <div className="w-full max-w-sm my-auto p-5 sm:p-6 rounded-lg bg-[#101411] border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pause-title"
+        className="w-full max-w-sm my-auto p-5 sm:p-6 rounded-lg bg-[#101411] border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden"
+      >
         {/* Subtle illuminated transit sign raster scanlines */}
         <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-40" />
 
@@ -50,7 +61,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
           {lineName}
         </div>
 
-        <h2 className="text-2xl font-black text-[#ece6d3] uppercase tracking-wide transit-sign-header drop-shadow-md">
+        <h2 id="pause-title" className="text-2xl font-black text-[#ece6d3] uppercase tracking-wide transit-sign-header drop-shadow-md">
           Train Paused
         </h2>
         {engine.nightmare && (
@@ -76,6 +87,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
 
         <div className="mt-6 flex flex-col gap-2.5 relative z-10">
           <button
+            ref={resumeRef}
             onClick={onResume}
             className="w-full py-3 px-6 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base tracking-wide transition-all shadow-lg hover:shadow-[0_0_15px_rgba(108,190,69,0.35)] active:scale-95 flex items-center justify-center gap-2"
           >

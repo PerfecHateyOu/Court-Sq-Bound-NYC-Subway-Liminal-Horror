@@ -19,6 +19,7 @@ const overlap = (a: { x: number; y: number; width: number; height: number }, b: 
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 const SIZES = [
+  [320, 568],
   [360, 640],
   [390, 844],
   [640, 360],
