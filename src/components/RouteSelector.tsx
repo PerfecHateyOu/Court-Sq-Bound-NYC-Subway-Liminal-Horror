@@ -74,7 +74,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
                 MTA Transit Line Switching
               </h2>
               <p className="text-xs text-[#9a9684]">
-                Select track routing at junction point. Each line alters transit cars and psychological hazard profiles.
+                Ride the same journey on another line's stations.
               </p>
             </div>
           </div>
