@@ -614,6 +614,7 @@ export class GameEngine {
     // menu) must start at full ambience.
     audioEngine.setMasterLevel(0.85, 0.3);
     audioEngine.setBedLevel(1.0, 0.3);
+    audioEngine.resetRideMusic(); // a new ride starts at the top of the tune
 
     this.sched(1.2, () => this.setPA(fillRoute('This is a {terminus}–bound {line} train.'), 4.0));
     if (!this.looped) {
@@ -1212,6 +1213,26 @@ export class GameEngine {
     }
   }
 
+  /**
+   * The ride's music (audio/rideMusic.ts): tell it where the ride is. It goes wrong by stop, steps
+   * back for the doors, announcements and the recorder, and has two planned silences: Greenpoint
+   * Av from the chapter card until the restraint is over (then the tune comes back minor), and
+   * the last stretch, which goes quiet well before Court Sq.
+   */
+  private updateMusic(dt: number) {
+    const seg = this.seg;
+    const L = seg ? this.segLen(seg) : 0;
+    audioEngine.updateRideMusic(dt, {
+      stop: seg ? seg.stop : 1,
+      phase: this.phase,
+      approach: this.phase === 'ride' && !!seg && this.ts > L - 7,
+      announcing: !!this.paText && this.GT < this.paUntil,
+      listening: evp.raised || !!this.tapePlaying,
+      hush: !!seg && ((seg.restraint && !this.restraintDone) || (!!seg.final && this.ts > 0.35 * L)),
+      minor: this.restraintDone && !!seg && seg.stop >= 11,
+    });
+  }
+
   private endRestraint(ok: boolean, why: string) {
     this.restraint = null;
     // The restraint says "don't let go", so the hold is usually still down when it ends. Let it go
@@ -1567,6 +1588,7 @@ export class GameEngine {
   public update(dt: number) {
     this.GT += dt;
     this.runSched();
+    this.updateMusic(dt);
 
     // Sanity tier drives visuals, audio, parent behaviour and the haven cue. Recompute it
     // every frame, and tell the UI when it changes so the tier color grading follows.

@@ -46,7 +46,7 @@ test.describe('settings', () => {
     await page.getByRole('button', { name: 'Settings' }).click();
     const d = page.locator(DIALOG);
     await d.getByLabel('Game sounds').fill('0.4');
-    await d.getByLabel('Pause music').fill('0.25');
+    await d.getByLabel('Music', { exact: true }).fill('0.25');
     await expect(d.locator('output[for=set-game-vol]')).toHaveText('40%');
     const g = await game(`await sleep(400); return { game: A.gameVol.gain.value, music: A.musicVol.gain.value, duck: A.masterGain.gain.value };`);
     expect(g.game).toBeCloseTo(0.4, 2);

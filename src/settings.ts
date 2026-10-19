@@ -14,7 +14,7 @@ export interface Settings {
   invertY: boolean;
   /** Game sounds, ambience and the intercom (0–1). */
   gameVolume: number;
-  /** Pause-menu music (0–1). */
+  /** The tune: the ride's music and the pause menu's (0–1). */
   musicVolume: number;
   /**
    * Screen tearing, breathing and the animated heartbeat trace. "system" follows the
