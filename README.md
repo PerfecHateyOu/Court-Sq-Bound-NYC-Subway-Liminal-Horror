@@ -2,7 +2,7 @@
 
 A first-person liminal horror ride on the NYC G train, from Hoyt–Schermerhorn to Court Square, 13 stops, with your parents. Notice what changes in the car, hide that you noticed, and learn which doors are safe.
 
-Built with React, TypeScript, Three.js, and Vite. The game logic follows the master design document, build v5.1. (The game was called Court Sq-Bound until October 2026; the repository keeps that name.)
+Built with React, TypeScript, Three.js, and Vite. The game logic follows the master design document, build v5.1. (The game was called Court Sq-Bound until October 2026.)
 
 ## Run it
 
@@ -47,11 +47,11 @@ Google AI Studio puts back its original starter `bun.lock` every time it syncs t
 The `Dockerfile` builds the game and serves it with nginx on port 8080. From Google Cloud Shell:
 
 ```bash
-git clone https://github.com/PerfecHateyOu/Court-Sq-Bound-NYC-Subway-Liminal-Horror && cd Court-Sq-Bound-NYC-Subway-Liminal-Horror
+git clone https://github.com/PerfecHateyOu/Last-Local-Liminal-Space-Subway- && cd Last-Local-Liminal-Space-Subway-
 gcloud run deploy court-sq-bound --source . --region us-central1 --allow-unauthenticated
 ```
 
-The repository and the Cloud Run service keep the old `court-sq-bound` name, so existing links and the deployed URL keep working. To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
+The Cloud Run service keeps the old `court-sq-bound` name, so the deployed URL keeps working. To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
 
 ## Offline copy
 
