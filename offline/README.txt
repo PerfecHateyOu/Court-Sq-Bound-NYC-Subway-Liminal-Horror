@@ -1,4 +1,4 @@
-Court Sq-Bound: NYC Subway Liminal Horror (offline copy)
+LAST LOCAL: A Liminal Subway Horror Game (offline copy)
 
 How to play:
 1. Unzip this folder.

@@ -1,5 +1,5 @@
 /**
- * 3D Stylized Character Mesh Generator for Court Sq-Bound
+ * 3D Stylized Character Mesh Generator for LAST LOCAL
  * Builds stylized passengers with realistic anatomical proportions, layered clothing,
  * articulated heads for gaze tracking, and specific anomaly state controls.
  */

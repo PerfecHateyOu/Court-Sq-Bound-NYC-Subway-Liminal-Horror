@@ -6,9 +6,9 @@
  *   bun run build:offline   (or: npm run build:offline)
  *
  * Output:
- *   dist-offline/Court-Sq-Bound/index.html   the whole game (script, styles and fonts inlined)
- *   dist-offline/Court-Sq-Bound/README.txt
- *   dist-offline/Court-Sq-Bound-offline.zip  the folder above, zipped
+ *   dist-offline/Last-Local/index.html   the whole game (script, styles and fonts inlined)
+ *   dist-offline/Last-Local/README.txt
+ *   dist-offline/Last-Local-offline.zip  the folder above, zipped
  *
  * Browsers won't load module scripts from file:// as separate files, so everything is inlined.
  * The fonts come from offline/fonts.css (embedded once, so this build never needs the internet).
@@ -20,7 +20,7 @@ import { crc32, deflateRawSync } from 'node:zlib';
 
 const root = join(import.meta.dirname, '..');
 const out = join(root, 'dist-offline');
-const folder = 'Court-Sq-Bound';
+const folder = 'Last-Local';
 
 // 1) Vite build in offline mode: one script, one stylesheet (see vite.config.ts).
 execFileSync(process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), 'build', '--mode', 'offline'], {

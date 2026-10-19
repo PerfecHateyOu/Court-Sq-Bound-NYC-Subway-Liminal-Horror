@@ -1,5 +1,5 @@
 /**
- * Start Screen / Title Experience for Court Sq-Bound
+ * Start Screen / Title Experience for LAST LOCAL
  * Authentic NYC subway mosaic plaque and station briefing, plus the Case Files dossier.
  */
 import React from 'react';
@@ -57,10 +57,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight uppercase text-white drop-shadow-md">
             LAST LOCAL
           </h1>
-          <p className="text-xs sm:text-sm font-mono text-[#6cbe45] tracking-wide mt-1">
+          <p className="text-[11px] min-[360px]:text-xs sm:text-sm font-mono text-[#6cbe45] tracking-normal min-[360px]:tracking-wide mt-1">
             Every stop takes you further from home.
           </p>
-          <div className="text-[10px] sm:text-[11px] font-mono tracking-[0.2em] text-[#8d8371] uppercase mt-0.5">
+          <div className="text-[10px] sm:text-[11px] font-mono tracking-[0.1em] min-[360px]:tracking-[0.2em] text-[#8d8371] uppercase mt-0.5">
             New York City · Last Train · No Way Back
           </div>
         </div>
@@ -82,7 +82,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
                style={{
                  borderImage: 'repeating-linear-gradient(90deg, #6cbe45 0 14px, #264a22 14px 28px, #e8e2cf 28px 42px) 8',
                }}>
-            <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-none uppercase">
+            <h2 className="text-[26px] min-[360px]:text-3xl sm:text-5xl font-black tracking-tight leading-none uppercase">
               Hoyt–<br />Schermerhorn
             </h2>
             <div className="mt-3 flex items-center gap-2 text-sm sm:text-base font-bold text-[#1b1d18]">

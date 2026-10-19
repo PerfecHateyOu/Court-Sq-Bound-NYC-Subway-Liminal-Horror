@@ -1,8 +1,8 @@
-# Court Sq-Bound
+# LAST LOCAL
 
 A first-person liminal horror ride on the NYC G train, from Hoyt–Schermerhorn to Court Square, 13 stops, with your parents. Notice what changes in the car, hide that you noticed, and learn which doors are safe.
 
-Built with React, TypeScript, Three.js, and Vite. The game logic follows the Court Sq-Bound master design document, build v5.1.
+Built with React, TypeScript, Three.js, and Vite. The game logic follows the master design document, build v5.1. (The game was called Court Sq-Bound until October 2026; the repository keeps that name.)
 
 ## Run it
 
@@ -18,7 +18,7 @@ Other scripts:
 | Script | What it does |
 |---|---|
 | `build` | Production build into `dist/` |
-| `build:offline` | The offline copy: `dist-offline/Court-Sq-Bound/index.html` (one file that opens from a double-click) and `dist-offline/Court-Sq-Bound-offline.zip` |
+| `build:offline` | The offline copy: `dist-offline/Last-Local/index.html` (one file that opens from a double-click) and `dist-offline/Last-Local-offline.zip` |
 | `preview` | Serve the production build |
 | `lint` | Type-check with `tsc --noEmit` |
 | `test` | Browser tests (Playwright); `test:ui` opens them interactively |
@@ -51,13 +51,13 @@ git clone https://github.com/PerfecHateyOu/Court-Sq-Bound-NYC-Subway-Liminal-Hor
 gcloud run deploy court-sq-bound --source . --region us-central1 --allow-unauthenticated
 ```
 
-To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
+The repository and the Cloud Run service keep the old `court-sq-bound` name, so existing links and the deployed URL keep working. To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
 
 ## Offline copy
 
 `bun run build:offline` (or `npm run build:offline`) builds the whole game into one `index.html` that opens from a double-click, with no internet, server or install. Scripts, styles and fonts are all inlined; the fonts come from `offline/fonts.css`, so the build doesn't need the internet either. The folder is zipped with a short `README.txt` from `offline/README.txt`.
 
-It's built from the same code as the web version, so every change applies to both. CI rebuilds it on every pull request and push, tests it with the network blocked (`e2e/offline.spec.ts`), and attaches it to the run: open the run on GitHub's **Actions** tab and download **Court-Sq-Bound-offline** under *Artifacts*.
+It's built from the same code as the web version, so every change applies to both. CI rebuilds it on every pull request and push, tests it with the network blocked (`e2e/offline.spec.ts`), and attaches it to the run: open the run on GitHub's **Actions** tab and download **Last-Local-offline** under *Artifacts*.
 
 ## How to play
 

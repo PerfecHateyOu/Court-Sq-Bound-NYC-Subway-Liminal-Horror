@@ -1,5 +1,5 @@
 /**
- * Core type definitions for Court Sq-Bound: NYC Subway Liminal Horror
+ * Core type definitions for LAST LOCAL
  * Based on Master Project Document v5.1
  */
 import * as THREE from 'three';

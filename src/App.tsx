@@ -1,5 +1,5 @@
 /**
- * Court Sq-Bound: NYC Subway Liminal Horror
+ * LAST LOCAL
  * Main Application Component tying Three.js render loop with React HUD,
  * sanity tier filters, and full game flow.
  */

@@ -1,5 +1,5 @@
 /**
- * Pause Screen Overlay for Court Sq-Bound
+ * Pause Screen Overlay for LAST LOCAL
  */
 import React from 'react';
 import { Play, RotateCcw, Settings as SettingsIcon, Maximize2, Minimize2 } from 'lucide-react';

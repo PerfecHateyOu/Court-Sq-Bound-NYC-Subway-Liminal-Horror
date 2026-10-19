@@ -1,5 +1,5 @@
 /**
- * HUD Component for Court Sq-Bound
+ * HUD Component for LAST LOCAL
  * Authentic NYC subway graphic aesthetic: reticle with flag progress ring,
  * dynamic MTA route bullet, car consist position, gangway door prompt,
  * Polaroid camera & album buttons, PA banner, and subtitles.

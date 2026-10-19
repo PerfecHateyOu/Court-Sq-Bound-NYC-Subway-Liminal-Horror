@@ -1,5 +1,5 @@
 /**
- * Anomaly Management Engine for Court Sq-Bound
+ * Anomaly Management Engine for LAST LOCAL
  * Implements the 13 cataloged procedural anomalies across High, Medium, Low, and Critical tiers,
  * unobserved manifestation angle checks, and lifecycle reversion.
  */

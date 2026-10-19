@@ -1,5 +1,5 @@
 /**
- * Game State & Engine Loop for Court Sq-Bound
+ * Game State & Engine Loop for LAST LOCAL
  * Implements the full v5.1 specification: 13-stop sequence, band-relative scoring,
  * parental gaze/masking, False Stop Trial, Restraint moment, and sensory sabotage.
  */
