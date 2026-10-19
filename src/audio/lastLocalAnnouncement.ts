@@ -157,13 +157,17 @@ export class LastLocalAnnouncementLoop {
     this.outGain.gain.setValueAtTime(this.outGain.gain.value, now);
     this.outGain.gain.linearRampToValueAtTime(0.0001, now + fadeDuration);
 
+    // Clean up only this cycle's nodes: a start() right after (a restart during the intro)
+    // schedules new ones, and the delayed cleanup must not cut those off.
+    const nodes = this.activeNodes;
+    this.activeNodes = [];
     setTimeout(() => {
-      this.cleanupNodes();
+      this.cleanupNodes(nodes);
     }, fadeDuration * 1000 + 50);
   }
 
-  private cleanupNodes() {
-    this.activeNodes.forEach((node) => {
+  private cleanupNodes(nodes: { stop?: () => void; disconnect?: () => void }[] = this.activeNodes) {
+    nodes.forEach((node) => {
       try {
         node.stop?.();
         node.disconnect?.();
@@ -171,7 +175,7 @@ export class LastLocalAnnouncementLoop {
         /* ignore */
       }
     });
-    this.activeNodes = [];
+    if (nodes === this.activeNodes) this.activeNodes = [];
   }
 
   /**
