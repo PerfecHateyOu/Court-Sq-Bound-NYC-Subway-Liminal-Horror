@@ -29,6 +29,17 @@ test.describe('Psychological Log', () => {
     expect(r.dup).toBe(0);
   });
 
+  test('Stop 10 never repeats one, even when every random pick lands on the same anomaly', async ({ game }) => {
+    // With Math.random pinned to 0, the forced parent anomaly is Mom's face and every Critical
+    // pick is Mom's face too, which used to give up re-rolling and plan it twice.
+    const r = await game(`toTier(5, 3); const rnd = Math.random; Math.random = () => 0;
+      try { G.Q = []; G.startSegment(9); return G.active.map((a) => a.id); }
+      finally { Math.random = rnd; G.active.forEach((a) => a.revert()); G.active = []; }`);
+    expect(r).toHaveLength(2);
+    expect(new Set(r).size).toBe(2);
+    expect(r).toContain('momface');
+  });
+
   test('NEW and CONFIRMED badges, counts, and progress that survives a reload', async ({ page, game }) => {
     const ride1 = [
       mk(3, [{ id: 'adswap', desc: 'The KESSLER DENTAL ad had a typo', hit: true }]),
