@@ -1,5 +1,5 @@
 /**
- * High-fidelity procedural textures and sprites for Court Sq-Bound
+ * High-fidelity procedural textures and sprites for LAST LOCAL
  * Generates subway flooring, authentic NYC MTA advertising, G-train route strip maps,
  * station tile mosaics, warning tactile strips, and anomaly variants.
  */

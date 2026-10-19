@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 // The offline copy (scripts/build-offline.mjs): one index.html opened from disk, no network.
 // The repo root is the folder above Playwright's config (e2e/).
 const root = () => join(dirname(test.info().config.configFile!), '..');
-const file = () => join(root(), 'dist-offline', 'Court-Sq-Bound', 'index.html');
+const file = () => join(root(), 'dist-offline', 'Last-Local', 'index.html');
 
 test.describe('offline copy', () => {
   test.describe.configure({ mode: 'serial' });
@@ -18,8 +18,8 @@ test.describe('offline copy', () => {
 
   test('is one self-contained file under 3 MB, zipped with its README', () => {
     expect(statSync(file()).size).toBeLessThan(3_000_000);
-    expect(existsSync(join(root(), 'dist-offline', 'Court-Sq-Bound', 'README.txt'))).toBe(true);
-    expect(existsSync(join(root(), 'dist-offline', 'Court-Sq-Bound-offline.zip'))).toBe(true);
+    expect(existsSync(join(root(), 'dist-offline', 'Last-Local', 'README.txt'))).toBe(true);
+    expect(existsSync(join(root(), 'dist-offline', 'Last-Local-offline.zip'))).toBe(true);
   });
 
   test('opens from a double-click with no network, boards, rides and goes full screen', async ({ page, context }) => {

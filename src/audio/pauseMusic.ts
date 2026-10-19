@@ -1,5 +1,5 @@
 /**
- * Pause-menu music for Court Sq-Bound: the game's tune (theme.ts), clean and calm.
+ * Pause-menu music for LAST LOCAL: the game's tune (theme.ts), clean and calm.
  *
  * The ride plays the same tune coming apart stop by stop (rideMusic.ts). The pause menu is the
  * one place it still sounds the way it used to: slower, in tune, every note where it belongs,
