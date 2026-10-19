@@ -90,7 +90,7 @@ export class AudioEngine {
       // Background intercom on the game bus: ducked on pause, covered by mute.
       this.intercomVoice = new Intercom(this.ac, this.masterGain, this.whiteBuffer);
 
-      // Ambient loop: 'last-local-announcement' for late-night NYC subway conductor voice
+      // The 'last-local-announcement': a late-night conductor's voice over the intro, once per ride
       this.lastLocalAnnouncement = new LastLocalAnnouncementLoop(this.ac, this.masterGain, this.whiteBuffer);
 
       // Bed bus (hum + train rumble)
@@ -271,8 +271,8 @@ export class AudioEngine {
   }
 
   /**
-   * Ambient audio loop 'last-local-announcement':
-   * Plays the distorted late-night NYC subway conductor announcement during the intro.
+   * The 'last-local-announcement': the distorted late-night conductor announcement, played once
+   * during the intro.
    */
   public startLastLocalAnnouncement(t0?: number) {
     this.lastLocalAnnouncement?.start(t0);
