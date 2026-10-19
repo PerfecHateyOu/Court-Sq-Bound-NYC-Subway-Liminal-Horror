@@ -1,6 +1,6 @@
 /**
  * Tuning values, route segment table, and dialog assets
- * Directly sourced from Court Sq-Bound Master Project Document v5.1 (October 2026)
+ * Directly sourced from LAST LOCAL Master Project Document v5.1 (October 2026)
  */
 import { SegmentDef } from './types';
 
