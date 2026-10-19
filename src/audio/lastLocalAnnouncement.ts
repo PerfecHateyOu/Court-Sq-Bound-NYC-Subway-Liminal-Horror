@@ -1,8 +1,8 @@
 /**
- * Ambient Audio Loop: 'last-local-announcement'
- * Simulates a distorted, late-night NYC subway conductor voice announcing the
- * 'Last Local' over an overdriven car PA speaker with realistic formants,
- * line transformer buzz, mic pops, and station slapback acoustics.
+ * The 'last-local-announcement': a distorted, late-night NYC subway conductor voice announcing
+ * the 'Last Local' over an overdriven car PA speaker, with formants, mic pops and station
+ * slapback. It plays once per intro, all scheduled up front on the audio clock: nothing on a
+ * wall-clock timer, so a pause or a hidden tab can't queue it again.
  */
 
 // Formant target frequencies (F1, F2, F3 in Hz) for spoken vowels
@@ -57,7 +57,6 @@ export class LastLocalAnnouncementLoop {
   private outGain: GainNode;
   private filterChainIn: GainNode;
   private shaperCurve: Float32Array<ArrayBuffer>;
-  private loopTimer: ReturnType<typeof setTimeout> | null = null;
   private _isPlaying: boolean = false;
   private activeNodes: { stop?: () => void; disconnect?: () => void }[] = [];
 
@@ -126,7 +125,7 @@ export class LastLocalAnnouncementLoop {
   }
 
   /**
-   * Start the ambient announcement loop.
+   * Play the announcement once. Further calls do nothing until stop().
    */
   public start(t0: number = this.ac.currentTime + 0.1) {
     if (this._isPlaying) return;
@@ -141,16 +140,11 @@ export class LastLocalAnnouncementLoop {
   }
 
   /**
-   * Stop the loop and fade out smoothly without audio clicks.
+   * Fade out (cutting off the announcement if it's still playing) without audio clicks.
    */
   public stop(fadeDuration: number = 0.8) {
     if (!this._isPlaying) return;
     this._isPlaying = false;
-
-    if (this.loopTimer) {
-      clearTimeout(this.loopTimer);
-      this.loopTimer = null;
-    }
 
     const now = this.ac.currentTime;
     this.outGain.gain.cancelScheduledValues(now);
@@ -179,7 +173,7 @@ export class LastLocalAnnouncementLoop {
   }
 
   /**
-   * Schedules one cycle of the conductor announcement, then sets a timer for the next loop.
+   * Schedules the conductor announcement.
    */
   private scheduleCycle(startTime: number) {
     if (!this._isPlaying) return;
@@ -201,20 +195,6 @@ export class LastLocalAnnouncementLoop {
 
     // 4. Mic key-up transient
     this.playMicTransient(t + 0.1, false);
-    t += 0.35;
-
-    // Total sequence duration
-    const sequenceDuration = t - startTime;
-
-    // Schedule next repetition in the loop (approx 12-16 seconds cycle)
-    if (this._isPlaying) {
-      const waitMs = Math.max(8000, sequenceDuration * 1000 + 7000);
-      this.loopTimer = setTimeout(() => {
-        if (this._isPlaying) {
-          this.scheduleCycle(this.ac.currentTime + 0.15);
-        }
-      }, waitMs);
-    }
   }
 
   private playMicTransient(time: number, isKeyDown: boolean) {
