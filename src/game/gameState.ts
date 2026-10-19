@@ -1214,6 +1214,11 @@ export class GameEngine {
 
   private endRestraint(ok: boolean, why: string) {
     this.restraint = null;
+    // The restraint says "don't let go", so the hold is usually still down when it ends. Let it go
+    // here, or it carries on as a flag on whatever you're looking at (a false flag you never made).
+    // A key still held only sends repeats, which don't flag; a fresh press of F does.
+    this.flagHeld = false;
+    this.flagProg = 0;
     this.restraintDone = true;
     this.restraintOK = ok;
     this.restraintWhy = ok ? 'Held' : why;
@@ -1493,6 +1498,10 @@ export class GameEngine {
   public endGame() {
     this.phase = 'end';
     evp.lower();
+    // The report replaces the ride: put the camera down and close the evidence log, so neither
+    // is left over (or covering) the report. Its prints and tapes are on the report itself.
+    polaroidManager.setViewfinder(false);
+    polaroidManager.setAlbum(false);
     this.stopTape();
     this.flagHeld = false;
     audioEngine.setMasterLevel(0.2, 0.8);
@@ -2074,11 +2083,9 @@ export class GameEngine {
           a.at = this.GT;
           // Critical, parent-implicated anomalies tear the screen the moment they happen.
           if (a.tier >= 3) this.triggerGlitch('anomaly');
-          if (a.id === 'dadanswer') {
-            this.setSub(
-              `<b>Dad:</b> ${['No, I didn\u2019t hear it either.', 'Because you didn\u2019t ask.', 'Two more. Don\u2019t count them.'][Math.floor(Math.random() * 3)]}`,
-              3.4
-            );
+          // A spoken anomaly: the subtitle is the same line the report quotes.
+          if (a.id === 'dadanswer' && a.line) {
+            this.setSub(`<b>Dad:</b> ${a.line}`, 3.4);
           }
         }
       });

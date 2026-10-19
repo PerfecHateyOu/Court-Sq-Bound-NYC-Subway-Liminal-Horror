@@ -234,15 +234,17 @@ body {
   );
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .transit-sign-flicker,
-  .transit-sign-flicker-subtle {
-    animation: simpleFadeIn 0.3s ease-out both;
-  }
-  .transit-sign-header,
-  .transit-sign-amber-header {
-    animation: none;
-  }
+/* Screen effects: Reduced (in Settings, or the device's reduced-motion setting with "Match
+   device"). settings.ts sets data-effects on <html>. */
+:root[data-effects='reduced'] .transit-sign-flicker,
+:root[data-effects='reduced'] .transit-sign-flicker-subtle {
+  animation: simpleFadeIn 0.3s ease-out both;
+}
+:root[data-effects='reduced'] .transit-sign-header,
+:root[data-effects='reduced'] .transit-sign-amber-header,
+:root[data-effects='reduced'] .animate-pulse,
+:root[data-effects='reduced'] .animate-ping {
+  animation: none;
 }
 
 @keyframes simpleFadeIn {

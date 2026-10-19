@@ -121,6 +121,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         <div className="px-6 py-2.5 bg-[#101311] border-b border-white/5 flex flex-wrap gap-2 text-xs">
           <button
             onClick={() => setFilter('all')}
+            aria-pressed={filter === 'all'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'all'
                 ? 'bg-[#ece6d3] text-black font-semibold'
@@ -133,6 +134,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 {developed && (
           <button
             onClick={() => setFilter('anomalies')}
+            aria-pressed={filter === 'anomalies'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors flex items-center gap-1.5 ${
               filter === 'anomalies'
                 ? 'bg-red-600 text-white font-semibold'
@@ -146,6 +148,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
           <button
             onClick={() => setFilter('carA')}
+            aria-pressed={filter === 'carA'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'carA'
                 ? 'bg-[#ece6d3] text-black font-semibold'
@@ -157,6 +160,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
           <button
             onClick={() => setFilter('carB')}
+            aria-pressed={filter === 'carB'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'carB'
                 ? 'bg-[#ece6d3] text-black font-semibold'
@@ -168,6 +172,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
           <button
             onClick={() => setFilter('carC')}
+            aria-pressed={filter === 'carC'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'carC'
                 ? 'bg-[#ece6d3] text-black font-semibold'
