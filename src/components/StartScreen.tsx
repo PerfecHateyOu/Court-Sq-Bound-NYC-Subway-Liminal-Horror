@@ -48,25 +48,25 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto safe-pad bg-black/80 backdrop-blur-md">
-      <div className="w-full max-w-xl my-auto animate-in fade-in zoom-in-95 duration-400">
+      <div className="start-card w-full max-w-xl my-auto animate-in fade-in zoom-in-95 duration-400">
         {/* Game Title & Branding Header */}
-        <div className="mb-4 text-center select-none">
+        <div className="start-head mb-4 text-center select-none">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#101411]/90 border border-white/10 text-[10px] sm:text-[11px] font-mono tracking-[0.22em] text-[#9a9684] uppercase mb-1.5 shadow-md">
             <span>A Liminal Subway Horror Game</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight uppercase text-white drop-shadow-md">
             LAST LOCAL
           </h1>
-          <p className="text-[11px] min-[360px]:text-xs sm:text-sm font-mono text-[#6cbe45] tracking-normal min-[360px]:tracking-wide mt-1">
+          <p className="start-tagline text-[11px] min-[360px]:text-xs sm:text-sm font-mono text-[#6cbe45] tracking-normal min-[360px]:tracking-wide mt-1">
             Every stop takes you further from home.
           </p>
-          <div className="text-[10px] sm:text-[11px] font-mono tracking-[0.1em] min-[360px]:tracking-[0.2em] text-[#8d8371] uppercase mt-0.5">
+          <div className="start-motto text-[10px] sm:text-[11px] font-mono tracking-[0.1em] min-[360px]:tracking-[0.2em] text-[#8d8371] uppercase mt-0.5">
             New York City · Last Train · No Way Back
           </div>
         </div>
 
         {/* MTA Station Mosaic Tablet */}
-        <div className="relative rounded-sm p-4 bg-[#e8e2cf] text-[#1b1d18] shadow-2xl border-4 border-[#1c241e]">
+        <div className="start-plaque relative rounded-sm p-4 bg-[#e8e2cf] text-[#1b1d18] shadow-2xl border-4 border-[#1c241e]">
           {/* Mosaic Tile Texture Grid */}
           <div
             className="absolute inset-0 opacity-40 pointer-events-none"
@@ -78,7 +78,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
           />
 
           {/* Mosaic Border Frame */}
-          <div className="relative border-8 border-transparent p-4 sm:p-6 bg-[#e8e2cf]"
+          <div className="start-frame relative border-8 border-transparent p-4 sm:p-6 bg-[#e8e2cf]"
                style={{
                  borderImage: 'repeating-linear-gradient(90deg, #6cbe45 0 14px, #264a22 14px 28px, #e8e2cf 28px 42px) 8',
                }}>
@@ -95,7 +95,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         </div>
 
         {/* Narrative & Gameplay Briefing */}
-        <div className="mt-5 p-5 rounded bg-[#101411]/90 border border-white/10 text-[#ece6d3] text-sm sm:text-base leading-relaxed space-y-3.5 shadow-xl">
+        <div className="start-brief mt-5 p-5 rounded bg-[#101411]/90 border border-white/10 text-[#ece6d3] text-sm sm:text-base leading-relaxed space-y-3.5 shadow-xl">
           <p className="text-[#ece6d3]/95">
             You're on the Last Local to Queens with your parents. Somewhere along the way, your perception starts to slip. Get to Court Square without losing your mind, and without letting them notice.
           </p>
@@ -131,7 +131,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         </div>
 
         {/* Action Controls & Settings */}
-        <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="start-actions mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <button
             onClick={() => onStart(startMuted, showDebug, nightmareUnlocked && nightmare, nightmareUnlocked ? startChapter : 1)}
             className="px-6 py-3.5 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base sm:text-lg tracking-wide transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
@@ -195,7 +195,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         </div>
 
         {nightmareUnlocked && (
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1.5 text-xs text-[#9a9684]">
+          <div className="start-chapter mt-3 flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1.5 text-xs text-[#9a9684]">
             <label className="flex items-center gap-2">
               <span className="text-[#ece6d3] font-semibold">Start from</span>
               <select

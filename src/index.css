@@ -11,6 +11,41 @@
   }
 }
 
+/* Start screen. One column on phones held upright. On wider landscape screens (laptops, desktops,
+   phones turned sideways) two columns: title, station sign and Board the Train on the left, the
+   briefing on the right, so the button is in view without scrolling (1280x720 and up). Unlayered,
+   so these win over the single-column Tailwind classes on the same elements. */
+@media (min-width: 640px) and (orientation: landscape) {
+  .start-card {
+    max-width: 64rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    grid-template-areas: "head brief" "plaque brief" "actions brief" "chapter brief";
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  .start-head { grid-area: head; }
+  .start-head h1 { font-size: clamp(2.25rem, 4.4vw, 3.75rem); line-height: 1; }
+  .start-plaque { grid-area: plaque; }
+  .start-plaque h2 { font-size: clamp(1.625rem, 3vw, 2.5rem); }
+  .start-brief { grid-area: brief; margin-top: 0; }
+  .start-actions { grid-area: actions; flex-direction: column; align-items: stretch; }
+  .start-chapter { grid-area: chapter; }
+}
+/* Phones turned sideways are short: tighten the left column so Board the Train still fits. */
+@media (min-width: 640px) and (orientation: landscape) and (max-height: 500px) {
+  .start-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .start-head { margin-bottom: 0.5rem; }
+  .start-head h1 { font-size: 2rem; }
+  .start-tagline { font-size: 11px; letter-spacing: 0; }
+  .start-motto { font-size: 10px; letter-spacing: 0.08em; }
+  .start-plaque { padding: 0.5rem; }
+  .start-frame { padding: 0.5rem 0.875rem; }
+  .start-plaque h2 { font-size: 1.25rem; }
+  .start-actions { margin-top: 0.5rem; }
+}
+
 :root {
   --tunnel: #0a0d0b;
   --ink: #ece6d3;
