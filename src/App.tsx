@@ -170,8 +170,8 @@ export default function App() {
       // Tab switched away: silence everything; music starts when the player comes back.
       audioEngine.suspend();
     } else {
-      // Game audio fades out, pause music (shaped by the current sanity tier) fades in.
-      audioEngine.enterPause(G.tier);
+      // Game audio and the ride's music fade out; the clean pause tune fades in.
+      audioEngine.enterPause();
     }
     // Free the cursor so the Resume button can be clicked.
     if (document.pointerLockElement) document.exitPointerLock();
@@ -698,7 +698,7 @@ export default function App() {
       } else if (G.paused) {
         // Back on the tab while paused: bring the pause music back.
         audioEngine.wake();
-        audioEngine.enterPause(G.tier);
+        audioEngine.enterPause();
       }
     };
 

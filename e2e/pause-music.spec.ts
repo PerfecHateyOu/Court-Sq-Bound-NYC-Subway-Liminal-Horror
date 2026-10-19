@@ -30,49 +30,26 @@ test.describe('pause music', () => {
     expect(s3.paused).toBe(false);
   });
 
-  test('pausing at each tier plays that tier', async ({ page, game }) => {
-    const tiers: number[] = [];
+  test('the pause menu plays the tune clean at every tier: a pocket of normal', async ({ page, game }) => {
     for (const [t, san] of [[0, 95], [1, 60], [2, 25], [3, 5]]) {
       await M(game, `toTier(${san}, ${t});`);
       await page.keyboard.press('KeyP');
-      tiers.push(await M(game, `await sleep(600); return M.currentTier;`));
+      const s = await M(game, `await sleep(2500); return { playing: M.playing, melody: M.stats.melodyNotes };`);
+      expect(s.playing).toBe(true);
+      expect(s.melody).toBeGreaterThan(0); // the tune, not just chords
       await page.keyboard.press('KeyP');
       await page.waitForTimeout(800);
     }
-    expect(tiers).toEqual([0, 1, 2, 3]);
   });
 
-  test('detune grows with each tier (30 s offline render per tier)', async ({ game }) => {
+  test('the pause tune plays the melody on a steady tempo (30 s offline render)', async ({ game }) => {
     // Offline, so the result doesn't depend on how busy the machine is.
-    const tiers = await M(game, `const out = [];
-      for (let t = 0; t < 4; t++) {
-        const oc = new OfflineAudioContext(1, 44100 * 30, 44100); const m = new (M.constructor)(oc, oc.destination);
-        m.start(t); clearInterval(m.timer); m.timer = null;
-        while (m.nextStepTime < 28.5) { m.playStep(m.nextStepTime); m.nextStepTime += m.stepDuration(); m.step++; if (m.step % 8 === 0) m.bar++; }
-        out.push({ detune: m.stats.maxAbsDetune, wrong: m.stats.wrongNotes });
-      }
-      return out;`);
-    expect(tiers[0].detune).toBe(0);
-    expect(tiers[1].detune).toBeGreaterThan(0);
-    expect(tiers[1].detune).toBeLessThanOrEqual(10.01);
-    expect(tiers[2].detune).toBeGreaterThan(tiers[1].detune);
-    expect(tiers[3].detune).toBeGreaterThan(tiers[2].detune);
-  });
-
-  test('wrong notes only at Critical, and Critical is slower (30 s offline render per tier)', async ({ game }) => {
-    const wrong = await M(game, `const out = [];
-      for (let t = 0; t < 4; t++) {
-        const oc = new OfflineAudioContext(1, 44100 * 30, 44100); const m = new (M.constructor)(oc, oc.destination);
-        m.start(t); clearInterval(m.timer); m.timer = null;
-        while (m.nextStepTime < 28.5) { m.playStep(m.nextStepTime); m.nextStepTime += m.stepDuration(); m.step++; if (m.step % 8 === 0) m.bar++; }
-        out.push({ wrong: m.stats.wrongNotes, notes: m.stats.notes });
-      }
-      return out;`);
-    expect(wrong.slice(0, 3).map((x: any) => x.wrong)).toEqual([0, 0, 0]);
-    expect(wrong[3].notes).toBeGreaterThan(30);
-    expect(wrong[3].wrong).toBeGreaterThan(0);
-    // Tempo from the offline render too: live note counts wobble when the CPU is busy.
-    expect(wrong[3].notes).toBeLessThan(wrong[0].notes);
+    const r = await M(game, `const oc = new OfflineAudioContext(1, 44100 * 30, 44100); const m = new (M.constructor)(oc, oc.destination);
+      m.playing = true; m.nextStepTime = 0.1;
+      while (m.nextStepTime < 28.5) { m.playStep(m.nextStepTime); m.nextStepTime += m.stepDuration(); m.step++; if (m.step % 8 === 0) m.bar++; }
+      return { melody: m.stats.melodyNotes, bars: m.bar };`);
+    expect(r.melody).toBeGreaterThan(30);
+    expect(r.bars).toBeGreaterThanOrEqual(7); // 68 bpm, 4/4
   });
 
   test('tab switches, restart, and the report screen', async ({ page, game }) => {

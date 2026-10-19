@@ -5,6 +5,7 @@
  */
 
 import { PauseMusic } from './pauseMusic';
+import { RideMusic, type RideMusicCue } from './rideMusic';
 import { Intercom } from './intercom';
 import { TapePlayback } from './tapePlayback';
 import { EvpAudio, type EvpSoundState } from './evpAudio';
@@ -13,7 +14,8 @@ import { settings } from '../settings';
 /*
  * Signal chain:
  *   game sounds + bed ─► masterGain (game bus: run level, ducked while paused) ─► gameVol ─┐
- *   pause music ───────────────────────────────────────────────────────────────► musicVol ─┴► outGain (mute) ─► speakers
+ *   pause music (the clean tune) ──────────────────────────────────────────────► musicVol ─┤
+ *   ride music (the tune going wrong, rideMusic.ts) ─► its own pause duck ─────► musicVol ─┴► outGain (mute) ─► speakers
  *
  * gameVol and musicVol are the player's volume settings; they never move otherwise.
  */
@@ -24,6 +26,7 @@ export class AudioEngine {
   private gameVol: GainNode | null = null;
   private musicVol: GainNode | null = null;
   private pauseMusic: PauseMusic | null = null;
+  private rideMusic: RideMusic | null = null;
   private intercomVoice: Intercom | null = null;
   private ducked: boolean = false;
   private bedGain: GainNode | null = null;
@@ -62,6 +65,7 @@ export class AudioEngine {
       this.masterGain.connect(this.gameVol);
 
       this.pauseMusic = new PauseMusic(this.ac, this.musicVol);
+      this.rideMusic = new RideMusic(this.ac, this.musicVol);
 
       // Generate White and Brown noise buffers
       const sr = this.ac.sampleRate;
@@ -211,22 +215,40 @@ export class AudioEngine {
   }
 
   /**
-   * Pause: fade the game out and the pause music in. The music degrades with sanity tier (0-3).
+   * Pause: fade the game and the ride's music out, and the clean pause tune in. The ride's music
+   * keeps its place (it runs on game time) and picks up where it was on resume.
    * The audio context keeps running; use suspend() instead when the tab is hidden.
    */
-  public enterPause(tier: number) {
+  public enterPause() {
     if (!this.ac || !this.masterGain) return;
     this.ducked = true;
     this.masterGain.gain.setTargetAtTime(0, this.ac.currentTime, 0.12);
-    this.pauseMusic?.start(tier);
+    this.rideMusic?.setPaused(true);
+    this.pauseMusic?.start();
   }
 
-  /** Resume: fade the music out and the game back in to its run level. */
+  /** Resume: fade the pause tune out and the game (and the ride's music) back in. */
   public exitPause() {
     if (!this.ac || !this.masterGain) return;
     this.ducked = false;
     this.masterGain.gain.setTargetAtTime(this.masterVolume, this.ac.currentTime, 0.3);
+    this.rideMusic?.setPaused(false);
     this.pauseMusic?.stop();
+  }
+
+  /** The ride's music, every frame the game runs (see rideMusic.ts). */
+  public updateRideMusic(dt: number, cue: RideMusicCue) {
+    this.rideMusic?.update(dt, cue);
+  }
+
+  /** A new ride: the ride's music goes back to the top of the tune. */
+  public resetRideMusic() {
+    this.rideMusic?.reset();
+  }
+
+  /** For tests. */
+  public getRideMusic(): RideMusic | null {
+    return this.rideMusic;
   }
 
   /** For tests and the debug overlay. */

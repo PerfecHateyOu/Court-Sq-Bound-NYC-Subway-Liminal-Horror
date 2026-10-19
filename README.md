@@ -27,7 +27,7 @@ No environment variables are required.
 
 ### Tests
 
-The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, pause music, heartbeat, haptics, intercom, screen glitch, breathing, the tape recorder, chapters and endings, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
+The browser tests in `e2e/` play the game in headless Chromium and check each system: flags and restart, the ride and pause music, heartbeat, haptics, intercom, screen glitch, breathing, the tape recorder, chapters and endings, and the Psychological Log. They build a test-mode copy of the game into `dist-test/` (the only build that exposes the engine to the tests) and serve it on port 4190.
 
 Playwright lives in `e2e/` with its own `package.json` and `bun.lock`, so install it there too:
 
@@ -77,9 +77,17 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 
 **Chapter select** unlocks at the same time: pick **Start from** on the start screen. Chapter I is the full ride from Hoyt–Schermerhorn. Chapter II (from Bedford–Nostrand Avs, into the Stop 6 Safe Haven) and Chapter III (from Nassau Av: the restraint, then the trestle, with Dad's recorder already in hand) are **practice runs**: they play exactly like the real ride, but nothing is saved. No endings, badges, Case Files entries, tapes, prints or ride history, and they don't count toward unlocks; the report and the pause menu say so. Ride Again keeps the chapter (and Nightmare) until you choose again. Where each chapter starts is `CHAPTER_START_SEGMENT` in `src/game/practice.ts`.
 
+**Music:** one tune, coming over the train's speakers, comes apart as the ride goes on. It never gets scarier or louder, just less like itself.
+- **Stops 1–3:** clean, with warm electric piano, pad, bass and soft brushes.
+- **Stops 4–6:** the opening phrase's long note goes a little flat (more each stop), notes now and then land late, and an electrical hum creeps in.
+- **Stops 7–9:** the brushes are gone. Notes go missing or hang on too long, the opening phrase comes back at the wrong time, and the tempo drifts out of step with the train.
+- **Stops 10–13:** only pieces of the opening phrase are left. Greenpoint Av goes silent from the chapter card until the restraint is over, and when the tune returns it has turned minor. The last stretch cuts out completely before Court Sq.
+
+The music steps back for the doors at each stop, nearly vanishes under PA announcements (they use the same speakers), and drops while you listen to the recorder. The pause menu plays the same tune clean, as a pocket of normal. Pausing freezes the ride's version where it was, and resuming carries on from there. Mute and the Music volume in Settings cover both.
+
 **Full screen:** boarding the train goes full screen (where the browser allows it; turn it off in Settings). Leave with Esc or the pause menu, which pauses the ride. On wide screens there's also a full-screen button in the top bar. iPhones don't let web pages go full screen: tap Share, then **Add to Home Screen**, and the game opens full screen from there.
 
-**Settings** (from the start screen or the pause menu): look speed, invert vertical look, game and pause-music volume, screen effects (match your device's reduced-motion setting, always on, or reduced), full screen when boarding, vibration, and erasing saved progress. Settings are saved on the device.
+**Settings** (from the start screen or the pause menu): look speed, invert vertical look, game and music volume, screen effects (match your device's reduced-motion setting, always on, or reduced), full screen when boarding, vibration, and erasing saved progress. Settings are saved on the device.
 
 ### Controls
 
@@ -109,7 +117,9 @@ A run takes about 10 minutes and ends with a travel report scoring sanity retain
 | `src/game/anomalyManager.ts` | Anomaly catalog by sanity tier |
 | `src/graphics/` | Procedural subway car, characters, textures, and the Trial space |
 | `src/audio/audioEngine.ts` | WebAudio bed, chimes, screech, whispers |
-| `src/audio/pauseMusic.ts` | Pause-menu music: a generated electric-piano loop that degrades with sanity tier |
+| `src/audio/theme.ts` | The game's one tune (melody, chords, instruments), shared by the ride and the pause menu |
+| `src/audio/rideMusic.ts` | Ride music: the tune over the train's speakers, going wrong stop by stop (per-stop settings in `STOP_MUSIC`) |
+| `src/audio/pauseMusic.ts` | Pause-menu music: the same tune, clean and calm at any sanity tier |
 | `src/audio/intercom.ts` | Background intercom: garbled announcements whose pitch and pace drop with sanity |
 | `src/game/evpManager.ts`, `src/audio/evpAudio.ts`, `src/audio/tapePlayback.ts` | EVP tape recorder: broadcasts and decoy carriers per stretch (shuffled every ride), tuning, tapes kept on the device |
 | `src/game/routeText.ts` | Place names per route (first and last stop, streets, the bait stop) for endings, announcements, Trial signs and broadcasts |

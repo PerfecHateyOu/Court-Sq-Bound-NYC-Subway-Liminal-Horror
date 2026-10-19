@@ -156,7 +156,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
             />
             <Slider
               id="set-music-vol"
-              label="Pause music"
+              label="Music"
               value={s.musicVolume}
               min={0}
               max={1}
