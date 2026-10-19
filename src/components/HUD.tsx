@@ -1,5 +1,5 @@
 /**
- * HUD Component for Court Sq-Bound
+ * HUD Component for LAST LOCAL
  * Authentic NYC subway graphic aesthetic: reticle with flag progress ring,
  * dynamic MTA route bullet, car consist position, gangway door prompt,
  * Polaroid camera & album buttons, PA banner, and subtitles.
@@ -144,6 +144,9 @@ export const HUD: React.FC<HUDProps> = ({
               style={{ backgroundColor: currentRoute.bulletColor, color: currentRoute.bulletTextColor }}
             >
               {currentRoute.id}
+            </span>
+            <span className="hidden min-[420px]:inline font-mono text-[10px] tracking-widest text-[#6cbe45] uppercase font-bold">
+              LAST LOCAL
             </span>
             <span className="hidden lg:inline text-[#9a9684]">Next:</span>
             <b className="min-w-0 truncate text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
@@ -419,7 +422,7 @@ export const HUD: React.FC<HUDProps> = ({
           <div className="font-bold border-b border-white/10 pb-1 mb-1 text-white">
             DEBUG: Stop {G.seg ? `${G.seg.stop}${G.seg.b ? 'b' : ''}` : '1'} ({G.phase}) | TS: {G.ts.toFixed(1)}s
           </div>
-          <div>Line: {currentRoute.name} [{currentRoute.id}]</div>
+          <div>Service: LAST LOCAL | Line: {currentRoute.name} [{currentRoute.id}]</div>
           <div>Car: {carName} | Pos: ({G.eyePos.x.toFixed(1)}, {G.eyePos.z.toFixed(1)})</div>
           <div>Sanity: {G.san.toFixed(0)} (Band: {b[0]}–{b[1]}) | Tier: {TIER_NAMES[G.tier]}</div>
           <div>Suspicion: {G.sus} (Peak: {G.peak})</div>

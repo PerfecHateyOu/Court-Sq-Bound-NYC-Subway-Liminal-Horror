@@ -1,5 +1,5 @@
 /**
- * Travel Report / Evaluation Screen for Court Sq-Bound
+ * Travel Report / Evaluation Screen for LAST LOCAL
  * Detailed psychological evaluation styled like an authentic NYC transit receipt.
  * Evaluates Sanity Retained, Mask Integrity, Anomaly Accuracy, and reveals endings.
  */
@@ -80,9 +80,9 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             <div>
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#1b1d18] text-[#ece6d3] text-[10px] font-mono font-bold tracking-wider mb-1.5">
                 <span className="w-3.5 h-3.5 rounded-full bg-[#6cbe45] text-[#1b1d18] font-black inline-flex items-center justify-center text-[9px]">
-                  G
+                  {rt.line}
                 </span>
-                MTA NYCT OFFICIAL RIDE RECORD
+                MTA NYCT // LAST LOCAL RIDE RECORD
               </div>
               <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-none text-[#1b1d18]">
                 Travel Report

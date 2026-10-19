@@ -1,5 +1,5 @@
 /**
- * Start Screen / Title Experience for Court Sq-Bound
+ * Start Screen / Title Experience for LAST LOCAL
  * Authentic NYC subway mosaic plaque and station briefing, plus the Case Files dossier.
  */
 import React from 'react';
@@ -89,7 +89,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
               <span className="w-6 h-6 rounded-full bg-[#6cbe45] text-black flex items-center justify-center text-xs font-black">
                 G
               </span>
-              <span>to Court Sq — 13 stops</span>
+              <span>LAST LOCAL — to Court Sq (13 stops)</span>
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         {/* Narrative & Gameplay Briefing */}
         <div className="mt-5 p-5 rounded bg-[#101411]/90 border border-white/10 text-[#ece6d3] text-sm sm:text-base leading-relaxed space-y-3.5 shadow-xl">
           <p className="text-[#ece6d3]/95">
-            You're riding to Queens with your parents. Somewhere along the way, your perception starts to slip. Get to Court Square without losing your mind, and without letting them notice.
+            You're on the Last Local to Queens with your parents. Somewhere along the way, your perception starts to slip. Get to Court Square without losing your mind, and without letting them notice.
           </p>
 
           <div className="space-y-2 text-xs sm:text-sm text-[#ece6d3]/90 border-t border-white/10 pt-3">

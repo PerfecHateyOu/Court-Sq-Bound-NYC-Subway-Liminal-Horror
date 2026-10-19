@@ -534,6 +534,7 @@ export class GameEngine {
       fog.far = this.fogBase.far;
     }
     audioEngine.setOpenAir(0);
+    audioEngine.stopLastLocalAnnouncement(0.1);
     this.breathBpm = 0;
     this.breathDepth = 0;
     this.psychLog = null;
@@ -638,8 +639,9 @@ export class GameEngine {
     audioEngine.setMasterLevel(0.85, 0.3);
     audioEngine.setBedLevel(1.0, 0.3);
     audioEngine.resetRideMusic(); // a new ride starts at the top of the tune
+    audioEngine.startLastLocalAnnouncement();
 
-    this.sched(1.2, () => this.setPA(fillRoute('This is a {terminus}–bound {line} train.'), 4.0));
+    this.sched(1.2, () => this.setPA(fillRoute('This is the Last Local. {terminus}–bound {line} train.'), 4.0));
     if (!this.looped) {
       this.sched(2.5, () =>
         this.setHint(
@@ -664,11 +666,15 @@ export class GameEngine {
         this.setHint(this.isTouch ? 'You have Dad\u2019s tape recorder. Tap Recorder to raise it.' : 'You have Dad\u2019s tape recorder. Press R to raise it.', 5)
       );
     }
-    this.sched(11.6, () => this.startSegment(from));
+    this.sched(11.6, () => {
+      audioEngine.stopLastLocalAnnouncement(1.2);
+      this.startSegment(from);
+    });
     this.notifyUI();
   }
 
   public startSegment(idx: number) {
+    audioEngine.stopLastLocalAnnouncement(0.5);
     const prev = this.seg;
     if (prev) {
       this.sampleSanity();

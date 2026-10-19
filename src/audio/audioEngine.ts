@@ -7,6 +7,7 @@
 import { PauseMusic } from './pauseMusic';
 import { RideMusic, type RideMusicCue } from './rideMusic';
 import { Intercom } from './intercom';
+import { LastLocalAnnouncementLoop } from './lastLocalAnnouncement';
 import { TapePlayback } from './tapePlayback';
 import { EvpAudio, type EvpSoundState } from './evpAudio';
 import { settings } from '../settings';
@@ -28,6 +29,7 @@ export class AudioEngine {
   private pauseMusic: PauseMusic | null = null;
   private rideMusic: RideMusic | null = null;
   private intercomVoice: Intercom | null = null;
+  private lastLocalAnnouncement: LastLocalAnnouncementLoop | null = null;
   private ducked: boolean = false;
   private bedGain: GainNode | null = null;
   private rumbleGain: GainNode | null = null;
@@ -87,6 +89,9 @@ export class AudioEngine {
 
       // Background intercom on the game bus: ducked on pause, covered by mute.
       this.intercomVoice = new Intercom(this.ac, this.masterGain, this.whiteBuffer);
+
+      // Ambient loop: 'last-local-announcement' for late-night NYC subway conductor voice
+      this.lastLocalAnnouncement = new LastLocalAnnouncementLoop(this.ac, this.masterGain, this.whiteBuffer);
 
       // Bed bus (hum + train rumble)
       this.bedGain = this.ac.createGain();
@@ -263,6 +268,22 @@ export class AudioEngine {
 
   public getIntercom(): Intercom | null {
     return this.intercomVoice;
+  }
+
+  /**
+   * Ambient audio loop 'last-local-announcement':
+   * Plays the distorted late-night NYC subway conductor announcement during the intro.
+   */
+  public startLastLocalAnnouncement(t0?: number) {
+    this.lastLocalAnnouncement?.start(t0);
+  }
+
+  public stopLastLocalAnnouncement(fadeDuration: number = 0.8) {
+    this.lastLocalAnnouncement?.stop(fadeDuration);
+  }
+
+  public getLastLocalAnnouncement(): LastLocalAnnouncementLoop | null {
+    return this.lastLocalAnnouncement;
   }
 
   public setBedLevel(level: number, rampTime: number = 0.3) {
