@@ -500,4 +500,41 @@ export class TextureGenerator {
       ctx.restore();
     });
   }
+  /**
+   * Subtle near-white cloth grain for passenger clothing. It multiplies the material
+   * colour, so one shared texture gives every outfit a worn, woven look.
+   */
+  public createClothGrainTexture(): THREE.CanvasTexture {
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const img = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        // Base noise plus a faint weave every other row and column.
+        let v = 232 + Math.random() * 23;
+        if (y % 2 === 0) v -= 6;
+        if (x % 2 === 0) v -= 4;
+        const i = (y * size + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.max(0, Math.min(255, v));
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    // A few soft wear patches.
+    for (let k = 0; k < 5; k++) {
+      ctx.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.04})`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * size, Math.random() * size, 4 + Math.random() * 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = this.aniso;
+    return tex;
+  }
 }

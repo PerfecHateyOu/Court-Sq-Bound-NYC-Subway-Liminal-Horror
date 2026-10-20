@@ -217,6 +217,14 @@ export interface ConsistState {
   doorBOpen: boolean;
 }
 
+/**
+ * Outfit archetypes for passengers built from boxes (see CharacterBuilder):
+ *  coat   - burgundy knee-length coat, shopping bag in one hand
+ *  mta    - MTA maintenance worker: navy uniform, hi-vis vest, hard hat
+ *  puffer - bulky puffer jacket, over-ear headphones
+ */
+export type PersonArchetype = 'coat' | 'mta' | 'puffer';
+
 export interface PersonObject {
   g: THREE.Group;
   head: THREE.Group;

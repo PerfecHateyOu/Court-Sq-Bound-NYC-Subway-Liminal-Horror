@@ -638,6 +638,7 @@ export class SubwayCarBuilder {
     const s1 = this.charBuilder.createPerson({
       tid: 's1',
       label: 'the man across the aisle',
+      archetype: 'mta',
       x: 2.35,
       z: -1.3,
       hp: 0.35,
@@ -650,6 +651,7 @@ export class SubwayCarBuilder {
     const s2 = this.charBuilder.createPerson({
       tid: 's2',
       label: 'the woman on your bench',
+      archetype: 'coat',
       x: -2.6,
       z: 1.3,
       ry: Math.PI,
@@ -664,6 +666,7 @@ export class SubwayCarBuilder {
     const s3 = this.charBuilder.createPerson({
       tid: 's3',
       label: 'the standing passenger',
+      archetype: 'puffer',
       x: 5.0,
       z: 0.55,
       ry: -Math.PI / 2,
