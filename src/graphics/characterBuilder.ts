@@ -559,14 +559,15 @@ export class CharacterBuilder {
     }
 
     if (cfg.archetype === 'overcoat') {
-      // Long charcoal-brown overcoat to the knees, black turtleneck, dark trousers. Built to stand very still.
-      const coat = this.fabric(0x4a3c33);
-      const trim = this.fabric(0x382d26);
-      const knit = new THREE.MeshLambertMaterial({ color: 0x121214 });
+      // Long warm charcoal-brown overcoat to the knees, near-black turtleneck, dark trousers. Built to stand very still.
+      // Lifted just enough to read under the car lights while staying the most sombre passenger.
+      const coat = this.fabric(0x726256);
+      const trim = this.fabric(0x5a4c42);
+      const knit = new THREE.MeshLambertMaterial({ color: 0x26262a });
       const tw = 0.43;
       const td = 0.27;
       const front = this.addTorso(g, up, tw, td, coat);
-      this.addLegs(g, standing, this.fabric(0x1d1d21), new THREE.MeshLambertMaterial({ color: 0x0e0e10 }), 1.05);
+      this.addLegs(g, standing, this.fabric(0x3a3a40), new THREE.MeshLambertMaterial({ color: 0x242427 }), 1.05);
       // Turtleneck rolled up the neck, showing down the open front of the coat.
       this.box(g, 0.115, 0.1, 0.115, knit, 0, 1.065 + up, 0);
       this.box(g, 0.12, 0.38, 0.012, knit, 0, 0.84 + up, front + 0.002);
