@@ -219,11 +219,15 @@ export interface ConsistState {
 
 /**
  * Outfit archetypes for passengers built from boxes (see CharacterBuilder):
- *  coat   - burgundy knee-length coat, shopping bag in one hand
- *  mta    - MTA maintenance worker: navy uniform, hi-vis vest, hard hat
- *  puffer - bulky puffer jacket, over-ear headphones
+ *  coat     - burgundy knee-length coat, small dark hat, canvas tote in one hand
+ *  mta      - MTA maintenance worker: navy uniform, hi-vis vest, hard hat
+ *  puffer   - bulky puffer jacket, over-ear headphones
+ *  office   - grey dress shirt and tie, messenger bag, folded newspaper
+ *  hoodie   - navy hoodie, white headphones over a beanie, baggy jeans, backpack
+ *  texter   - navy puffer, phone held up at the chest, backpack, hair in a bun
+ *  overcoat - long dark overcoat over a black turtleneck, slicked hair; very still
  */
-export type PersonArchetype = 'coat' | 'mta' | 'puffer';
+export type PersonArchetype = 'coat' | 'mta' | 'puffer' | 'office' | 'hoodie' | 'texter' | 'overcoat';
 
 export interface PersonObject {
   g: THREE.Group;

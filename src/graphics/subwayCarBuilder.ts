@@ -659,7 +659,7 @@ export class SubwayCarBuilder {
       skin: 0xe0b89a,
       shirt: 0x9a9a90,
       pants: 0x40404a,
-      hair: 0x8a6a3a,
+      hair: 0x9b968d,
       longHair: true,
     });
     // s3: The standing commuter
@@ -702,10 +702,10 @@ export class SubwayCarBuilder {
 
     // Crowd (for crowded stops 7 and 8)
     this.crowd = [
-      this.charBuilder.createPerson({ tid: 'c1', label: 'a passenger in the aisle', x: 3.0, z: 0.5, ry: -Math.PI / 2, standing: true, hy: -0.3, skin: 0x9b6a4a, shirt: 0x6b2f2f, pants: 0x2a2a2a, hair: 0x111111 }),
-      this.charBuilder.createPerson({ tid: 'c2', label: 'a passenger at the end', x: -6.6, z: -1.3, hp: 0.4, skin: 0xe2c4a8, shirt: 0x3d5f8a, pants: 0x2e2e3a, hair: 0x6a4a2a }),
-      this.charBuilder.createPerson({ tid: 'c3', label: 'a passenger behind you', x: 6.0, z: 1.3, ry: Math.PI, hp: 0.3, skin: 0x7a4e34, shirt: 0xc7a64a, pants: 0x2a2a2a, hair: 0x0e0e0e }),
-      this.charBuilder.createPerson({ tid: 'c4', label: 'a passenger by the door', x: -3.2, z: -0.25, ry: Math.PI / 2, standing: true, skin: 0xc99a7a, shirt: 0x4d4d4d, pants: 0x3c3326, hair: 0x2a1a10 }),
+      this.charBuilder.createPerson({ tid: 'c1', label: 'a passenger in the aisle', archetype: 'hoodie', x: 3.0, z: 0.5, ry: -Math.PI / 2, standing: true, hy: -0.3, skin: 0x9b6a4a, shirt: 0x6b2f2f, pants: 0x2a2a2a, hair: 0x111111 }),
+      this.charBuilder.createPerson({ tid: 'c2', label: 'a passenger at the end', archetype: 'texter', x: -6.6, z: -1.3, hp: 0.4, skin: 0xe2c4a8, shirt: 0x3d5f8a, pants: 0x2e2e3a, hair: 0x6a4a2a }),
+      this.charBuilder.createPerson({ tid: 'c3', label: 'a passenger behind you', archetype: 'overcoat', x: 6.0, z: 1.3, ry: Math.PI, hp: 0.3, skin: 0x7a4e34, shirt: 0xc7a64a, pants: 0x2a2a2a, hair: 0x0e0e0e }),
+      this.charBuilder.createPerson({ tid: 'c4', label: 'a passenger by the door', archetype: 'office', x: -3.2, z: -0.25, ry: Math.PI / 2, standing: true, skin: 0xc99a7a, shirt: 0x4d4d4d, pants: 0x3c3326, hair: 0x2a1a10 }),
       this.charBuilder.createPerson({ tid: 'c5', label: 'a passenger across', x: 3.15, z: -1.3, hp: 0.5, skin: 0xb07a58, shirt: 0x7a7a3a, pants: 0x262626, hair: 0x1a1a1a }),
     ];
     this.crowd.forEach((c) => {
@@ -897,6 +897,7 @@ export class SubwayCarBuilder {
     const pa1 = this.charBuilder.createPerson({
       tid: 'pa1',
       label: 'the commuter reading in Car A',
+      archetype: 'office',
       x: -18.5,
       z: -1.3,
       hp: 0.3,
@@ -904,11 +905,11 @@ export class SubwayCarBuilder {
       shirt: 0x4a5d4e,
       pants: 0x222629,
       hair: 0x1c1a17,
-      phone: true,
     });
     const pa2 = this.charBuilder.createPerson({
       tid: 'pa2',
       label: 'the commuter staring ahead in Car A',
+      archetype: 'overcoat',
       x: -22.0,
       z: 1.3,
       ry: Math.PI,
@@ -995,6 +996,7 @@ export class SubwayCarBuilder {
     const pc1 = this.charBuilder.createPerson({
       tid: 'pc1',
       label: 'the passenger holding the pole in Car C',
+      archetype: 'texter',
       x: 17.0,
       z: 0.55,
       ry: -Math.PI / 2,
@@ -1007,6 +1009,7 @@ export class SubwayCarBuilder {
     const pc2 = this.charBuilder.createPerson({
       tid: 'pc2',
       label: 'the hooded passenger in Car C',
+      archetype: 'hoodie',
       x: 23.5,
       z: -1.3,
       hp: 0.4,

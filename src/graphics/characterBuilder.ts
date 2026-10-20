@@ -178,7 +178,7 @@ export class CharacterBuilder {
       head.add(bridge);
     }
 
-    if (cfg.archetype) this.addHeadwear(head, cfg.archetype);
+    if (cfg.archetype) this.addHeadwear(head, cfg.archetype, hairMat);
 
     // Smartphone
     let phone: THREE.Object3D | null = null;
@@ -237,21 +237,23 @@ export class CharacterBuilder {
   }
 
   /** Legs, hips and shoes for either pose. */
-  private addLegs(g: THREE.Group, standing: boolean, pantsMat: THREE.Material, shoeMat: THREE.Material, shoeScale = 1, soleMat?: THREE.Material) {
+  private addLegs(g: THREE.Group, standing: boolean, pantsMat: THREE.Material, shoeMat: THREE.Material, shoeScale = 1, soleMat?: THREE.Material, legScale = 1) {
     const sw = 0.13 * shoeScale;
     const sh = 0.08 * shoeScale;
+    const L = legScale;
     if (standing) {
-      this.box(g, 0.34, 0.16, 0.22, pantsMat, 0, 0.9, 0);
+      this.box(g, 0.34 * Math.min(L, 1.06), 0.16, 0.22 * L, pantsMat, 0, 0.9, 0);
       [-0.09, 0.09].forEach((dx) => {
-        this.box(g, 0.15, 0.44, 0.16, pantsMat, dx, 0.62, 0);
-        this.box(g, 0.13, 0.42, 0.14, pantsMat, dx, 0.25, 0.005);
+        this.box(g, 0.15 * L, 0.44, 0.16 * L, pantsMat, dx, 0.62, 0);
+        // Baggy legs flare a little at the ankle.
+        this.box(g, 0.13 * L * L, 0.42, 0.14 * L * L, pantsMat, dx, 0.25 + (L > 1 ? 0.02 : 0), 0.005);
         this.box(g, sw, sh, 0.27, shoeMat, dx, sh / 2, 0.05);
         if (soleMat) this.box(g, sw + 0.006, 0.025, 0.275, soleMat, dx, 0.0125, 0.05);
       });
     } else {
-      this.box(g, 0.35, 0.15, 0.44, pantsMat, 0, 0.55, 0.2);
+      this.box(g, 0.35 * Math.min(L, 1.06), 0.15 * L, 0.44, pantsMat, 0, 0.55, 0.2);
       [-0.1, 0.1].forEach((dx) => {
-        this.box(g, 0.13, 0.48, 0.13, pantsMat, dx, 0.25, 0.38);
+        this.box(g, 0.13 * L, 0.48, 0.13 * L, pantsMat, dx, 0.25, 0.38);
         this.box(g, sw * 0.95, sh, 0.25, shoeMat, dx, sh / 2, 0.45);
         if (soleMat) this.box(g, sw * 0.95 + 0.006, 0.025, 0.255, soleMat, dx, 0.0125, 0.45);
       });
@@ -273,7 +275,7 @@ export class CharacterBuilder {
    * One arm: 'lap' rests the forearm forward like the original passengers,
    * 'down' hangs at the side (for carrying). Returns the hand mesh.
    */
-  private addArm(g: THREE.Group, s: number, pose: 'lap' | 'down', up: number, ax: number, sleeve: THREE.Material, skMat: THREE.Material, thick = 1, cuff?: THREE.Material, reach = 0): THREE.Mesh {
+  private addArm(g: THREE.Group, s: number, pose: 'lap' | 'down', up: number, ax: number, sleeve: THREE.Material, skMat: THREE.Material, thick = 1, cuff?: THREE.Material, reach = 0, splay = 0): THREE.Mesh {
     const t = thick;
     if (pose === 'lap') {
       this.box(g, 0.095 * t, 0.32, 0.105 * t, sleeve, s * ax, 0.85 + up, 0.02);
@@ -287,6 +289,7 @@ export class CharacterBuilder {
     const pivot = new THREE.Group();
     pivot.position.set(s * ax, 1.0 + up, 0);
     pivot.rotation.x = -reach;
+    pivot.rotation.z = s * splay;
     g.add(pivot);
     this.box(pivot, 0.095 * t, 0.32, 0.105 * t, sleeve, 0, -0.16, 0);
     this.box(pivot, 0.085 * t, 0.26, 0.09 * t, sleeve, 0, -0.43, 0);
@@ -294,6 +297,44 @@ export class CharacterBuilder {
     const hand = this.box(pivot, 0.065, 0.09, 0.08, skMat, 0, -0.61, 0);
     this.box(pivot, 0.022, 0.04, 0.03, skMat, -s * 0.04, -0.6, 0.025);
     return hand;
+  }
+
+  /** Resting arm: forearm on the lap when seated, hanging loose at the side when standing. */
+  private restArm(g: THREE.Group, s: number, standing: boolean, up: number, ax: number, sleeve: THREE.Material, skMat: THREE.Material, thick = 1, cuff?: THREE.Material, splay = 0.05): THREE.Mesh {
+    return standing ? this.addArm(g, s, 'down', up, ax, sleeve, skMat, thick, cuff, 0.04, splay) : this.addArm(g, s, 'lap', up, ax, sleeve, skMat, thick, cuff);
+  }
+
+  /** A box stretched between two points (for bent limbs and straps). */
+  private limb(parent: THREE.Object3D, a: THREE.Vector3, b: THREE.Vector3, w: number, d: number, mat: THREE.Material): THREE.Mesh {
+    const dir = new THREE.Vector3().subVectors(b, a);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, dir.length(), d), mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    parent.add(m);
+    return m;
+  }
+
+  /** Backpack: straps over the front of the shoulders; the pack sits on the back standing, on the floor by the right foot seated. */
+  private addBackpack(g: THREE.Group, standing: boolean, up: number, tw: number, td: number, packMat: THREE.Material, strapMat: THREE.Material) {
+    const front = td / 2;
+    if (standing) {
+      [-1, 1].forEach((s) => {
+        this.box(g, 0.04, 0.3, 0.012, strapMat, s * tw * 0.27, 0.86 + up, front + 0.008);
+        this.box(g, 0.04, 0.012, td + 0.02, strapMat, s * tw * 0.27, 1.02 + up, 0);
+      });
+      this.box(g, tw * 0.72, 0.38, 0.14, packMat, 0, 0.8 + up, -front - 0.07);
+      this.box(g, tw * 0.6, 0.15, 0.04, packMat, 0, 0.72 + up, -front - 0.155);
+      this.box(g, tw * 0.6, 0.012, 0.045, strapMat, 0, 0.8 + up, -front - 0.155);
+    } else {
+      // Seated, the straps hang loose and the pack leans against the right shin.
+      const pack = new THREE.Group();
+      this.box(pack, 0.28, 0.36, 0.13, packMat, 0, 0.18, 0);
+      this.box(pack, 0.22, 0.14, 0.04, packMat, 0, 0.11, 0.08);
+      this.box(pack, 0.22, 0.012, 0.045, strapMat, 0, 0.19, 0.08);
+      pack.position.set(0.33, 0, 0.42);
+      pack.rotation.set(-0.12, -0.5, 0);
+      g.add(pack);
+    }
   }
 
   private buildArchetypeBody(g: THREE.Group, cfg: PersonConfig, skMat: THREE.Material, up: number) {
@@ -336,20 +377,22 @@ export class CharacterBuilder {
         this.box(g, 0.39, 0.2, 0.04, coat, 0, 0.53, 0.44);
         [-1, 1].forEach((s) => this.box(g, 0.03, 0.2, 0.4, coat, s * 0.2, 0.53, 0.15));
       }
-      // Arms: left on the lap, right hanging with the bag.
+      // Arms: left on the lap (loose at her side standing), right hanging with the tote.
       const ax = tw / 2 + 0.05;
-      this.addArm(g, -1, 'lap', up, ax, coat, skMat, 1, trim);
+      this.restArm(g, -1, standing, up, ax, coat, skMat, 1, trim);
       // Standing the bag hangs at her side; seated it rests on the floor by her right shin.
       const reach = standing ? 0 : 0.57;
       this.addArm(g, 1, 'down', up, ax, coat, skMat, 1, trim, reach);
-      // Kraft shopping bag with dark rope handles, hanging from the right hand.
+      // Cream canvas tote with long canvas straps, hanging from the right hand.
       const bag = new THREE.Group();
-      const kraft = this.fabric(0x8a6b48);
-      const rope = new THREE.MeshLambertMaterial({ color: 0x1d1a17 });
-      this.box(bag, 0.11, 0.3, 0.26, kraft, 0, -0.15, 0);
-      this.box(bag, 0.112, 0.04, 0.262, this.fabric(0x6f5236), 0, -0.02, 0);
-      [-0.05, 0.05].forEach((hz) => this.box(bag, 0.012, 0.1, 0.012, rope, 0, 0.05, hz));
-      this.box(bag, 0.012, 0.012, 0.11, rope, 0, 0.1, 0);
+      const canvas = this.fabric(0xc9c0a3);
+      const strap = this.fabric(0x9e9579);
+      this.box(bag, 0.06, 0.32, 0.3, canvas, 0, -0.2, 0);
+      this.box(bag, 0.062, 0.03, 0.302, strap, 0, -0.355, 0);
+      [-1, 1].forEach((s) => {
+        this.limb(bag, new THREE.Vector3(0, 0.1, s * 0.012), new THREE.Vector3(0, -0.045, s * 0.09), 0.016, 0.02, strap);
+        this.box(bag, 0.064, 0.2, 0.022, strap, 0, -0.14, s * 0.09);
+      });
       bag.position.set(ax + 0.03, 1.0 + up - 0.61 * Math.cos(reach) - 0.1, 0.61 * Math.sin(reach));
       g.add(bag);
       return;
@@ -384,7 +427,177 @@ export class CharacterBuilder {
       this.box(g, tw * 0.86 + 0.035, 0.05, td * 0.92 + 0.035, leather, 0, 0.52 + up, 0);
       this.box(g, 0.07, 0.09, 0.08, leather, 0.19, 0.49 + up, 0.04);
       const ax = tw / 2 + 0.05;
-      [-1, 1].forEach((s) => this.addArm(g, s, 'lap', up, ax, navy, skMat));
+      [-1, 1].forEach((s) => this.restArm(g, s, standing, up, ax, navy, skMat));
+      return;
+    }
+
+    if (cfg.archetype === 'office') {
+      // Office worker: light grey dress shirt, dark tie, dark trousers, messenger bag, folded newspaper.
+      const shirt = this.fabric(0xa9aca9);
+      const shirtShade = this.fabric(0x8d908e);
+      const tie = new THREE.MeshLambertMaterial({ color: 0x1f2531 });
+      const trousers = this.fabric(0x26282d);
+      const leather = new THREE.MeshLambertMaterial({ color: 0x3a2d22 });
+      const paper = new THREE.MeshLambertMaterial({ color: 0xcdc8b6 });
+      const ink = new THREE.MeshLambertMaterial({ color: 0x3b3a37 });
+      const tw = 0.38;
+      const td = 0.23;
+      const front = this.addTorso(g, up, tw, td, shirt);
+      this.addLegs(g, standing, trousers, shoeMat, 1.05);
+      // Collar points, knot, and a tie that narrows at the waist.
+      [-1, 1].forEach((s) => {
+        const pt = this.box(g, 0.06, 0.035, 0.012, shirtShade, s * 0.035, 1.03 + up, front + 0.004);
+        pt.rotation.z = s * 0.5;
+      });
+      this.box(g, 0.13, 0.05, td * 0.7, shirt, 0, 1.04 + up, -0.01);
+      this.box(g, 0.035, 0.035, 0.015, tie, 0, 1.0 + up, front + 0.008);
+      this.box(g, 0.045, 0.2, 0.008, tie, 0, 0.88 + up, front + 0.006);
+      const tip = this.box(g, 0.032, 0.032, 0.008, tie, 0, 0.775 + up, front + 0.006);
+      tip.rotation.z = Math.PI / 4;
+      this.box(g, tw * 0.86 + 0.01, 0.035, td * 0.92 + 0.01, trousers, 0, 0.52 + up, 0);
+      const ax = tw / 2 + 0.05;
+      // Messenger bag: strap from the left shoulder across to the right hip.
+      this.limb(g, new THREE.Vector3(-0.12, 1.03 + up, front + 0.01), new THREE.Vector3(0.17, 0.6 + up, front + 0.01), 0.035, 0.01, leather);
+      this.limb(g, new THREE.Vector3(-0.12, 1.03 + up, -front - 0.01), new THREE.Vector3(0.17, 0.6 + up, -front - 0.01), 0.035, 0.01, leather);
+      if (standing) {
+        this.box(g, 0.07, 0.24, 0.3, leather, ax + 0.06, 0.52 + up, -0.02);
+        this.box(g, 0.075, 0.1, 0.305, this.fabric(0x2c2219), ax + 0.06, 0.6 + up, -0.02);
+        // Arms loose; the folded paper is tucked in the left hand.
+        this.restArm(g, 1, standing, up, ax, shirt, skMat, 1, shirtShade, 0.12);
+        const hand = this.restArm(g, -1, standing, up, ax, shirt, skMat, 1, shirtShade, 0.05);
+        const fold = new THREE.Group();
+        this.box(fold, 0.03, 0.26, 0.17, paper, 0, 0, 0);
+        [1, -1].forEach((side) => {
+          this.box(fold, 0.004, 0.045, 0.13, ink, side * 0.016, 0.08, 0.0);
+          [0.02, -0.02, -0.06].forEach((y) => this.box(fold, 0.004, 0.012, 0.13, ink, side * 0.016, y, 0));
+        });
+        fold.position.set(0.0, -0.06, 0.07);
+        fold.rotation.set(0.15, -0.9, 0);
+        hand.add(fold);
+      } else {
+        // Seated: bag on the bench by his hip, reading the folded paper over his lap.
+        this.box(g, 0.08, 0.24, 0.3, leather, -(tw / 2 + 0.18), 0.62, 0.05);
+        [-1, 1].forEach((s) => this.addArm(g, s, 'lap', up, ax - 0.03, shirt, skMat, 1, shirtShade));
+        const read = new THREE.Group();
+        this.box(read, 0.3, 0.2, 0.012, paper, 0, 0, 0);
+        this.box(read, 0.26, 0.04, 0.014, ink, 0, 0.065, 0);
+        [-0.06, 0.06].forEach((x) => [0.0, -0.035, -0.07].forEach((y) => this.box(read, 0.11, 0.01, 0.014, ink, x, y, 0)));
+        read.position.set(0, 0.79, 0.37);
+        read.rotation.x = -0.55;
+        g.add(read);
+      }
+      return;
+    }
+
+    if (cfg.archetype === 'hoodie') {
+      // Teen: dark navy hoodie with drawstrings and pouch, baggy light-wash jeans, white sneakers, backpack.
+      const hood = this.fabric(0x222a3d);
+      const hoodShade = this.fabric(0x1a2030);
+      const cord = new THREE.MeshLambertMaterial({ color: 0xd6d3c8 });
+      const tw = 0.42;
+      const td = 0.27;
+      const front = this.addTorso(g, up, tw, td, hood);
+      // Ribbed hem and a kangaroo pouch.
+      this.box(g, tw * 0.86 + 0.02, 0.05, td * 0.92 + 0.02, hoodShade, 0, 0.525 + up, 0);
+      this.box(g, 0.24, 0.12, 0.014, hoodShade, 0, 0.64 + up, td * 0.46 + 0.006);
+      // Hood bunched behind the neck, drawstrings down the chest.
+      this.box(g, 0.28, 0.13, 0.12, hood, 0, 1.08 + up, -0.09);
+      this.box(g, 0.26, 0.06, 0.24, hood, 0, 1.05 + up, 0);
+      [-1, 1].forEach((s) => {
+        this.box(g, 0.012, 0.15, 0.012, cord, s * 0.04, 0.95 + up, front + 0.008);
+        this.box(g, 0.018, 0.025, 0.018, cord, s * 0.04, 0.87 + up, front + 0.008);
+      });
+      this.addLegs(g, standing, this.fabric(0x7a8ba1), new THREE.MeshLambertMaterial({ color: 0xdedbd2 }), 1.15, new THREE.MeshLambertMaterial({ color: 0xf1efe8 }), 1.18);
+      this.addBackpack(g, standing, up, tw, td, this.fabric(0x2b2b2e), new THREE.MeshLambertMaterial({ color: 0x141416 }));
+      const ax = tw / 2 + 0.055;
+      [-1, 1].forEach((s) => this.restArm(g, s, standing, up, ax, hood, skMat, 1.12, hoodShade, 0.06));
+      return;
+    }
+
+    if (cfg.archetype === 'texter') {
+      // Young woman: navy puffer, phone held up in front of her chest, backpack, baggy light jeans, white sneakers.
+      const shell = this.fabric(0x283148);
+      const seam = new THREE.MeshLambertMaterial({ color: 0x151a27 });
+      const tw = 0.44;
+      const td = 0.3;
+      this.box(g, tw - 0.05, 0.54, td - 0.05, seam, 0, 0.78 + up, 0);
+      [0.575, 0.705, 0.835, 0.965].forEach((by, i) => {
+        const shrink = i === 0 ? 0.05 : i % 2 ? 0 : 0.015;
+        this.box(g, tw - shrink, 0.118, td - shrink, shell, 0, by + up, 0);
+      });
+      [-1, 1].forEach((s) => {
+        const cap = this.box(g, 0.13, 0.12, td * 0.9, shell, s * (tw / 2 - 0.02), 0.99 + up, 0);
+        cap.rotation.z = s * -0.15;
+      });
+      this.box(g, 0.25, 0.1, 0.25, shell, 0, 1.07 + up, -0.01);
+      this.box(g, 0.012, 0.54, 0.006, seam, 0, 0.78 + up, td / 2 + 0.004);
+      this.addLegs(g, standing, this.fabric(0x9aa6b4), new THREE.MeshLambertMaterial({ color: 0xdfdcd3 }), 1.1, new THREE.MeshLambertMaterial({ color: 0xf1efe8 }), 1.1);
+      this.addBackpack(g, standing, up, tw, td, this.fabric(0x3a3633), new THREE.MeshLambertMaterial({ color: 0x18171a }));
+      // Arms bent up, both hands meeting at the phone in front of her chest.
+      const ax = tw / 2 + 0.05;
+      const t = 1.3;
+      const hy = 0.86 + up;
+      const hz = td / 2 + 0.13;
+      [-1, 1].forEach((s) => {
+        const sh = new THREE.Vector3(s * ax, 1.0 + up, 0);
+        const el = new THREE.Vector3(s * (ax + 0.01), 0.74 + up, 0.03);
+        const wr = new THREE.Vector3(s * 0.06, hy - 0.02, hz - 0.03);
+        this.limb(g, sh, el, 0.095 * t, 0.105 * t, shell);
+        this.limb(g, el, wr, 0.085 * t, 0.085 * t, shell);
+        this.box(g, 0.05, 0.08, 0.06, skMat, s * 0.045, hy, hz);
+      });
+      const phone = new THREE.Group();
+      this.box(phone, 0.072, 0.14, 0.012, new THREE.MeshLambertMaterial({ color: 0xb79a96 }), 0, 0, 0);
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.062, 0.125), new THREE.MeshBasicMaterial({ color: 0x9fb8d6 }));
+      screen.position.z = -0.007;
+      screen.rotation.y = Math.PI;
+      phone.add(screen);
+      phone.position.set(0, hy + 0.03, hz + 0.01);
+      phone.rotation.x = -0.35;
+      g.add(phone);
+      return;
+    }
+
+    if (cfg.archetype === 'overcoat') {
+      // Long charcoal-brown overcoat to the knees, black turtleneck, dark trousers. Built to stand very still.
+      const coat = this.fabric(0x4a3c33);
+      const trim = this.fabric(0x382d26);
+      const knit = new THREE.MeshLambertMaterial({ color: 0x121214 });
+      const tw = 0.43;
+      const td = 0.27;
+      const front = this.addTorso(g, up, tw, td, coat);
+      this.addLegs(g, standing, this.fabric(0x1d1d21), new THREE.MeshLambertMaterial({ color: 0x0e0e10 }), 1.05);
+      // Turtleneck rolled up the neck, showing down the open front of the coat.
+      this.box(g, 0.115, 0.1, 0.115, knit, 0, 1.065 + up, 0);
+      this.box(g, 0.12, 0.38, 0.012, knit, 0, 0.84 + up, front + 0.002);
+      // Wide notched lapels and a stand collar.
+      [-1, 1].forEach((s) => {
+        const lapel = this.box(g, 0.09, 0.3, 0.022, trim, s * 0.085, 0.88 + up, front + 0.008);
+        lapel.rotation.z = s * 0.22;
+        const notch = this.box(g, 0.07, 0.05, 0.022, trim, s * 0.13, 1.0 + up, front + 0.01);
+        notch.rotation.z = s * -0.5;
+      });
+      this.box(g, 0.32, 0.08, td + 0.01, trim, 0, 1.04 + up, -0.015);
+      [0.66, 0.56].forEach((by) => this.box(g, 0.022, 0.022, 0.01, knit, 0.1, by + up, td * 0.46 + 0.005));
+      if (standing) {
+        const geo = new THREE.CylinderGeometry(0.707, 0.76, 1, 4, 1);
+        geo.rotateY(Math.PI / 4);
+        const skirt = new THREE.Mesh(geo, coat);
+        skirt.scale.set(0.44, 0.68, 0.29);
+        skirt.position.set(0, 0.68, 0);
+        g.add(skirt);
+        // Front opening and back vent.
+        this.box(g, 0.012, 0.66, 0.01, trim, 0.0, 0.68, 0.152);
+        this.box(g, 0.012, 0.3, 0.01, trim, 0.0, 0.5, -0.152);
+      } else {
+        this.box(g, 0.44, 0.06, 0.48, coat, 0, 0.645, 0.2);
+        this.box(g, 0.43, 0.3, 0.04, coat, 0, 0.48, 0.45);
+        [-1, 1].forEach((s) => this.box(g, 0.03, 0.26, 0.42, coat, s * 0.22, 0.5, 0.16));
+        this.box(g, 0.012, 0.3, 0.045, trim, 0.0, 0.48, 0.455);
+      }
+      // Arms straight down (standing) or hands flat on the knees (seated). No props, nothing moving.
+      const ax = tw / 2 + 0.05;
+      [-1, 1].forEach((s) => this.restArm(g, s, standing, up, ax, coat, skMat, 1.05, trim, 0.02));
       return;
     }
 
@@ -408,11 +621,66 @@ export class CharacterBuilder {
     this.box(g, 0.012, 0.56, 0.006, seam, 0, 0.78 + up, td / 2 + 0.004);
     this.addLegs(g, standing, this.fabric(0x3a4456), new THREE.MeshLambertMaterial({ color: 0xb9b3a6 }), 1.05, seam);
     const ax = tw / 2 + 0.06;
-    [-1, 1].forEach((s) => this.addArm(g, s, 'lap', up, ax, shell, skMat, 1.35, seam));
+    [-1, 1].forEach((s) => this.restArm(g, s, standing, up, ax, shell, skMat, 1.35, seam, 0.1));
   }
 
   /** Accessories that ride on the head group, so they turn with every gaze/stare. */
-  private addHeadwear(head: THREE.Group, archetype: PersonArchetype) {
+  private addHeadwear(head: THREE.Group, archetype: PersonArchetype, hairMat: THREE.MeshLambertMaterial) {
+    if (archetype === 'coat') {
+      // Small dark felt hat sitting high on the grey hair.
+      const felt = this.fabric(0x1f1c22);
+      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.105, 0.075, 8), felt);
+      crown.position.set(0, 0.115, -0.015);
+      crown.rotation.x = -0.15;
+      head.add(crown);
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.012, 8), felt);
+      brim.position.set(0, 0.08, -0.01);
+      brim.rotation.x = -0.15;
+      head.add(brim);
+      this.box(head, 0.01, 0.02, 0.06, new THREE.MeshLambertMaterial({ color: 0x4a1a24 }), 0.1, 0.095, -0.01);
+      return;
+    }
+    if (archetype === 'hoodie') {
+      // Dark beanie with a folded cuff, white over-ear headphones over it.
+      const knit = this.fabric(0x34343a);
+      const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.128, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.5), knit);
+      beanie.position.set(0, 0.03, -0.012);
+      beanie.scale.set(0.98, 1.25, 1.04);
+      head.add(beanie);
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.045, 8), knit);
+      cuff.position.set(0, 0.035, -0.012);
+      cuff.rotation.x = -0.08;
+      head.add(cuff);
+      const white = new THREE.MeshLambertMaterial({ color: 0xdedcd6 });
+      const grey = new THREE.MeshLambertMaterial({ color: 0x8e8d8a });
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.142, 0.014, 4, 10, Math.PI), white);
+      band.position.set(0, 0.0, -0.01);
+      head.add(band);
+      [-1, 1].forEach((s) => {
+        this.box(head, 0.05, 0.1, 0.09, white, s * 0.13, -0.015, -0.01);
+        this.box(head, 0.008, 0.06, 0.06, grey, s * 0.158, -0.015, -0.01);
+      });
+      return;
+    }
+    if (archetype === 'texter') {
+      // Dark hair pulled back into a bun.
+      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.055, 7, 5), hairMat);
+      bun.position.set(0, 0.105, -0.07);
+      head.add(bun);
+      this.box(head, 0.2, 0.08, 0.08, hairMat, 0, 0.04, -0.07);
+      return;
+    }
+    if (archetype === 'overcoat') {
+      // Slicked-back hair: a flat glossy cap swept to the back of the head.
+      const slick = new THREE.MeshPhongMaterial({ color: hairMat.color.getHex(), shininess: 70, specular: 0x3a3a3a });
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.122, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), slick);
+      cap.position.set(0, 0.012, -0.02);
+      cap.scale.set(0.97, 0.78, 1.06);
+      cap.rotation.x = -0.12;
+      head.add(cap);
+      this.box(head, 0.19, 0.09, 0.05, slick, 0, -0.02, -0.1);
+      return;
+    }
     if (archetype === 'mta') {
       // Low-poly hard hat: faceted dome, brim, centre ridge.
       const hat = new THREE.MeshLambertMaterial({ color: 0xd3cebf });
