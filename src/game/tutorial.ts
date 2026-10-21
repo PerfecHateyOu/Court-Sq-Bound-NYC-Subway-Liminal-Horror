@@ -51,8 +51,11 @@ export interface TutorialView {
   canNext: boolean;
 }
 
-/** The window across the aisle, straight ahead of your seat (subwayCarBuilder panes, x = 0). */
-const PANE = 2;
+/**
+ * The window across the aisle, a little to your right (subwayCarBuilder panes, x ≈ 1.9). Not the
+ * one straight ahead: that one is behind Dad's head, and he can block it.
+ */
+const PANE = 3;
 /** Look this far left or right (rad) to tick off step 1. */
 const LOOK = 1.0;
 

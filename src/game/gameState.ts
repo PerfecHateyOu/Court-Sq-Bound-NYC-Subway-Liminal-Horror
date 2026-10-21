@@ -2239,7 +2239,8 @@ export class GameEngine {
       if (ts >= L && !this.choice && !this.intervening && !this.restraint && !(seg.restraint && !this.restraintDone)) {
         this.arrive();
       }
-    } else {
+    } else if (!this.tutorial) {
+      // Off the ride, flags reset (the practice stretch flags while parked: see update()).
       this.flagProg = 0;
     }
 

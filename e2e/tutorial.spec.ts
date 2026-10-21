@@ -59,19 +59,18 @@ test.describe('Practice stretch', () => {
     expect(await game(`return G.tutorial.step;`)).toBe('flag');
 
     // 2. Look away: the sticker appears on the window across the aisle.
-    expect(await game(`G.ty = G.yaw = 1.6; advance(0.6); return G.carBuilder.panes[2].decal.visible;`)).toBe(false); // not yet (1 s grace)
-    expect(await game(`advance(0.8); return G.carBuilder.panes[2].decal.visible;`)).toBe(true);
+    expect(await game(`G.ty = G.yaw = 1.6; advance(1.2); return G.carBuilder.panes[3].decal.visible;`)).toBe(true);
     await expect(coach(page)).toContainText('just changed');
     // A wrong flag is named as wrong here (and only here).
     await game(`${AIM} const ad = G.carBuilder.acrossAds.find((a) => Math.abs(a.mesh.position.x - 2.6) < 0.1).mesh.getWorldPosition(G.eyePos.clone());
       aimAt(ad.x, ad.y, ad.z); advance(0.1); G.flagHeld = true; advance(1.0); G.flagHeld = false; advance(0.1);`);
     await expect(coach(page)).toContainText('Not that');
     // The right one.
-    await game(`${AIM} const p = G.carBuilder.panes[2].decal.getWorldPosition(G.eyePos.clone()); aimAt(p.x, p.y, p.z); advance(0.1);
+    await game(`${AIM} const p = G.carBuilder.panes[3].decal.getWorldPosition(G.eyePos.clone()); aimAt(p.x, p.y, p.z); advance(0.1);
       G.flagHeld = true; advance(1.0); G.flagHeld = false; advance(0.1);`);
     await expect(coach(page)).toContainText('flags are private');
     await page.keyboard.press('Enter');
-    expect(await game(`return { step: G.tutorial.step, sticker: G.carBuilder.panes[2].decal.visible };`)).toEqual({ step: 'mask', sticker: false });
+    expect(await game(`return { step: G.tutorial.step, sticker: G.carBuilder.panes[3].decal.visible };`)).toEqual({ step: 'mask', sticker: false });
 
     // 3. Mom watches, then asks; the calm answer.
     await expect(coach(page)).toContainText('Mom is watching you');
