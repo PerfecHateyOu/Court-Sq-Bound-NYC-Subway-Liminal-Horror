@@ -777,11 +777,13 @@ export class GameEngine {
   private planAnomalies(seg: SegmentDef) {
     this.active = [];
     this.usedTids = new Set();
-    const C = this.cruiseOf(seg);
     const times: number[] = [];
     const n = seg.anoms + (seg.forced ? seg.forced.length : 0);
+    // Every slot is early enough to appear with time to spare before the cutoff (it waits until
+    // you look away, so leave it a few seconds), instead of being dropped unseen.
+    const latest = Math.max(6, this.lastChanceOf(seg) - 4);
     for (let i = 0; i < n; i++) {
-      times.push(6 + Math.random() * (TA + C - 12));
+      times.push(6 + Math.random() * (latest - 6));
     }
     times.sort((a, b) => a - b);
 
@@ -2113,7 +2115,7 @@ export class GameEngine {
     if (this.phase === 'ride' && seg) {
       const L = this.segLen(seg);
       const ts = this.ts;
-      const lastChance = L - TD - 4.0;
+      const lastChance = this.lastChanceOf(seg);
 
       // Unobserved anomaly manifestation
       this.active.forEach((a) => {
@@ -2445,6 +2447,19 @@ export class GameEngine {
   public cruiseOf(s: SegmentDef): number {
     return (s.cruise || 26) * (this.nightmare ? NIGHTMARE.cruise : 1);
   }
+
+  /**
+   * The latest an anomaly may appear in a stretch: it leaves at least MIN_NOTICE seconds to
+   * notice it before the train arrives (and it reverts). Short stretches (6b) get what they can
+   * spare, never less than the old 10 s.
+   */
+  public lastChanceOf(s: SegmentDef): number {
+    const L = this.segLen(s);
+    return L - Math.max(TD + 4, Math.min(GameEngine.MIN_NOTICE, L - 12));
+  }
+
+  /** Seconds an anomaly is guaranteed to stay before the doors, on a stretch long enough for it. */
+  public static MIN_NOTICE = 15;
 
   public segLen(s: SegmentDef): number {
     return TA + this.cruiseOf(s) + TD;
