@@ -8,6 +8,9 @@ import { SWAP_CHAR_MAP } from '../constants';
 import { SubwayCarBuilder, AdObject } from '../graphics/subwayCarBuilder';
 import { ActiveAnomaly, AnomalyDef } from '../types';
 
+/** How far along the car (m, either side of your seat) the small, close-look anomalies may happen. */
+export const NEAR_X = 5;
+
 export class AnomalyManager {
   private carBuilder: SubwayCarBuilder;
   private catalog: Record<string, AnomalyDef> = {};
@@ -21,8 +24,12 @@ export class AnomalyManager {
   private initCatalog() {
     const cb = this.carBuilder;
 
-    const freeAd = (usedTids: Set<string>): AdObject | null => {
-      const shuffled = [...cb.acrossAds].sort(() => Math.random() - 0.5);
+    // Fair reach: changes you'd have to read or spot small (a typo, warped words, a sticker, one
+    // cold light) only happen within NEAR_X of your seat. At the far end of the car you can't
+    // read an ad's letters, however hard you look.
+    const near = (x: number) => Math.abs(x) <= NEAR_X;
+    const freeAd = (usedTids: Set<string>, nearOnly = false): AdObject | null => {
+      const shuffled = [...cb.acrossAds].filter((a) => !nearOnly || near(a.mesh.position.x)).sort(() => Math.random() - 0.5);
       return shuffled.find((a) => !usedTids.has(a.tid)) || null;
     };
 
@@ -31,7 +38,7 @@ export class AnomalyManager {
       adswap: {
         tier: 0,
         make: () => {
-          const ad = freeAd(new Set());
+          const ad = freeAd(new Set(), true);
           if (!ad) return null;
           const h = ad.def.h;
           const idx = [...h].map((c, i) => (SWAP_CHAR_MAP[c] ? i : -1)).filter((i) => i >= 0);
@@ -57,7 +64,7 @@ export class AnomalyManager {
       sticker: {
         tier: 0,
         make: () => {
-          const shuffledPanes = [...cb.panes].sort(() => Math.random() - 0.5);
+          const shuffledPanes = cb.panes.filter((p) => near(p.x)).sort(() => Math.random() - 0.5);
           const p = shuffledPanes[0];
           if (!p) return null;
           const kind = Math.random() < 0.5 ? 'sticker' : 'stain';
@@ -80,7 +87,7 @@ export class AnomalyManager {
       lighttemp: {
         tier: 0,
         make: () => {
-          const shuffledLights = [...cb.lightSegs].sort(() => Math.random() - 0.5);
+          const shuffledLights = cb.lightSegs.filter((l) => near(l.m.position.x)).sort(() => Math.random() - 0.5);
           const l = shuffledLights[0];
           if (!l) return null;
 
@@ -89,7 +96,7 @@ export class AnomalyManager {
             obj: l.m,
             desc: 'One ceiling fluorescent light turned cold sterile blue',
             apply: () => {
-              l.mat.color.set(0xa8d0ff);
+              l.mat.color.set(0x8cc2ff); // cold blue, clear against the warm strip
             },
             revert: () => {
               l.mat.color.set(0xfff4de);
@@ -197,7 +204,7 @@ export class AnomalyManager {
       nearword: {
         tier: 2,
         make: () => {
-          const ad = freeAd(new Set());
+          const ad = freeAd(new Set(), true);
           if (!ad || !ad.def.warp) return null;
 
           return {
