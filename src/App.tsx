@@ -18,6 +18,8 @@ import { haptics } from './game/haptics';
 import { GlitchPass } from './graphics/glitchPass';
 import { HUD } from './components/HUD';
 import { StartScreen } from './components/StartScreen';
+import { TutorialCoach } from './components/TutorialCoach';
+import { tutorialSeen } from './game/tutorial';
 import { ReportScreen } from './components/ReportScreen';
 import { SettingsPanel } from './components/SettingsPanel';
 import { PauseScreen } from './components/PauseScreen';
@@ -604,6 +606,14 @@ export default function App() {
         return;
       }
 
+      // Practice stretch: Enter moves on once a lesson is done (the mouse is captured while looking).
+      if (e.code === 'Enter' && G.tutorial && !G.choice && !polaroidManager.isViewfinderOpen) {
+        e.preventDefault();
+        if (!e.repeat) G.tutorial.next();
+        triggerUpdate();
+        return;
+      }
+
       // Snap photo if viewfinder is active
       if (polaroidManager.isViewfinderOpen && (e.code === 'Space' || e.code === 'Enter')) {
         e.preventDefault();
@@ -741,7 +751,23 @@ export default function App() {
       G.debug = showDebug;
       G.nightmare = nightmare; // kept for Ride Again / Restart until the next start screen
       G.startChapter = startChapter; // likewise; Chapter II and III are practice runs
-      G.startIntro();
+      // The first ride starts with the practice stretch (skippable); after that, straight in.
+      if (!tutorialSeen() && startChapter === 1 && !nightmare) G.startTutorial();
+      else G.startIntro();
+      triggerUpdate();
+    }
+  };
+
+  /** The title screen's "Practice stretch": the lesson again, then a normal ride. */
+  const handleStartTutorial = (startMuted: boolean) => {
+    if (settings.get().fullscreenOnBoard) enterFullscreen();
+    audioEngine.init(startMuted);
+    audioEngine.wake();
+    setIsMuted(startMuted);
+    const G = engineRef.current;
+    if (G) {
+      G.nightmare = false;
+      G.startTutorial();
       triggerUpdate();
     }
   };
@@ -871,10 +897,27 @@ export default function App() {
         />
       )}
 
+      {/* Practice stretch coach card */}
+      {engineRef.current?.tutorial && phase !== 'menu' && !paused && (
+        <TutorialCoach
+          view={engineRef.current.tutorial.view}
+          isTouch={isTouch}
+          onNext={() => {
+            engineRef.current?.tutorial?.next();
+            triggerUpdate();
+          }}
+          onSkip={() => {
+            engineRef.current?.finishTutorial(true);
+            triggerUpdate();
+          }}
+        />
+      )}
+
       {/* Start / Briefing Screen */}
       {phase === 'menu' && (
         <StartScreen
           onStart={handleStartGame}
+          onPractice={handleStartTutorial}
           onOpenSettings={() => setSettingsOpen(true)}
           isTouch={isTouch}
           engine={engineRef.current ?? undefined}

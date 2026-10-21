@@ -54,6 +54,7 @@ import { routeText, fillRoute } from './routeText';
 import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
 import { unlockAchievement } from './achievements';
 import { practice, CHAPTER_START_SEGMENT } from './practice';
+import { Tutorial, markTutorialSeen } from './tutorial';
 
 /** Foggy sodium-vapor night fog colour on the open trestle. */
 const TRESTLE_FOG = new THREE.Color('#322018');
@@ -204,6 +205,8 @@ export class GameEngine {
   public heartNextAt: number = 0;
   public heartBeats: number[] = []; // GT of recent beats, newest last
   public isTouch: boolean = false;
+  /** The practice stretch, while it runs (src/game/tutorial.ts). */
+  public tutorial: Tutorial | null = null;
 
   // Operation Skyward Phase 3: Chapters & Multiple Escape Endings
   public currentChapter: ChapterDef = CHAPTERS[0];
@@ -354,6 +357,29 @@ export class GameEngine {
   public say(parentIdx: number, line: string, dur: number = 3.2) {
     const parent = this.carBuilder.parents[parentIdx];
     this.setSub(`<b>${parent.label}:</b> ${line}`, dur);
+  }
+
+  /** For the tutorial's coach card. */
+  public refreshUI() {
+    this.notifyUI();
+  }
+
+  /** Angle (rad) between where you're looking and an object. */
+  public angleTo(obj: THREE.Object3D): number {
+    obj.getWorldPosition(this.tmpVec1);
+    this.tmpVec1.sub(this.camera.position).normalize();
+    return this.dirVec.angleTo(this.tmpVec1);
+  }
+
+  /** The practice stretch, then the ride (the first ride, or the title screen's "Practice stretch"). */
+  public startTutorial() {
+    this.startChapter = 1;
+    this.startIntro({ tutorial: true });
+  }
+
+  /** Done or skipped: on to the real ride, fresh. */
+  public finishTutorial(_skipped: boolean) {
+    this.startIntro();
   }
 
   private notifyUI() {
@@ -614,7 +640,13 @@ export class GameEngine {
    * A new ride. `looped` is "Get back on" after The Eternal Commute: the same ride, but you've
    * been here before (no tutorial hint, and Dad's line lands as a repeat). Nothing else carries over.
    */
-  public startIntro(opts: { looped?: boolean } = {}) {
+  public startIntro(opts: { looped?: boolean; tutorial?: boolean } = {}) {
+    // Leaving the practice stretch (finished, skipped, or Restart from the pause menu).
+    if (this.tutorial) {
+      this.tutorial.cleanUp();
+      this.tutorial = null;
+      markTutorialSeen();
+    }
     this.newGame();
     this.looped = !!opts.looped;
     // Camera and route are per ride: a restart or Ride again starts with fresh film,
@@ -648,6 +680,14 @@ export class GameEngine {
     audioEngine.setMasterLevel(0.85, 0.3);
     audioEngine.setBedLevel(1.0, 0.3);
     audioEngine.resetRideMusic(); // a new ride starts at the top of the tune
+
+    // The practice stretch: the train waits at the platform with the doors open; nothing counts.
+    if (opts.tutorial) {
+      practice.on = true;
+      this.tutorial = new Tutorial(this);
+      this.notifyUI();
+      return;
+    }
     audioEngine.startLastLocalAnnouncement();
 
     this.sched(1.2, () => this.setPA(fillRoute('This is the Last Local. {terminus}–bound {line} train.'), 4.0));
@@ -1689,6 +1729,10 @@ export class GameEngine {
     }
 
     this.updateChoiceTimer(dt);
+    if (this.tutorial && this.phase === 'intro') {
+      this.updateFlag(dt);
+      this.tutorial.update(dt);
+    }
 
     // Subtitle expiry
     if (this.subUntil && this.GT > this.subUntil) {
@@ -2257,7 +2301,8 @@ export class GameEngine {
       if (ts >= L && !this.choice && !this.intervening && !this.restraint && !(seg.restraint && !this.restraintDone)) {
         this.arrive();
       }
-    } else {
+    } else if (!this.tutorial) {
+      // Off the ride, flags reset (the practice stretch flags while parked: see update()).
       this.flagProg = 0;
     }
 

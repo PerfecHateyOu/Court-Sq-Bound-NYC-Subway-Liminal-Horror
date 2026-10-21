@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { SKIP_TUTORIAL } from './game';
 
 // The offline copy (scripts/build-offline.mjs): one index.html opened from disk, no network.
 // The repo root is the folder above Playwright's config (e2e/).
@@ -10,6 +11,10 @@ const file = () => join(root(), 'dist-offline', 'Last-Local', 'index.html');
 
 test.describe('offline copy', () => {
   test.describe.configure({ mode: 'serial' });
+  // These check the ride's controls; e2e/tutorial.spec.ts covers the first-ride practice stretch.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(SKIP_TUTORIAL);
+  });
 
   test.beforeAll(() => {
     // CI builds it in its own step; build it here if it's missing (e.g. a local run).

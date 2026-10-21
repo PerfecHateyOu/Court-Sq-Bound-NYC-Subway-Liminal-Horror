@@ -6,6 +6,7 @@ const fresh = async (page: import('@playwright/test').Page, settings?: object) =
   await page.goto('/');
   await page.evaluate((s) => {
     localStorage.clear();
+    localStorage.setItem('gtrain-tutorial', 'done'); // e2e/tutorial.spec.ts covers the first-ride practice
     if (s) localStorage.setItem('gtrain-settings', JSON.stringify(s));
   }, settings ?? null);
   await page.reload();

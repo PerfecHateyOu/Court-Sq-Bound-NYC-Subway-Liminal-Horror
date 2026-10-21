@@ -3,7 +3,7 @@
  * Authentic NYC subway mosaic plaque and station briefing, plus the Case Files dossier.
  */
 import React from 'react';
-import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X } from 'lucide-react';
+import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X, GraduationCap } from 'lucide-react';
 import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '../game/psychLog';
 import { loadEvpArchive, EVP_SIGNALS } from '../game/evpManager';
 import { loadEndingsArchive, ENDING_IDS } from '../game/endings';
@@ -19,11 +19,13 @@ const titleCase = (t: string) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpp
 interface StartScreenProps {
   onStart: (muted: boolean, debug: boolean, nightmare: boolean, startChapter: number) => void;
   onOpenSettings: () => void;
+  /** Replay the practice stretch (it runs by itself before the first ride). */
+  onPractice?: (muted: boolean) => void;
   isTouch: boolean;
   engine?: GameEngine;
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, isTouch, engine }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, onPractice, isTouch, engine }) => {
   const [startMuted, setStartMuted] = React.useState(false);
   const [showDebug, setShowDebug] = React.useState(false);
   const [nightmare, setNightmare] = React.useState(false);
@@ -155,6 +157,16 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
               <SettingsIcon className="w-4 h-4" />
               Settings
             </button>
+
+            {onPractice && (
+              <button
+                onClick={() => onPractice(startMuted)}
+                className="flex items-center gap-1.5 py-1.5 px-2.5 rounded border border-transparent hover:border-white/20 text-[#ece6d3] font-semibold transition-colors"
+              >
+                <GraduationCap className="w-4 h-4 text-[#e3a83a]" />
+                Practice stretch
+              </button>
+            )}
 
             {nightmareUnlocked ? (
               <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors" title="Faster train, flickering tubes, sharper-eyed parents, faster sanity loss">

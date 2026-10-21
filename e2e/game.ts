@@ -67,7 +67,23 @@ export function watchErrors(page: Page): string[] {
   return errs;
 }
 
+/**
+ * The first ride starts with the practice stretch (src/game/tutorial.ts). Tests clear storage all
+ * the time, so mark it seen before every page load; e2e/tutorial.spec.ts uses its own fixture.
+ */
+export const SKIP_TUTORIAL = () => {
+  try {
+    if (!localStorage.getItem('gtrain-tutorial')) localStorage.setItem('gtrain-tutorial', 'done');
+  } catch {
+    /* no storage */
+  }
+};
+
 export const test = base.extend<{ pageErrors: string[]; game: Run }>({
+  page: async ({ page }, use) => {
+    await page.addInitScript(SKIP_TUTORIAL);
+    await use(page);
+  },
   pageErrors: [
     async ({ page }, use) => {
       const errs = watchErrors(page);
