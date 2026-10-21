@@ -4,6 +4,7 @@
  * ergonomic fiberglass seating, responsive sliding doors, and tunnel lighting.
  */
 import * as THREE from 'three';
+import { PassingTrain, FAR_WALL_Z } from './passingTrain';
 import { TrestleBuilder } from './trestleBuilder';
 import { ACROSS_ADS, NEAR_ADS, STOPS, AdDefinition } from '../constants';
 import { TextureGenerator } from './textureGenerator';
@@ -109,6 +110,8 @@ export class SubwayCarBuilder {
   public tunnelLength: number = 84;
   /** The two long tunnel walls; the engine slides them to make the tunnel mouth. */
   public tunnelWalls: THREE.Mesh[] = [];
+  /** A train on the other track, now and then (gameState schedules it). */
+  public passingTrain!: PassingTrain;
   public trestle!: TrestleBuilder;
 
   public stA!: StationObject;
@@ -239,6 +242,7 @@ export class SubwayCarBuilder {
     this.buildRouteMaps();
     this.buildPassengers();
     this.buildTunnel();
+    this.passingTrain = new PassingTrain(this.worldGroup);
     this.trestle = new TrestleBuilder(this.worldGroup);
     this.stA = this.buildStationPlatform();
     this.stB = this.buildStationPlatform();
@@ -722,7 +726,8 @@ export class SubwayCarBuilder {
 
     [-1, 1].forEach((s) => {
       const wall = new THREE.Mesh(new THREE.BoxGeometry(400, 3.4, 0.1), mTunnelWall);
-      wall.position.set(0, 1.1, s * 2.55);
+      // The far side (+z, behind your seat) is wide enough for a second track: see passingTrain.ts.
+      wall.position.set(0, 1.1, s > 0 ? FAR_WALL_Z : -2.55);
       this.tunnelGroup.add(wall);
       this.tunnelWalls.push(wall);
 

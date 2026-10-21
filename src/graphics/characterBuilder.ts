@@ -209,6 +209,8 @@ export class CharacterBuilder {
       label: cfg.label,
       home: new THREE.Vector3(cfg.x, 0, cfg.z),
       pose: [cfg.hy || 0, cfg.hp || 0],
+      archetype: cfg.archetype,
+      standing: !!cfg.standing,
     };
 
     head.rotation.set(person.pose[1], person.pose[0], 0);
@@ -473,6 +475,7 @@ export class CharacterBuilder {
         });
         fold.position.set(0.0, -0.06, 0.07);
         fold.rotation.set(0.15, -0.9, 0);
+        fold.userData.habit = 'paper'; // carLife: turns a page now and then
         hand.add(fold);
       } else {
         // Seated: bag on the bench by his hip, reading the folded paper over his lap.
@@ -484,6 +487,7 @@ export class CharacterBuilder {
         [-0.06, 0.06].forEach((x) => [0.0, -0.035, -0.07].forEach((y) => this.box(read, 0.11, 0.01, 0.014, ink, x, y, 0)));
         read.position.set(0, 0.79, 0.37);
         read.rotation.x = -0.55;
+        read.userData.habit = 'paper'; // carLife: turns a page now and then
         g.add(read);
       }
       return;
@@ -554,6 +558,7 @@ export class CharacterBuilder {
       phone.add(screen);
       phone.position.set(0, hy + 0.03, hz + 0.01);
       phone.rotation.x = -0.35;
+      phone.userData.habit = 'phone'; // carLife: thumb-scroll flicks
       g.add(phone);
       return;
     }

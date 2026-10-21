@@ -55,8 +55,17 @@ export class KeyLook {
     x = Math.max(-1, Math.min(1, x));
     y = Math.max(-1, Math.min(1, y));
     if (!x && !y) return;
-    const limit = G.phase === 'trial' ? 1.2 : 1.75;
-    G.ty = Math.max(-limit, Math.min(limit, G.ty + x * KEY_LOOK_RATE.yaw * lookSpeed * dt));
+    G.ty = limitYaw(G.phase, G.ty + x * KEY_LOOK_RATE.yaw * lookSpeed * dt);
     G.tp = Math.max(-0.6, Math.min(0.72, G.tp + y * KEY_LOOK_RATE.pitch * lookSpeed * dt));
   }
+}
+
+/**
+ * Where the view may turn. In the train you can turn all the way around in your seat (no limit;
+ * the yaw only feeds sin/cos, so it can keep growing past a full turn). The False Stop Trial is
+ * a stage built to be seen from the front, so it keeps its limit.
+ */
+export const TRIAL_YAW_LIMIT = 1.2;
+export function limitYaw(phase: string, ty: number): number {
+  return phase === 'trial' ? Math.max(-TRIAL_YAW_LIMIT, Math.min(TRIAL_YAW_LIMIT, ty)) : ty;
 }
