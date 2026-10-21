@@ -47,7 +47,9 @@ export class PassengerBehaviorManager {
       const distToPlayer = this.passengerWorldPos.distanceTo(playerPos);
 
       // Flash startle reaction recovery
+      p.gazeLocked = false;
       if (p.flashReactionUntil && gameTime < p.flashReactionUntil) {
+        p.gazeLocked = true;
         // Tense frozen posture with eyes flared
         p.head.rotation.x = -0.15;
         p.head.rotation.y += Math.sin(gameTime * 45) * 0.015;
@@ -84,11 +86,13 @@ export class PassengerBehaviorManager {
       // Gaze state decision tree:
       if (this.syncChorusActive || (hasActiveAnomaly && sanityTier >= 2)) {
         // SYNCHRONIZED CHORUS: All passengers turn in unison to stare directly at player
+        p.gazeLocked = true;
         targetYaw = angleToPlayer;
         targetPitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
         p.uncannyAvert = false;
       } else if (prolongedStare) {
         // Prolonged stare: passenger slowly and coldly turns back to meet player's gaze
+        p.gazeLocked = true;
         targetYaw = angleToPlayer;
         targetPitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
         p.uncannyAvert = false;
@@ -101,6 +105,7 @@ export class PassengerBehaviorManager {
           p.uncannyAvert = true;
         } else {
           // Low/Critical sanity: Dead-eyed lock onto player
+          p.gazeLocked = true;
           targetYaw = angleToPlayer;
           targetPitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
           p.uncannyAvert = false;

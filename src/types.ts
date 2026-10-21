@@ -259,4 +259,23 @@ export interface PersonObject {
   flashReactionUntil?: number;
   syncChorus?: boolean;
   uncannyAvert?: boolean;
+  /** Outfit from PersonConfig (the #74 lineup); carLife picks small habits from it. */
+  archetype?: string;
+  standing?: boolean;
+  /** passengerBehavior: the head is held by a stare, chorus or flash; carLife adds no habits. */
+  gazeLocked?: boolean;
+  /** carLife state: body lean (spring) and the head/prop offsets it added this frame. */
+  life?: {
+    lean: number;
+    leanVel: number;
+    phase: number;
+    headX: number;
+    headY: number;
+    nextAt: number;
+    startT: number;
+    untilT: number;
+    act: '' | 'nod' | 'page' | 'scroll' | 'radio';
+    prop: THREE.Object3D | null;
+    propBase: number;
+  };
 }
