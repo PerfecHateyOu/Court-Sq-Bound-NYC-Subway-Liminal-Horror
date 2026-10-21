@@ -47,6 +47,8 @@ import { settings } from '../settings';
 import { polaroidManager } from './polaroidManager';
 import { evp, EVP_SIGNALS } from './evpManager';
 import { passengerBehavior } from './passengerBehavior';
+import { carLife } from './carLife';
+import { PassingTrain } from '../graphics/passingTrain';
 import { routeManager } from './routeManager';
 import { routeText, fillRoute } from './routeText';
 import { resolveEnding, endingSummary, recordEndingToArchive, EndingDefinition, ExitChoice } from './endings';
@@ -92,6 +94,10 @@ export class GameEngine {
   public ts: number = 0;
   public odo: number = 0;
   public speed: number = 0;
+  /** Seconds into this stretch when a train passes on the other track, or null for none. */
+  public passAt: number | null = null;
+  /** Passenger lean and habits (src/game/carLife.ts). */
+  public readonly life = carLife;
   public bandStop: number = 1;
 
   // Multi-Car Consist & Player Movement
@@ -647,6 +653,9 @@ export class GameEngine {
     // an empty album, the viewfinder down and the G route.
     polaroidManager.reset();
     routeManager.reset();
+    carLife.reset(this.carBuilder.getAllPassengers(), this.GT);
+    this.carBuilder.passingTrain.stop();
+    this.passAt = null;
     this.phase = 'intro';
     this.doorOpen = 1;
     this.doorTarget = 1;
@@ -772,6 +781,7 @@ export class GameEngine {
       this.sched(6.0, () => this.giveRecorder('train'));
     }
     this.planAnomalies(seg);
+    this.planPassingTrain(seg);
 
     // Mask checks are timed for the normal ride; a shorter Nightmare ride brings them forward too,
     // so none lands on the approach.
@@ -813,6 +823,33 @@ export class GameEngine {
     const listener = this.carBuilder.parents[1 - who].label;
     this.setSub(`<b>${speaker}:</b> ${line} <em>(to ${listener})</em>`, 3.4);
   }
+
+  /**
+   * Now and then a train passes the other way, mid-cruise: ambience, nothing to flag. Its odds
+   * don't depend on the next stop (no second door tell), it's done at least 10 s before braking
+   * (never near the arrival flicker), and it skips the trestle, the restraint stretch, the
+   * unscheduled 6b, the last stretch, and Screen effects Reduced.
+   */
+  private planPassingTrain(seg: SegmentDef) {
+    this.carBuilder.passingTrain.stop();
+    this.passAt = null;
+    const trestle = Number.isFinite(this.trestleExitAt) || this.trestleEnterAt !== null;
+    if (seg.b || seg.restraint || seg.stop === 13 || trestle || settings.effectsReduced()) return;
+    const latest = TA + this.cruiseOf(seg) - 10 - PassingTrain.duration(this.topSpeed);
+    if (latest > 8 && Math.random() < GameEngine.PASS_CHANCE) this.passAt = 8 + Math.random() * (latest - 8);
+  }
+
+  private lifeRolesCache: { noHabits: Set<PersonObject>; still: Set<PersonObject> } | null = null;
+  /** Parents' heads are the game; the woman on your bench owns the face-turn anomaly; the silent extra stays still. */
+  private lifeRoles() {
+    return (this.lifeRolesCache ??= {
+      noHabits: new Set([...this.carBuilder.parents, this.carBuilder.strangers[1]]),
+      still: new Set([this.carBuilder.extraPerson]),
+    });
+  }
+
+  /** Share of stretches with a passing train. */
+  public static PASS_CHANCE = 0.35;
 
   private planAnomalies(seg: SegmentDef) {
     this.active = [];
@@ -1586,6 +1623,8 @@ export class GameEngine {
 
   public endGame() {
     this.phase = 'end';
+    this.carBuilder.passingTrain.stop();
+    this.passAt = null;
     evp.lower();
     // The report replaces the ride: put the camera down and close the evidence log, so neither
     // is left over (or covering) the report. Its prints and tapes are on the report itself.
@@ -1870,6 +1909,16 @@ export class GameEngine {
     this.speed = speed;
     const sf = speed / this.topSpeed;
 
+    const train = this.carBuilder.passingTrain;
+    if (this.phase === 'ride' && this.passAt !== null && this.ts >= this.passAt) {
+      this.passAt = null;
+      if (!settings.effectsReduced()) {
+        train.start();
+        audioEngine.passingTrain(PassingTrain.duration(speed));
+      }
+    }
+    train.update(dt, speed, !this.trestleShow);
+
     // Train motion & screen shake calculation linked to ride phase and sanity tier
     const isRide = this.phase === 'ride' && !!seg;
     const L = seg ? this.segLen(seg) : 37;
@@ -2092,6 +2141,9 @@ export class GameEngine {
       this.dwellReacted = false;
     }
 
+    // Car life's head habits come off before the gaze code sets the heads, and go back on after.
+    const everyone = this.carBuilder.getAllPassengers();
+    carLife.stripHeads(everyone);
     this.updateParents(dt, this.phase === 'ride' || this.phase === 'stop');
     this.updateStrangers();
 
@@ -2107,6 +2159,14 @@ export class GameEngine {
       // The parents' heads and yaw/pitch belong to updateParents and the watching check.
       this.carBuilder.parents
     );
+    carLife.update(everyone, {
+      dt,
+      gt: this.GT,
+      speed: this.speed,
+      topSpeed: this.topSpeed,
+      reduced: settings.effectsReduced(),
+      ...this.lifeRoles(),
+    });
 
     const watcher = this.carBuilder.parents.find((p) => p.facing);
 

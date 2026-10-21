@@ -446,6 +446,39 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * A train passing the other way: the roar builds and opens up as it reaches you, a whoosh as
+   * the front goes by, wheels clattering past, then it falls away behind. `duration` is the
+   * whole pass (PassingTrain.duration).
+   */
+  public passingTrain(duration: number) {
+    if (!this.ac || !this.whiteBuffer || !this.masterGain) return;
+    const t = this.ac.currentTime;
+    const peak = t + duration * 0.42;
+    const end = t + duration;
+    const src = this.ac.createBufferSource();
+    src.buffer = this.whiteBuffer;
+    src.loop = true;
+    const lp = this.ac.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(220, t);
+    lp.frequency.linearRampToValueAtTime(950, peak);
+    lp.frequency.linearRampToValueAtTime(260, end);
+    const gain = this.ac.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.11, peak);
+    gain.gain.setValueAtTime(0.11, t + duration * 0.72);
+    gain.gain.linearRampToValueAtTime(0.0001, end);
+    src.connect(lp).connect(gain).connect(this.masterGain);
+    src.start(t, Math.random() * 1.5);
+    src.stop(end + 0.1);
+    // The front going by.
+    this.noiseHit(peak - 0.05, 0.9, 1400, 0.8, 0.05);
+    // Wheel sets clattering past.
+    const n = Math.floor((duration * 0.3) / 0.27);
+    for (let i = 0; i < n; i++) this.noiseHit(peak + i * 0.27, 0.06, 2600, 6, 0.028);
+  }
+
   public screech(duration: number, volume: number = 0.08) {
     if (!this.ac || !this.whiteBuffer || !this.masterGain) return;
     const t = this.ac.currentTime;

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GameEngine } from './game/gameState';
 import { audioEngine } from './audio/audioEngine';
 import { settings } from './settings';
-import { KeyLook } from './input/keyLook';
+import { KeyLook, limitYaw } from './input/keyLook';
 import { evp } from './game/evpManager';
 import { passengerBehavior } from './game/passengerBehavior';
 import { enterFullscreen, isFullscreen, leftFullscreenOnRequest, onFullscreenChange } from './ui/fullscreen';
@@ -409,19 +409,18 @@ export default function App() {
       const G = engineRef.current;
       if (!G || G.paused || G.phase === 'menu' || G.phase === 'end') return;
 
-      const limit = G.phase === 'trial' ? 1.2 : 1.75;
       // Look speed and vertical direction come from the player's settings.
       const { lookSensitivity: sens, invertY } = settings.get();
       const ySign = invertY ? -1 : 1;
       if (e.pointerType === 'mouse' && document.pointerLockElement) {
-        G.ty = Math.max(-limit, Math.min(limit, G.ty - e.movementX * 0.0022 * sens));
+        G.ty = limitYaw(G.phase, G.ty - e.movementX * 0.0022 * sens);
         G.tp = Math.max(-0.6, Math.min(0.72, G.tp - ySign * e.movementY * 0.0022 * sens));
         return;
       }
 
       if (e.pointerId !== dragId) return;
       const k = (e.pointerType === 'mouse' ? 0.004 : 0.0055) * sens;
-      G.ty = Math.max(-limit, Math.min(limit, G.ty - (e.clientX - lx) * k));
+      G.ty = limitYaw(G.phase, G.ty - (e.clientX - lx) * k);
       G.tp = Math.max(-0.6, Math.min(0.72, G.tp - ySign * (e.clientY - ly) * k));
       lx = e.clientX;
       ly = e.clientY;
