@@ -55,22 +55,22 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
 
           {/* Viewfinder Header Controls */}
           <div className="relative z-40 px-3 pt-3 sm:px-6 sm:pt-6 flex items-center justify-between gap-2 text-xs pointer-events-auto">
-            <div className="min-w-0 flex items-center gap-3 bg-black/75 px-3 sm:px-4 py-2 rounded-md border border-white/15 text-[#ece6d3] font-mono tracking-wider shadow-lg">
+            <div className="min-w-0 flex items-center gap-3 bg-black/75 px-3 sm:px-4 py-2 rounded-md border border-white/15 text-cream font-mono tracking-wider shadow-lg">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
               <span>POLAROID 600 VIEW</span>
               <span className="hidden sm:inline text-white/40">|</span>
-              <span className="hidden sm:inline text-[#e3a83a]">EXP 1/125s • f/11</span>
+              <span className="hidden sm:inline text-warn">EXP 1/125s • f/11</span>
             </div>
 
             <div className="shrink-0 flex items-center gap-2 sm:gap-3">
               <button
                 onClick={onOpenAlbum}
                 aria-label={`Evidence Log (${polaroidManager.photos.length} ${polaroidManager.photos.length === 1 ? 'print' : 'prints'})`}
-                className="h-10 flex items-center gap-2 px-3.5 rounded-md bg-black/75 border border-white/20 hover:border-white/50 text-[#ece6d3] text-xs font-semibold backdrop-blur-md transition-all active:scale-95"
+                className="h-10 flex items-center gap-2 px-3.5 rounded-md bg-black/75 border border-white/20 hover:border-white/50 text-cream text-xs font-semibold backdrop-blur-md transition-all active:scale-95"
               >
-                <ImageIcon className="w-4 h-4 text-[#e3a83a]" />
+                <ImageIcon className="w-4 h-4 text-warn" />
                 <span>Evidence ({polaroidManager.photos.length})</span>
-                <span className="hidden sm:pointer-fine:inline text-[10px] text-white/50 bg-white/10 px-1.5 py-0.5 rounded font-mono">
+                <span className="hidden sm:pointer-fine:inline text-3xs text-white/50 bg-white/10 px-1.5 py-0.5 rounded font-mono">
                   TAB
                 </span>
               </button>
@@ -103,10 +103,10 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
               </div>
 
               {/* Light Meter Gauge Needle on Right Edge */}
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 py-2 px-1 bg-black/60 rounded border border-white/10 text-[9px] font-mono text-white/70">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 py-2 px-1 bg-black/60 rounded border border-white/10 text-4xs font-mono text-white/70">
                 <span>+</span>
                 <div className="w-1.5 h-16 bg-white/20 rounded-full relative overflow-hidden">
-                  <div className="absolute w-full h-2 bg-[#6cbe45] rounded-full top-7 animate-pulse" />
+                  <div className="absolute w-full h-2 bg-g-line rounded-full top-7 animate-pulse" />
                 </div>
                 <span>-</span>
               </div>
@@ -117,19 +117,19 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
           <div className="relative z-40 px-3 pb-3 sm:px-6 sm:pb-6 flex items-center justify-between gap-2 pointer-events-auto">
             {/* Film Cartridge Counter */}
             <div className="flex items-center gap-2.5 px-4 py-2 rounded-md bg-black/80 border border-white/15 font-mono text-xs shadow-lg">
-              <span className="text-[#9a9684]">FILM:</span>
+              <span className="text-dim">FILM:</span>
               <span
                 className={`font-bold px-2 py-0.5 rounded ${
                   remainingFilm > 2
-                    ? 'bg-[#6cbe45]/20 text-[#6cbe45] border border-[#6cbe45]/40'
+                    ? 'bg-g-line/20 text-g-line border border-g-line/40'
                     : remainingFilm > 0
-                    ? 'bg-[#e3a83a]/20 text-[#e3a83a] border border-[#e3a83a]/40'
+                    ? 'bg-warn/20 text-warn border border-warn/40'
                     : 'bg-red-900/40 text-red-400 border border-red-500/40'
                 }`}
               >
                 {String(remainingFilm).padStart(2, '0')} / 10
               </span>
-              <span className="text-[10px] text-white/40 hidden sm:inline">600 INSTANT CARTRIDGE</span>
+              <span className="text-3xs text-white/40 hidden sm:inline">600 INSTANT CARTRIDGE</span>
             </div>
 
             {/* Red Shutter Trigger Button */}
@@ -164,7 +164,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             isDeveloping ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-90 scale-95'
           }`}
         >
-          <div className="w-[180px] sm:w-[210px] p-2.5 pb-4 bg-[#f4efe6] rounded shadow-2xl border border-black/30 text-black flex flex-col items-center">
+          <div className="w-[180px] sm:w-[210px] p-2.5 pb-4 bg-film rounded shadow-2xl border border-black/30 text-black flex flex-col items-center">
             {/* Square photo print area */}
             <div className="relative w-full aspect-square bg-[#1f1e1c] rounded-sm overflow-hidden border border-black/20">
               {/* Prints develop after the ride: fresh emulsion only, no image or verdict. */}
@@ -179,9 +179,9 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             </div>
 
             {/* Handwritten Polaroid Bottom Border Caption */}
-            <div className="w-full mt-2 text-center font-mono text-[10px] text-gray-700 leading-tight">
+            <div className="w-full mt-2 text-center font-mono text-3xs text-gray-700 leading-tight">
               <div className="font-bold truncate">{isDeveloping ? 'Ejecting…' : 'Develops after the ride'}</div>
-              <div className="text-[9px] text-gray-500">
+              <div className="text-4xs text-gray-500">
                 CAR {lastPhoto?.carIndex === 0 ? 'A' : lastPhoto?.carIndex === 2 ? 'C' : 'B'} • {polaroidManager.remainingFilm} left
               </div>
             </div>

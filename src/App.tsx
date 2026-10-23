@@ -819,7 +819,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#0d110e] text-[#ece6d3] font-sans">
+    <div className="relative w-screen h-screen overflow-hidden bg-ink text-cream font-sans">
       {/* 3D Canvas Stage */}
       <div
         ref={containerRef}

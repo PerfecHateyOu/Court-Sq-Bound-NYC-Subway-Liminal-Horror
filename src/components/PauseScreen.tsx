@@ -46,7 +46,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
         role="dialog"
         aria-modal="true"
         aria-labelledby="pause-title"
-        className="w-full max-w-sm my-auto p-5 sm:p-6 rounded-lg bg-[#101411] border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden"
+        className="w-full max-w-sm my-auto p-5 sm:p-6 rounded-lg bg-panel border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden"
       >
         {/* Subtle illuminated transit sign raster scanlines */}
         <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-40" />
@@ -54,29 +54,29 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
         {/* Top MTA-style route strip */}
         <div
           data-testid="pause-line"
-          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono font-bold tracking-wider uppercase mb-2"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-2xs font-mono font-bold tracking-wider uppercase mb-2"
           style={{ color: route.bulletColor, backgroundColor: `${route.bulletColor}26`, borderColor: `${route.bulletColor}4d` }}
         >
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: route.bulletColor }} />
           {lineName}
         </div>
 
-        <h2 id="pause-title" className="text-2xl font-black text-[#ece6d3] uppercase tracking-wide transit-sign-header drop-shadow-md">
+        <h2 id="pause-title" className="text-2xl font-black text-cream uppercase tracking-wide transit-sign-header drop-shadow-md">
           Train Paused
         </h2>
         {engine.nightmare && (
-          <p className="mt-1 font-mono text-[11px] font-bold tracking-[0.2em] text-[#e8705e]">NIGHTMARE MODE</p>
+          <p className="mt-1 font-mono text-2xs font-bold tracking-[0.2em] text-bad-hi">NIGHTMARE MODE</p>
         )}
         {engine.isPractice && (
-          <p className="mt-1 font-mono text-[11px] font-bold tracking-[0.2em] text-[#e3a83a]">
+          <p className="mt-1 font-mono text-2xs font-bold tracking-[0.2em] text-warn">
             PRACTICE RUN: NOTHING IS SAVED
           </p>
         )}
-        <p data-testid="pause-next-stop" className="mt-2 text-sm text-[#9a9684]">
+        <p data-testid="pause-next-stop" className="mt-2 text-sm text-dim">
           Next approaching station:{' '}
-          <span className="text-[#ece6d3] font-bold inline-flex items-center gap-1">
+          <span className="text-cream font-bold inline-flex items-center gap-1">
             <span
-              className="w-4 h-4 rounded-full text-[10px] font-extrabold inline-flex items-center justify-center font-sans"
+              className="w-4 h-4 rounded-full text-3xs font-extrabold inline-flex items-center justify-center font-sans"
               style={{ backgroundColor: route.bulletColor, color: route.bulletTextColor }}
             >
               {route.id}
@@ -89,7 +89,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
           <button
             ref={resumeRef}
             onClick={onResume}
-            className="w-full py-3 px-6 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base tracking-wide transition-all shadow-lg hover:shadow-[0_0_15px_rgba(108,190,69,0.35)] active:scale-95 flex items-center justify-center gap-2"
+            className="w-full py-3 px-6 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all shadow-lg hover:shadow-[0_0_15px_rgba(108,190,69,0.35)] active:scale-95 flex items-center justify-center gap-2"
           >
             <Play className="w-4 h-4 fill-current" />
             Resume Ride
@@ -97,7 +97,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
 
           <button
             onClick={onOpenSettings}
-            className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-[#ece6d3] font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-cream font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
           >
             <SettingsIcon className="w-4 h-4" />
             Settings
@@ -106,22 +106,22 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
           {canFull && (
             <button
               onClick={toggleFullscreen}
-              className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-[#ece6d3] font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-cream font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
             >
               {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               {full ? 'Exit Full Screen' : 'Full Screen'}
             </button>
           )}
           {showHomeScreenTip && (
-            <p data-testid="home-screen-tip" className="text-xs text-[#9a9684] leading-snug text-center px-2">
-              To play full screen on iPhone: tap Share, then <strong className="text-[#ece6d3]">Add to Home Screen</strong>, and open the game from there.
+            <p data-testid="home-screen-tip" className="text-xs text-dim leading-snug text-center px-2">
+              To play full screen on iPhone: tap Share, then <strong className="text-cream">Add to Home Screen</strong>, and open the game from there.
             </p>
           )}
 
           {!confirmRestart ? (
             <button
               onClick={() => setConfirmRestart(true)}
-              className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-[#ece6d3] font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-3 px-6 rounded border border-white/20 hover:border-white/40 bg-transparent text-cream font-bold text-base tracking-wide transition-all hover:bg-white/5 active:scale-95 flex items-center justify-center gap-2"
             >
               <RotateCcw className="w-4 h-4" />
               Restart Ride
@@ -130,22 +130,22 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
             <div
               role="alertdialog"
               aria-labelledby="restart-confirm-text"
-              className="w-full p-3 rounded border border-[#e3a83a]/50 bg-[#e3a83a]/10 text-left transit-sign-flicker shadow-[0_0_15px_rgba(227,168,58,0.15)]"
+              className="w-full p-3 rounded border border-warn/50 bg-warn/10 text-left transit-sign-flicker shadow-[0_0_15px_rgba(227,168,58,0.15)]"
             >
-              <p id="restart-confirm-text" className="text-sm text-[#ece6d3] leading-snug">
+              <p id="restart-confirm-text" className="text-sm text-cream leading-snug">
                 Start over from {restartOrigin}? This ride won't be saved to your history.
               </p>
               <div className="mt-3 flex gap-2">
                 <button
                   autoFocus
                   onClick={onRestart}
-                  className="flex-1 py-2.5 px-4 rounded bg-[#e3a83a] hover:bg-[#f0b84a] text-[#1a1205] font-extrabold text-sm transition-all active:scale-95 shadow-md"
+                  className="flex-1 py-2.5 px-4 rounded bg-warn hover:bg-warn-hi text-[#1a1205] font-extrabold text-sm transition-all active:scale-95 shadow-md"
                 >
                   Restart
                 </button>
                 <button
                   onClick={() => setConfirmRestart(false)}
-                  className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 text-[#ece6d3] font-bold text-sm transition-all active:scale-95"
+                  className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 text-cream font-bold text-sm transition-all active:scale-95"
                 >
                   Cancel
                 </button>

@@ -4,6 +4,8 @@ const PORT = 4190;
 
 export default defineConfig({
   testDir: '.',
+  // The screenshot matrix (polish.config.ts) runs on demand, not in CI.
+  testIgnore: ['polish/**'],
   // Software WebGL is slow, and several checks listen to a few seconds of audio.
   timeout: 180_000,
   expect: { timeout: 10_000 },

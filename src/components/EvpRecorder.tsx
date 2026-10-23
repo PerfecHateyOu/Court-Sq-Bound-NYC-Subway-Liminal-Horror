@@ -61,19 +61,19 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
   return (
     <div
       data-testid="evp-recorder"
-      className="absolute right-4 bottom-5 w-[min(300px,calc(100%-160px))] pointer-events-auto select-none rounded-lg border border-[#4a4438] bg-[#15130f]/95 shadow-2xl text-[#d9d1bd] p-3"
+      className="absolute right-4 bottom-5 w-[min(300px,calc(100%-160px))] pointer-events-auto select-none rounded-lg border border-[#4a4438] bg-film-ink/95 shadow-2xl text-film-2 p-3"
     >
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] tracking-[0.25em] text-[#8d8371]">MICROCASSETTE</span>
+        <span className="font-mono text-3xs tracking-[0.25em] text-faint">MICROCASSETTE</span>
         <div className="flex items-center gap-2">
           <span
-            className={`w-2 h-2 rounded-full ${evp.recording ? 'bg-red-500 shadow-[0_0_6px_#ef4444]' : 'bg-[#3a3328]'}`}
+            className={`w-2 h-2 rounded-full ${evp.recording ? 'bg-red-500 shadow-[0_0_6px_#ef4444]' : 'bg-sepia'}`}
             aria-label={evp.recording ? 'Recording' : 'Not recording'}
           />
           <button
             onClick={() => engine.toggleRecorder()}
             aria-label="Lower recorder"
-            className="w-7 h-7 pointer-coarse:w-10 pointer-coarse:h-10 -mr-1 flex items-center justify-center rounded-full text-[#8d8371] hover:text-[#ece6d3] hover:bg-white/10"
+            className="w-7 h-7 pointer-coarse:w-10 pointer-coarse:h-10 -mr-1 flex items-center justify-center rounded-full text-faint hover:text-cream hover:bg-white/10"
           >
             <X className="w-4 h-4" />
           </button>
@@ -81,7 +81,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
       </div>
 
       <div className="mt-1.5 flex items-center gap-3">
-        <div className="flex gap-1.5 p-1.5 rounded bg-black/40 border border-[#3a3328]">
+        <div className="flex gap-1.5 p-1.5 rounded bg-black/40 border border-sepia">
           <Reel spinning={evp.recording && !reduced} />
           <Reel spinning={evp.recording && !reduced} />
         </div>
@@ -106,13 +106,13 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
           </text>
         </svg>
         <div className="flex-1 text-right">
-          <div className="font-mono text-lg font-bold tabular-nums text-[#ece6d3]" data-testid="evp-khz">
+          <div className="font-mono text-lg font-bold tabular-nums text-cream" data-testid="evp-khz">
             {evp.khz.toFixed(1)}
           </div>
-          <div className="flex items-center justify-end gap-1.5 font-mono text-[10px] text-[#8d8371]">
+          <div className="flex items-center justify-end gap-1.5 font-mono text-3xs text-faint">
             kHz
             <span
-              className={`w-2 h-2 rounded-full ${locked ? 'bg-[#6cbe45] shadow-[0_0_6px_#6cbe45]' : 'bg-[#2c3a28]'}`}
+              className={`w-2 h-2 rounded-full ${locked ? 'bg-g-line shadow-[0_0_6px_#6cbe45]' : 'bg-[#2c3a28]'}`}
               aria-label={locked ? 'Locked on' : 'No lock'}
             />
           </div>
@@ -124,7 +124,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <button
           aria-label="Tune down 5 kHz"
           onClick={() => evp.tune(-5.0)}
-          className="px-1.5 pointer-coarse:px-2 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          className="px-1.5 pointer-coarse:px-2 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-sepia hover:border-faint font-mono text-4xs text-faint"
           title="-5 kHz"
         >
           -5k
@@ -132,7 +132,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <button
           aria-label="Tune down"
           onClick={() => evp.tune(-0.5)}
-          className="w-7 pointer-coarse:w-9 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+          className="w-7 pointer-coarse:w-9 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-sepia hover:border-faint"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -144,7 +144,7 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
           aria-valuemax={EVP_MAX_KHZ}
           aria-valuenow={evp.khz}
           data-testid="evp-strip"
-          className="relative flex-1 h-9 rounded bg-black/50 border border-[#3a3328] touch-none cursor-ew-resize overflow-hidden"
+          className="relative flex-1 h-9 rounded bg-black/50 border border-sepia touch-none cursor-ew-resize overflow-hidden"
           style={{
             backgroundImage:
               'repeating-linear-gradient(90deg, rgba(217,209,189,0.35) 0 1px, transparent 1px 9px), repeating-linear-gradient(90deg, rgba(217,209,189,0.6) 0 1px, transparent 1px 45px)',
@@ -170,19 +170,19 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
           onPointerUp={() => (drag.current = null)}
           onPointerCancel={() => (drag.current = null)}
         >
-          <div className="absolute top-0 bottom-0 w-0.5 bg-[#e3a83a]" style={{ left: `${markerPct}%` }} />
+          <div className="absolute top-0 bottom-0 w-0.5 bg-warn" style={{ left: `${markerPct}%` }} />
         </div>
         <button
           aria-label="Tune up"
           onClick={() => evp.tune(0.5)}
-          className="w-7 pointer-coarse:w-9 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371]"
+          className="w-7 pointer-coarse:w-9 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-sepia hover:border-faint"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
         <button
           aria-label="Tune up 5 kHz"
           onClick={() => evp.tune(5.0)}
-          className="px-1.5 pointer-coarse:px-2 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-[#3a3328] hover:border-[#8d8371] font-mono text-[9px] text-[#8d8371]"
+          className="px-1.5 pointer-coarse:px-2 h-9 shrink-0 flex items-center justify-center rounded bg-black/40 border border-sepia hover:border-faint font-mono text-4xs text-faint"
           title="+5 kHz"
         >
           +5k
@@ -199,8 +199,8 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
           onPointerCancel={() => evp.setRecording(false)}
           onPointerLeave={() => evp.setRecording(false)}
           onContextMenu={(e) => e.preventDefault()}
-          className={`w-[86px] shrink-0 rounded border font-mono text-[11px] font-bold tracking-wider touch-none ${
-            evp.recording ? 'bg-red-600/80 border-red-400 text-white' : 'bg-black/40 border-[#5a2a24] text-[#e8a49a]'
+          className={`w-[86px] shrink-0 rounded border font-mono text-2xs font-bold tracking-wider touch-none ${
+            evp.recording ? 'bg-red-600/80 border-red-400 text-white' : 'bg-black/40 border-[#5a2a24] text-bad-pale'
           }`}
         >
           HOLD
@@ -210,13 +210,13 @@ export const EvpRecorder: React.FC<{ engine: GameEngine }> = ({ engine }) => {
         <p
           aria-live="polite"
           data-testid="evp-transcript"
-          className={`flex-1 min-h-[2.6rem] text-[11px] leading-snug ${sig ? 'italic text-[#ece6d3]' : 'text-[#8d8371]'}`}
+          className={`flex-1 min-h-[2.6rem] text-2xs leading-snug ${sig ? 'italic text-cream' : 'text-faint'}`}
         >
           {status}
         </p>
       </div>
       {!engine.isTouch && (
-        <p className="mt-1.5 font-mono text-[9px] text-[#6d6450]">[ ] or wheel to tune · hold Space to record · R to lower</p>
+        <p className="mt-1.5 font-mono text-4xs text-[#6d6450]">[ ] or wheel to tune · hold Space to record · R to lower</p>
       )}
     </div>
   );

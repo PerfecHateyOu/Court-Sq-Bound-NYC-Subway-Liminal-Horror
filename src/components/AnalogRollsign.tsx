@@ -58,21 +58,21 @@ export const AnalogRollsign: React.FC<AnalogRollsignProps> = ({ engine }) => {
           >
             {route.id}
           </span>
-          <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.25em] text-[#9f9883] uppercase font-bold">
+          <span className="font-mono text-4xs sm:text-3xs tracking-[0.25em] text-paper-faint uppercase font-bold">
             MTA NYCT • SYSTEM DIVISION
           </span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#e3a83a]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-warn" />
         </div>
 
         {/* Mechanical Split-Card Body */}
         <div className={`relative z-10 py-0.5 ${!isReduced ? 'transit-sign-flicker-subtle' : ''}`}>
-          <div className="font-mono font-black text-xs sm:text-sm tracking-[0.2em] text-[#e3a83a] uppercase mb-0.5">
+          <div className="font-mono font-black text-xs sm:text-sm tracking-[0.2em] text-warn uppercase mb-0.5">
             {chapter.numeral}
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-[#f3ede0] uppercase font-sans leading-none drop-shadow-sm">
             {title}
           </h2>
-          <div className="mt-1 pt-1 border-t border-[#3a372f] text-[10px] sm:text-[11px] font-medium text-[#c4bda7] tracking-wider uppercase font-mono">
+          <div className="mt-1 pt-1 border-t border-[#3a372f] text-3xs sm:text-2xs font-medium text-paper-line tracking-wider uppercase font-mono">
             {subtitle}
           </div>
         </div>
