@@ -7,6 +7,14 @@ import { SegmentDef } from './types';
 export const V = 14;
 
 /**
+ * Which way the train travels along x: toward -x, so Car A (Lead, centered at x = -19.5) is the
+ * front and Car C (Rear, x = +19.5) the back. Everything outside (tunnel lights and piers,
+ * stations, the trestle, passing trains, the rain on the trestle windows) streams toward +x.
+ * World x of something `d` metres ahead of the train is FORWARD_X * d.
+ */
+export const FORWARD_X = -1;
+
+/**
  * Nightmare mode (unlocked after one completed ride): the same ride, harder.
  * Rules it keeps: the arrival tick stays the only reliable door signal (bulb flicker is one tube
  * at a time, mid-ride only, never on the approach), sanity stays band-clamped, and Screen

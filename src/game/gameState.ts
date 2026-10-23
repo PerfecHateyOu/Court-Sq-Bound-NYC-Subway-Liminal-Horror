@@ -36,6 +36,7 @@ import {
   CHAPTERS,
   ChapterDef,
   chapterForStop,
+  FORWARD_X,
 } from '../constants';
 import { recordRide, PsychLogResult, entryState } from './psychLog';
 import { audioEngine } from '../audio/audioEngine';
@@ -2441,9 +2442,12 @@ export class GameEngine {
     return [yaw, pitch];
   }
 
-  /** Is a point at relative x (train frame) inside the tunnel, given the trestle positions? */
-  private inTunnelAt(x: number, pos: number): boolean {
-    return x <= this.trestleExitAt - pos || (this.trestleEnterAt !== null && x >= this.trestleEnterAt - pos);
+  /**
+   * Is a point `d` metres ahead of the train's middle (negative: behind) inside the tunnel, given
+   * the trestle positions? Ahead is toward Car A (world x = FORWARD_X * d).
+   */
+  private inTunnelAt(d: number, pos: number): boolean {
+    return d <= this.trestleExitAt - pos || (this.trestleEnterAt !== null && d >= this.trestleEnterAt - pos);
   }
 
   private placeWorld(pos: number, speed: number, dt: number = 0) {
@@ -2451,24 +2455,26 @@ export class GameEngine {
     const L = cb.tunnelLength;
     const best = [1e9, 1e9];
 
+    // The world streams past toward Car C: a point d metres ahead sits at world x = FORWARD_X * d.
     // Tunnel walls end at the mouth: slide them so the open stretch has none.
     const wallX = Number.isFinite(this.trestleExitAt)
-      ? this.trestleExitAt - pos - 200
+      ? FORWARD_X * (this.trestleExitAt - pos - 200)
       : this.trestleEnterAt !== null
-      ? this.trestleEnterAt - pos + 200
+      ? FORWARD_X * (this.trestleEnterAt - pos + 200)
       : 0;
     cb.tunnelWalls.forEach((w) => (w.position.x = wallX));
 
     // How much of the 57 m consist is outside, and whether open air is in view at all.
     let out = 0;
-    for (let i = 0; i <= 12; i++) if (!this.inTunnelAt(-28.5 + i * 4.75, pos)) out++;
+    for (let i = 0; i <= 12; i++) if (!this.inTunnelAt(FORWARD_X * (-28.5 + i * 4.75), pos)) out++;
     this.trestleOutside = out / 13;
     this.trestleShow = !(this.inTunnelAt(-110, pos) && this.inTunnelAt(110, pos));
 
     cb.tunnelItems.forEach((it) => {
-      const x = (((it.base - pos) % L) + L) % L - L / 2;
+      const d = (((it.base - pos) % L) + L) % L - L / 2;
+      const x = FORWARD_X * d;
       it.m.position.x = x;
-      it.m.visible = this.inTunnelAt(x, pos);
+      it.m.visible = this.inTunnelAt(d, pos);
       if (it.light && it.m.visible) {
         const si = it.s < 0 ? 0 : 1;
         if (Math.abs(x) < Math.abs(best[si])) best[si] = x;
@@ -2478,13 +2484,13 @@ export class GameEngine {
     let near = false;
     [cb.stA, cb.stB].forEach((s) => {
       if (!s) return;
-      const x = s.baseX - pos;
+      const x = FORWARD_X * (s.baseX - pos);
       s.g.position.x = x;
       s.g.visible = Math.abs(x) < 60;
       if (Math.abs(x) < 30) near = true;
     });
 
-    cb.trestle.update(this.GT, dt, pos, speed, this.trestleShow, (x) => !this.inTunnelAt(x, pos), settings.effectsReduced(), this.trestleOutside);
+    cb.trestle.update(this.GT, dt, pos, speed, this.trestleShow, (x) => !this.inTunnelAt(FORWARD_X * x, pos), settings.effectsReduced(), this.trestleOutside);
     if (this.trestleOutside > 0.4 && !this.trestleBadgeChecked) {
       this.trestleBadgeChecked = true; // once per ride, not every frame (it reads saved data)
       unlockAchievement('trestle_cross');

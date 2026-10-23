@@ -8,6 +8,7 @@
  * arrival flicker that marks a False Stop, and its odds don't depend on what the next stop is.
  */
 import * as THREE from 'three';
+import { FORWARD_X } from '../constants';
 
 /** Center line of the second track (the column line is at z = 2.4). */
 export const OTHER_TRACK_Z = 4.25;
@@ -18,9 +19,9 @@ const CAR_LEN = 15.5;
 export const PASSING_LENGTH = CARS * CAR_LEN;
 /** The other train's own speed (m/s); it adds to ours as it passes. */
 const OTHER_SPEED = 12;
-/** Starts this far ahead and is done once its tail is this far behind. */
-const START_X = 70;
-const END_X = -40;
+/** Starts this far ahead and is done once its tail is this far behind (metres, not world x). */
+const START_AHEAD = 70;
+const END_BEHIND = 40;
 
 function windowTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -51,8 +52,11 @@ function windowTexture(): THREE.CanvasTexture {
 export class PassingTrain {
   public group = new THREE.Group();
   public active = false;
-  /** x of the train's front (it runs toward -x); the body trails behind it toward +x. */
-  public x = START_X;
+  /**
+   * World x of the train's front. It comes from ahead (the Car A end) and runs back toward the
+   * Car C end, so it moves along -FORWARD_X; the body trails behind its front, toward FORWARD_X.
+   */
+  public x = FORWARD_X * START_AHEAD;
   /** Seconds since it started, for the sound and tests. */
   public t = 0;
 
@@ -61,27 +65,27 @@ export class PassingTrain {
       new THREE.BoxGeometry(PASSING_LENGTH, 2.7, 2.7),
       new THREE.MeshLambertMaterial({ color: 0x3a3e3b })
     );
-    body.position.set(PASSING_LENGTH / 2, 1.45, 0);
+    body.position.set(FORWARD_X * (PASSING_LENGTH / 2), 1.45, 0);
     const windows = new THREE.Mesh(new THREE.PlaneGeometry(PASSING_LENGTH, 0.95), new THREE.MeshBasicMaterial({ map: windowTexture() }));
     // Faces our car (toward -z).
     windows.rotation.y = Math.PI;
-    windows.position.set(PASSING_LENGTH / 2, 1.75, -1.36);
+    windows.position.set(FORWARD_X * (PASSING_LENGTH / 2), 1.75, -1.36);
     const lamps = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 1.6), new THREE.MeshBasicMaterial({ color: 0xfff1c8 }));
-    lamps.position.set(-0.04, 0.8, 0);
+    lamps.position.set(-FORWARD_X * 0.04, 0.8, 0);
     this.group.add(body, windows, lamps);
-    this.group.position.set(START_X, 0, OTHER_TRACK_Z);
+    this.group.position.set(FORWARD_X * START_AHEAD, 0, OTHER_TRACK_Z);
     this.group.visible = false;
     parent.add(this.group);
   }
 
   /** Seconds a pass takes at the given speed of our train, start to finish. */
   public static duration(ourSpeed: number) {
-    return (START_X - END_X + PASSING_LENGTH) / (ourSpeed + OTHER_SPEED);
+    return (START_AHEAD + END_BEHIND + PASSING_LENGTH) / (ourSpeed + OTHER_SPEED);
   }
 
   public start() {
     this.active = true;
-    this.x = START_X;
+    this.x = FORWARD_X * START_AHEAD;
     this.t = 0;
     this.group.position.x = this.x;
     this.group.visible = true;
@@ -96,9 +100,10 @@ export class PassingTrain {
   public update(dt: number, ourSpeed: number, canShow: boolean) {
     if (!this.active) return;
     this.t += dt;
-    this.x -= (ourSpeed + OTHER_SPEED) * dt;
+    this.x -= FORWARD_X * (ourSpeed + OTHER_SPEED) * dt;
     this.group.position.x = this.x;
     this.group.visible = canShow;
-    if (this.x + PASSING_LENGTH < END_X) this.stop();
+    // Done once its tail (PASSING_LENGTH behind its front) is END_BEHIND metres behind us.
+    if (FORWARD_X * this.x + PASSING_LENGTH < -END_BEHIND) this.stop();
   }
 }

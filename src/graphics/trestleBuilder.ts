@@ -11,6 +11,7 @@
  * (zero cost) except near and during the open-air stretch.
  */
 import * as THREE from 'three';
+import { FORWARD_X } from '../constants';
 
 /** Distance between passing steel bents, and the wrap length for scrolling them. */
 const BENT_SPACING = 9;
@@ -193,7 +194,10 @@ export class TrestleBuilder {
     [-1, 1].forEach((s) => {
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(57 / 1.2, 0.85 / 1.2);
+      // Seen from inside, streaks slant down and run to the left of the screen; on the strip
+      // where screen-left is not the back of the train (toward Car C), mirror it.
+      const back = s === -FORWARD_X ? 1 : -1;
+      tex.repeat.set(back * (57 / 1.2), 0.85 / 1.2);
       tex.anisotropy = 8;
       const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.6, depthWrite: false, fog: false });
       const strip = new THREE.Mesh(new THREE.PlaneGeometry(57, 0.85), mat);
@@ -239,7 +243,8 @@ export class TrestleBuilder {
   }
 
   /**
-   * Per frame. `outside(x)` says whether a point at relative x is in the open (not in tunnel).
+   * Per frame. `outside(x)` says whether a point at world x (train frame) is in the open (not in
+   * tunnel). Bents stream past toward Car C (see FORWARD_X).
    * `show` is whether any open air is in view.
    */
   public update(GT: number, dt: number, pos: number, speed: number, show: boolean, outside: (x: number) => boolean, reduced: boolean, rainLevel: number) {
@@ -247,12 +252,13 @@ export class TrestleBuilder {
     this.steelGroup.visible = show;
     if (!show) return;
     this.steel.forEach((it) => {
-      const x = (((it.base - pos) % BENT_WRAP) + BENT_WRAP) % BENT_WRAP - BENT_WRAP / 2;
+      const x = FORWARD_X * ((((it.base - pos) % BENT_WRAP) + BENT_WRAP) % BENT_WRAP - BENT_WRAP / 2);
       it.m.position.x = x;
       it.m.visible = outside(x);
     });
-    // Far skyline: a hint of parallax as the train moves.
-    this.skyline.rotation.y = pos * 0.0006;
+    // Far skyline: a hint of parallax as the train moves (drifting back, toward Car C, on the
+    // side your seat faces).
+    this.skyline.rotation.y = FORWARD_X * pos * 0.0006;
     this.rainMats.forEach((m) => (m.opacity = 0.6 * rainLevel));
     if (!reduced) {
       // Rain runs down and is pushed back by the train's speed.

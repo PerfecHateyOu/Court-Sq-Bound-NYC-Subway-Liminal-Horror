@@ -42,7 +42,7 @@ test.describe('A livelier car', () => {
       advance(2.0); const pulling = { stand: s3.life.lean, seat: s1.life.lean, pos: s3.g.position.clone(), home: s3.home.clone() };
       G.ts = G.segLen(G.seg) - 3; advance(1.5); const braking = { stand: s3.life.lean, seat: s1.life.lean };
       return { pulling: { stand: pulling.stand, seat: pulling.seat, moved: pulling.pos.distanceTo(pulling.home) }, braking };`);
-    expect(r.pulling.stand).toBeGreaterThan(0.02); // back (toward -x; the train runs toward +x)
+    expect(r.pulling.stand).toBeGreaterThan(0.02); // back (toward Car C, +x; the train runs toward Car A, -x)
     expect(r.pulling.seat).toBeGreaterThan(0);
     expect(r.pulling.seat).toBeLessThan(r.pulling.stand); // seated riders lean less
     expect(r.braking.stand).toBeLessThan(-0.02); // forward
@@ -108,7 +108,24 @@ test.describe('A train on the other track', () => {
       G.passAt = G.ts + 0.1; advance(0.2); const started = T.active && T.group.visible;
       const z = T.group.position.z; const x0 = T.x; advance(1); const x1 = T.x;
       for (let i = 0; i < 200 && T.active; i++) advance(0.05);
-      return { started, z, movingBack: x1 < x0, gone: !T.active && !T.group.visible };`);
+      return { started, z, movingBack: x1 > x0, gone: !T.active && !T.group.visible }; // back = toward Car C (+x)`);
     expect(r).toEqual({ started: true, z: 4.25, movingBack: true, gone: true });
+  });
+});
+
+test.describe('Direction of travel', () => {
+  test('Car A leads: the next stop is ahead past Car A and the tunnel streams back toward Car C', async ({ game }) => {
+    const r = await game(`ride(1); G.Q = []; G.seg._masks = []; G.ts = 8; advance(0.2); const cb = G.carBuilder;
+      const st0 = cb.stB.g.position.x; const items0 = cb.tunnelItems.map((it) => it.m.position.x);
+      advance(0.1); const st1 = cb.stB.g.position.x;
+      const moved = cb.tunnelItems.map((it, i) => it.m.position.x - items0[i]).filter((d) => Math.abs(d) < 5);
+      return { speed: G.speed, carA: cb.carAGroup.children[0].position.x, carC: cb.carCGroup.children[0].position.x,
+        nextStop: st0, nextStopNearer: st1 > st0, streamingBack: moved.length > 0 && moved.every((d) => d > 0) };`);
+    expect(r.speed).toBeGreaterThan(1);
+    expect(r.carA).toBeLessThan(0); // Car A (Lead) is the -x end
+    expect(r.carC).toBeGreaterThan(0);
+    expect(r.nextStop).toBeLessThan(0); // the next station is ahead, beyond Car A
+    expect(r.nextStopNearer).toBe(true);
+    expect(r.streamingBack).toBe(true); // tunnel lights and piers move toward Car C (+x)
   });
 });
