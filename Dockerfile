@@ -1,4 +1,5 @@
-# Container for Google Cloud Run: builds the game, then serves dist/ with nginx.
+# Container for Google Cloud Run and for Render when Language is Docker.
+# Builds the game, then serves dist/ with nginx on $PORT (Cloud Run 8080, Render 10000).
 #   gcloud run deploy court-sq-bound --source . --region us-central1 --allow-unauthenticated
 
 # 1) Build the static site

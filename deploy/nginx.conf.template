@@ -1,6 +1,8 @@
 server {
+    # IPv4 only. Render's Docker network has no IPv6 socket: `listen [::]:${PORT}`
+    # makes nginx exit before it binds, so the image builds and the deploy still fails.
+    # Cloud Run reaches the container over IPv4 on $PORT as well.
     listen ${PORT};
-    listen [::]:${PORT};
     server_name _;
     root /usr/share/nginx/html;
 

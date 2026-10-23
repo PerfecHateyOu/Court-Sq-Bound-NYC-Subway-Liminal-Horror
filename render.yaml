@@ -1,0 +1,13 @@
+# Blueprint for the Render web service. Applying it is optional; the same
+# settings have to be set by hand on an existing service that is not synced
+# from this file. See the README "Deploy to Render" section.
+services:
+  - type: web
+    name: Last-Local-Liminal-Space-Subway-
+    runtime: node
+    buildCommand: npm install --include=dev --no-audit --no-fund && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22.22.0"

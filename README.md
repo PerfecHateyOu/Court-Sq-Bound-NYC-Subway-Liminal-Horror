@@ -19,7 +19,8 @@ Other scripts:
 |---|---|
 | `build` | Production build into `dist/` |
 | `build:offline` | The offline copy: `dist-offline/Last-Local/index.html` (one file that opens from a double-click) and `dist-offline/Last-Local-offline.zip` |
-| `preview` | Serve the production build |
+| `preview` | Serve the production build with Vite |
+| `start` | Serve `dist/` on `0.0.0.0:$PORT` (Render's start command). Run `build` first. |
 | `lint` | Type-check with `tsc --noEmit` |
 | `test` | Browser tests (Playwright); `test:ui` opens them interactively |
 
@@ -52,6 +53,22 @@ gcloud run deploy court-sq-bound --source . --region us-central1 --allow-unauthe
 ```
 
 The Cloud Run service keeps the old `court-sq-bound` name, so the deployed URL keeps working. To ship an update later, `git pull` in that folder and run the same `gcloud run deploy` line. No environment variables or API keys are needed; nothing from `.env` goes into the image.
+
+## Deploy to Render
+
+The web service is `Last-Local-Liminal-Space-Subway-`. `render.yaml` is the same setup as a Blueprint; an existing service that is not synced from that file needs these dashboard settings (Settings → Build & Deploy, and Environment):
+
+| Field | Value |
+|---|---|
+| Language | Node |
+| Build Command | `npm install --include=dev --no-audit --no-fund && npm run build` |
+| Start Command | `npm start` |
+| Health Check Path | `/` |
+| `NODE_VERSION` | `22.22.0` (or delete it and let `.node-version` apply). Vite 8 needs Node 22.12+ or 20.19+. |
+
+`npm start` serves `dist/` on `0.0.0.0:$PORT`. Render's default `PORT` is `10000`. No other environment variables are required.
+
+If Language is **Docker** instead, leave Docker Command empty so the image's nginx starts, and redeploy. nginx listens on `$PORT` over IPv4. A `listen [::]` line used to abort startup on Render, which fails the deploy after the image has already built.
 
 ## Offline copy
 

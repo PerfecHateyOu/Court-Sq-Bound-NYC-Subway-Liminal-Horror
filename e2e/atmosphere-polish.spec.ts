@@ -3,14 +3,14 @@ import { test, expect } from './game';
 test.describe('Atmospheric horror & audiovisual polish', () => {
   test('audioEngine synthesizes wheel flange squeals, power sparks, and conductor broadcasts without errors', async ({ game }) => {
     const res = await game(`
-      audioEngine.init(false);
-      audioEngine.wheelFlangeSqueal(0.5, 0.05);
-      audioEngine.thirdRailSpark();
-      audioEngine.conductorBroadcast(1);
+      A.init(false);
+      A.wheelFlangeSqueal(0.5, 0.05);
+      A.thirdRailSpark();
+      A.conductorBroadcast(1);
       return {
-        hasSqueal: typeof audioEngine.wheelFlangeSqueal === 'function',
-        hasSpark: typeof audioEngine.thirdRailSpark === 'function',
-        hasConductor: typeof audioEngine.conductorBroadcast === 'function',
+        hasSqueal: typeof A.wheelFlangeSqueal === 'function',
+        hasSpark: typeof A.thirdRailSpark === 'function',
+        hasConductor: typeof A.conductorBroadcast === 'function',
       };
     `);
     expect(res).toEqual({
@@ -26,9 +26,12 @@ test.describe('Atmospheric horror & audiovisual polish', () => {
       G.Q = [];
       const cb = G.carBuilder;
       const initialDip = cb.powerDip;
-      cb.triggerPowerFlicker(0.8, 0.08);
+      cb.triggerPowerFlicker(0.8, 0.05);
       const dipped = cb.powerDip;
-      advance(0.2);
+      // The dip is wall-clock time, and the pool only eases it back on updateLightPool
+      // (the render loop), which advance() does not call.
+      await sleep(80);
+      for (let i = 0; i < 8; i++) cb.updateLightPool(R.camera.position, 0.05);
       const recovered = cb.powerDip;
       return { initialDip, dipped, recovered };
     `);
