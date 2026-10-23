@@ -302,7 +302,11 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
           {/* Psychological Log */}
           <section aria-labelledby="psych-log-h" className="mt-5 border-t-2 border-paper-ink pt-3">
             <div className="flex items-baseline justify-between gap-3 mb-1">
-              <h3 id="psych-log-h" className="font-black text-xs sm:text-sm uppercase tracking-wide">
+              <h3
+                id="psych-log-h"
+                className="font-black text-xs sm:text-sm uppercase tracking-wide"
+                title="The anomalies you've seen: this ride's, then the whole file kept on this device (the same file as Case Files → Anomalies)."
+              >
                 Psychological Log
               </h3>
               <span className="font-mono text-2xs sm:text-xs font-bold whitespace-nowrap">
