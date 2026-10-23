@@ -10,8 +10,9 @@ import { evp } from '../game/evpManager';
 import type { GameEngine } from '../game/gameState';
 import { TapePlayButton } from './TapePlayButton';
 import { Overlay } from '../ui/Overlay';
+import { StatusChip } from '../ui/StatusChip';
 import { PolaroidPhoto } from '../types';
-import { X, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, ZoomIn, Mic } from 'lucide-react';
+import { X, Image as ImageIcon, Sparkles, ZoomIn, Mic } from 'lucide-react';
 
 interface PolaroidAlbumProps {
   onClose: () => void;
@@ -174,8 +175,10 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
               <div className="py-16 text-center text-dim">
                 <Mic className="w-8 h-8 mx-auto opacity-40 mb-3" />
                 <p className="text-sm font-medium">No tapes yet.</p>
-                <p className="text-xs text-white/40 mt-1">
-                  {evp.hasRecorder ? 'Raise the recorder, tune slowly, and hold record when something comes through.' : 'You don\u2019t have anything to record with.'}
+                <p className="text-xs text-dim mt-1">
+                  {evp.hasRecorder
+                    ? `${engine?.isTouch ? 'Tap the recorder' : 'Press R'} to raise it, tune slowly, and hold record when something comes through.`
+                    : 'You don\u2019t have anything to record with.'}
                 </p>
               </div>
             ) : (
@@ -200,14 +203,12 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         ) : (
         <div role="tabpanel">
           {filteredPhotos.length === 0 ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center text-dim">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-3">
-                <ImageIcon className="w-8 h-8 opacity-40" />
-              </div>
-              <p className="text-sm font-medium">No Polaroid prints in this category yet.</p>
-              <p className="text-xs text-white/40 mt-1">
-                Press [C] or click the camera icon on the HUD to frame and capture evidence.
-              </p>
+            <div className="py-16 text-center flex flex-col items-center justify-center text-dim">
+              <ImageIcon className="w-8 h-8 opacity-40 mb-3" aria-hidden="true" />
+              <p className="text-sm font-medium">{photos.length ? 'No prints from this car.' : 'No Polaroids yet.'}</p>
+              {!photos.length && (
+                <p className="text-xs text-dim mt-1">{engine?.isTouch ? 'Tap Camera' : 'Press C'} on the train to take one.</p>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
@@ -229,16 +230,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                       <UndevelopedPrint />
                     )}
 
-                    {/* Badge (developed prints only) */}
-                    {!photo.developed ? null : photo.hasAnomalyInFrustum ? (
-                      <div className="absolute top-1.5 right-1.5 bg-red-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-0.5">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        <span>ANOMALY</span>
-                      </div>
-                    ) : (
-                      <div className="absolute top-1.5 right-1.5 bg-black/60 text-white/80 text-[8px] font-mono px-1.5 py-0.5 rounded">
-                        BASELINE
-                      </div>
+                    {/* Status (developed prints only), the same chip as the Case Files */}
+                    {photo.developed && (
+                      <StatusChip tone="dark" state={photo.hasAnomalyInFrustum ? 'caught' : 'nothing'} className="absolute top-1.5 right-1.5 shadow" />
                     )}
 
                     {/* Hover Zoom Prompt */}
@@ -306,25 +300,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                   {selectedPhoto.developed ? selectedPhoto.anomalyName || 'NOTHING OUT OF PLACE' : 'STILL DEVELOPING'}
                 </span>
                 {selectedPhoto.developed && (
-                <span
-                  className={`text-3xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                    selectedPhoto.hasAnomalyInFrustum
-                      ? 'bg-red-600 text-white'
-                      : 'bg-emerald-700 text-white'
-                  }`}
-                >
-                  {selectedPhoto.hasAnomalyInFrustum ? (
-                    <>
-                      <AlertTriangle className="w-3 h-3" />
-                      ANOMALOUS
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3 h-3" />
-                      NEGATIVE
-                    </>
-                  )}
-                </span>
+                  <StatusChip tone="dark" state={selectedPhoto.hasAnomalyInFrustum ? 'caught' : 'nothing'} />
                 )}
               </div>
 

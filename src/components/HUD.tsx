@@ -337,15 +337,19 @@ export const HUD: React.FC<HUDProps> = ({
       {G.subHtml && (
         <div
           className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/80 border border-white/10 text-center text-sm sm:text-base text-cream leading-relaxed shadow-lg transit-sign-flicker-subtle transition-all duration-300 ${
-            showChoices ? 'bottom-28' : isRestraint ? 'bottom-32' : 'bottom-16'
+            showChoices ? 'bottom-28 touch:bottom-56 short-land:bottom-28' : isRestraint ? 'bottom-32' : 'bottom-16'
           }`}
           dangerouslySetInnerHTML={{ __html: G.subHtml }}
         />
       )}
 
-      {/* Choice Buttons Bar (Doors & Mask Checks) */}
+      {/* Choice Buttons Bar (Doors & Mask Checks). Touch: full-width stacked buttons, at least
+          48px tall, clear of the home indicator. Keyboard: side by side, each with its key cap. */}
       {showChoices && choice && (
-        <div className="absolute left-1/2 bottom-5 -translate-x-1/2 w-[min(calc(100vw-32px),760px)] flex flex-wrap gap-2.5 pointer-events-auto p-2 rounded-lg bg-black/85 border border-white/15 shadow-2xl transit-sign-flicker">
+        <div
+          data-testid="choice-bar"
+          className="absolute left-1/2 bottom-[max(1.25rem,env(safe-area-inset-bottom))] -translate-x-1/2 w-[min(calc(100vw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right)),760px)] flex flex-wrap touch:flex-col short-land:flex-row gap-2.5 touch:gap-2 pointer-events-auto p-2 rounded-lg bg-black/85 border border-white/15 shadow-2xl transit-sign-flicker"
+        >
           {/* Progress Time Bar */}
           {isFinite(choice.window) && (
             <div className="w-full h-1 bg-white/15 rounded-full overflow-hidden mb-1">
@@ -360,11 +364,13 @@ export const HUD: React.FC<HUDProps> = ({
             <button
               key={idx}
               onClick={() => G.pickChoiceIndex(idx)}
-              className="flex-1 min-w-[160px] min-h-[46px] flex items-center gap-3 px-3.5 py-2.5 rounded bg-[#151916] hover:bg-[#202722] border border-white/15 hover:border-g-line text-left text-sm sm:text-base text-cream transition-all active:scale-[0.98]"
+              className="flex-1 min-w-[160px] touch:w-full short-land:w-auto short-land:min-w-0 touch:min-h-12 min-h-[46px] flex items-center gap-3 px-3.5 py-2.5 rounded bg-[#151916] hover:bg-[#202722] border border-white/15 hover:border-g-line text-left text-sm sm:text-base text-cream transition-colors active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
             >
-              <span className="w-6 h-6 rounded bg-black/70 border border-white/20 text-dim flex items-center justify-center text-xs font-mono font-bold">
-                {idx + 1}
-              </span>
+              {!G.isTouch && (
+                <kbd className="shrink-0 w-6 h-6 rounded bg-black/70 border border-white/25 border-b-2 text-cream/80 flex items-center justify-center text-xs font-mono font-bold">
+                  {idx + 1}
+                </kbd>
+              )}
               <span className="flex-1 font-medium">{item.txt}</span>
             </button>
           ))}

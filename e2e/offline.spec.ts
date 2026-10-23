@@ -121,7 +121,6 @@ test.describe('offline copy', () => {
     await expect(page.getByRole('button', { name: 'Resume Ride' })).toHaveCount(0);
     await page.keyboard.press('KeyP');
     await page.locator('text=/Restart Ride/i').click();
-    await page.locator('[role=alertdialog]').locator('text=/^Restart$/').click();
     await expect(page.getByTestId('hud-route-panel')).toHaveAccessibleName(/^G train/); // a new ride is on the G
 
     expect(requests).toEqual([]);

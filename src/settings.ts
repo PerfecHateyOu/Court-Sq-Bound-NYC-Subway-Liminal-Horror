@@ -23,6 +23,10 @@ export interface Settings {
   screenEffects: ScreenEffects;
   /** Go full screen when boarding the train (where the browser allows it). */
   fullscreenOnBoard: boolean;
+  /** Rides (and the practice stretch) start with sound off; M or the Sound button turns it on. */
+  startMuted: boolean;
+  /** The HUD's key-hint strip, for the first minute of the first ride. */
+  showHints: boolean;
 }
 
 export const SENSITIVITY_RANGE = [0.4, 2.0] as const;
@@ -34,6 +38,8 @@ export const DEFAULT_SETTINGS: Settings = {
   musicVolume: 1,
   screenEffects: 'system',
   fullscreenOnBoard: true,
+  startMuted: false,
+  showHints: true,
 };
 
 const KEY = 'gtrain-settings';
@@ -61,6 +67,8 @@ function sanitize(raw: any): Settings {
     musicVolume: clamp(raw.musicVolume, 0, 1, d.musicVolume),
     screenEffects: ['system', 'full', 'reduced'].includes(raw.screenEffects) ? raw.screenEffects : d.screenEffects,
     fullscreenOnBoard: typeof raw.fullscreenOnBoard === 'boolean' ? raw.fullscreenOnBoard : d.fullscreenOnBoard,
+    startMuted: typeof raw.startMuted === 'boolean' ? raw.startMuted : d.startMuted,
+    showHints: typeof raw.showHints === 'boolean' ? raw.showHints : d.showHints,
   };
 }
 

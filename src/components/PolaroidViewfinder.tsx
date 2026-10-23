@@ -158,9 +158,11 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
       )}
 
       {/* Chemical Developing Polaroid Card Ejection Drawer (Bottom Left) */}
-      {(isDeveloping || lastPhoto) && (
+      {/* Ride-time only: on the Travel Report it would sit over the report's buttons. It has
+          nothing to press, so it never takes a tap or click meant for what's under it. */}
+      {(isDeveloping || lastPhoto) && engine.phase !== 'end' && (
         <div
-          className={`fixed left-6 bottom-6 z-40 transition-all duration-700 pointer-events-auto select-none ${
+          className={`fixed left-6 bottom-6 z-40 transition-all duration-700 pointer-events-none select-none ${
             isDeveloping ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-90 scale-95'
           }`}
         >

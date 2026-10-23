@@ -47,7 +47,7 @@ for (const s of [
       await openTitlePanels(page);
       for (const [open, id, done] of [
         ['Settings', 'settings-panel', 'Done'],
-        [/Case Files/, 'case-files', /Close|Return to Briefing/],
+        [/Case Files/, 'case-files', 'Close'],
       ] as const) {
         await page.getByRole('button', { name: open }).first().click();
         const b = await box(page, id);

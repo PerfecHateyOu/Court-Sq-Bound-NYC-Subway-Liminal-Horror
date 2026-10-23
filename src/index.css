@@ -152,7 +152,8 @@
   .start-head h1 { font-size: clamp(2.25rem, 4.4vw, 3.75rem); line-height: 1; }
   .start-plaque { grid-area: plaque; }
   .start-plaque h2 { font-size: clamp(1.625rem, 3vw, 2.5rem); }
-  .start-brief { grid-area: brief; margin-top: 0; }
+  /* Same top as the left column, and at least as tall, so the two columns end together. */
+  .start-brief { grid-area: brief; margin-top: 0; align-self: stretch; }
   .start-actions { grid-area: actions; flex-direction: column; align-items: stretch; }
   .start-chapter { grid-area: chapter; }
 }
@@ -167,6 +168,12 @@
   .start-frame { padding: 0.5rem 0.875rem; }
   .start-plaque h2 { font-size: 1.25rem; }
   .start-actions { margin-top: 0.5rem; }
+}
+/* The shortest of those (640×360, an SE turned sideways): the kicker and the motto make way, so
+   Board the Train sits fully on screen. The game's name, tagline and the station sign stay. */
+@media (min-width: 640px) and (orientation: landscape) and (max-height: 400px) {
+  .start-kicker,
+  .start-motto { display: none; }
 }
 
 :root {

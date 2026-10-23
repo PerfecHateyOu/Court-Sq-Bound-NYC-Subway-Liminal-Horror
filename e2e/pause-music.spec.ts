@@ -67,7 +67,6 @@ test.describe('pause music', () => {
     expect(back.music).toBeGreaterThan(0.8);
 
     await page.locator('text=/Restart Ride/i').click();
-    await page.locator('[role=alertdialog] >> text=/^Restart$/').click();
     const r = await M(game, `await sleep(1800); return { playing: M.playing, game: A.masterGain.gain.value, phase: G.phase, paused: G.paused };`);
     expect(r).toMatchObject({ playing: false, phase: 'intro', paused: false });
     expect(r.game).toBeGreaterThan(0.8);

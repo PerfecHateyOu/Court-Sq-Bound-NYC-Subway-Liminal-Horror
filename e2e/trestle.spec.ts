@@ -73,7 +73,6 @@ test.describe('Newtown Creek trestle', () => {
     await game(`G.Q = []; G.startSegment(12); G.san = 5; advance(1);`);
     await page.keyboard.press('KeyP');
     await page.locator('text=/Restart Ride/i').click();
-    await page.locator('[role=alertdialog] >> text=/^Restart$/').click();
     const r = await game(`await sleep(500); return { exit: String(G.trestleExitAt), enter: G.trestleEnterAt, show: G.trestleShow, out: G.trestleOutside,
       visible: G.carBuilder.trestle.group.visible, wallX: G.carBuilder.tunnelWalls[0].position.x, fogFar: R.scene.fog.far };`);
     expect(r).toEqual({ exit: 'Infinity', enter: null, show: false, out: 0, visible: false, wallX: 0, fogFar: 30 });

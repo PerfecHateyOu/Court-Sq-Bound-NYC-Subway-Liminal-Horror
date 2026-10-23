@@ -83,13 +83,6 @@ test('Tab stays in the pause menu, never reaching the HUD behind it', async ({ p
   await expect(pause.getByRole('button', { name: 'Resume Ride' })).toBeFocused();
   await expectTrapped(page, pause, 6);
   expect(await tabs(page, 6)).not.toContain('Pause');
-
-  // With the restart confirmation up, Tab cycles through it too; Esc cancels it.
-  await pause.getByRole('button', { name: 'Restart Ride' }).click();
-  await expect(pause.getByRole('button', { name: 'Restart', exact: true })).toBeFocused();
-  await expectTrapped(page, pause, 6);
-  await page.keyboard.press('Escape');
-  expect(await page.evaluate(() => (window as any).__G.paused)).toBe(true);
 });
 
 test('Settings over the pause menu holds focus, then hands it back to the Settings button', async ({ page, game }) => {

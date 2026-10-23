@@ -30,6 +30,11 @@ const fakeMouseLock = (page: Page) =>
       locked = null;
       document.dispatchEvent(new Event('pointerlockchange'));
     };
+    Element.prototype.requestPointerLock = function (this: Element) {
+      locked = this;
+      document.dispatchEvent(new Event('pointerlockchange'));
+      return Promise.resolve();
+    } as never;
   });
 
 test.describe('Evidence log', () => {
@@ -42,6 +47,8 @@ test.describe('Evidence log', () => {
 
     await page.keyboard.press('Escape');
     await expect(page.getByRole('tablist', { name: 'Evidence' })).toHaveCount(0);
+    // Closing it captures the mouse again, so you're straight back to looking around.
+    expect(await game(`return document.pointerLockElement?.tagName ?? null;`)).toBe('CANVAS');
     await backInTheRide(page, game);
   });
 
