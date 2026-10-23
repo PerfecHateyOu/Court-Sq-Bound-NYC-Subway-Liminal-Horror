@@ -5,7 +5,14 @@ import type { Locator, Page } from '@playwright/test';
 // both reachable), and content stays out of notches and the home indicator.
 
 /** Scrolled into view, the whole element is on screen. */
+/** Panels at rest, after their opening animation (src/ui/Overlay.tsx). */
+const settled = (page: Page) =>
+  page.evaluate(() =>
+    Promise.all(document.getAnimations().filter((a) => /^overlay-/.test((a as CSSAnimation).animationName)).map((a) => a.finished))
+  );
+
 async function expectReachable(page: Page, el: Locator) {
+  await settled(page);
   await el.scrollIntoViewIfNeeded();
   const b = (await el.boundingBox())!;
   const vp = page.viewportSize()!;
@@ -76,6 +83,7 @@ test.describe('with a notch and a home indicator', () => {
     await cdp.send('Emulation.setSafeAreaInsetsOverride' as never, { insets: INSET } as never);
     await game(`G.Q = []; G.startSegment(2);`);
     const inside = async (el: Locator) => {
+      await settled(page);
       const b = (await el.boundingBox())!;
       expect(b.x).toBeGreaterThanOrEqual(INSET.left);
       expect(b.x + b.width).toBeLessThanOrEqual(844 - INSET.right);

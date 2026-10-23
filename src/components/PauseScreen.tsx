@@ -8,7 +8,7 @@ import { routeManager } from '../game/routeManager';
 import { chapterOrigin } from '../game/practice';
 import { GameEngine } from '../game/gameState';
 import { useEscape } from '../ui/escape';
-import { useFocusTrap } from '../ui/focus';
+import { Overlay } from '../ui/Overlay';
 
 interface PauseScreenProps {
   engine: GameEngine;
@@ -35,19 +35,23 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
   // Esc on the confirmation cancels it (rather than resuming the ride).
   useEscape(() => setConfirmRestart(false), confirmRestart);
   // Keys go to the menu, starting on Resume, not to the HUD behind it.
-  const panelRef = React.useRef<HTMLDivElement>(null);
   const resumeRef = React.useRef<HTMLButtonElement>(null);
-  useFocusTrap(panelRef, () => resumeRef.current);
 
   return (
-    <div className="fixed inset-0 z-30 flex justify-center overflow-y-auto safe-pad bg-black/80 backdrop-blur-md">
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pause-title"
-        className="w-full max-w-sm my-auto p-5 sm:p-6 rounded-lg bg-panel border border-white/20 text-center shadow-2xl transit-sign-flicker relative overflow-hidden"
-      >
+    // Esc and P resume through the game's own key handler (it also re-captures the mouse), and
+    // a stray click outside shouldn't throw you back into the ride: neither closes it here.
+    <Overlay
+      onClose={onResume}
+      labelledBy="pause-title"
+      width="sm"
+      layer={30}
+      escape={false}
+      backdropClose={false}
+      initialFocus={() => resumeRef.current}
+      panelClassName="bg-panel border border-white/20 text-center transit-sign-flicker"
+      bodyClassName="p-5 sm:p-6"
+      testId="pause-panel"
+    >
         {/* Subtle illuminated transit sign raster scanlines */}
         <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-40" />
 
@@ -61,7 +65,7 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
           {lineName}
         </div>
 
-        <h2 id="pause-title" className="text-2xl font-black text-cream uppercase tracking-wide transit-sign-header drop-shadow-md">
+        <h2 id="pause-title" className="text-fluid-2xl font-black text-cream uppercase tracking-wide transit-sign-header drop-shadow-md">
           Train Paused
         </h2>
         {engine.nightmare && (
@@ -153,7 +157,6 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 };

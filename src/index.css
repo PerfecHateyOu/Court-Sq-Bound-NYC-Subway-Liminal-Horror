@@ -98,6 +98,42 @@
   }
 }
 
+/* Reduced screen effects (settings.ts sets data-effects on <html>): `calm:animate-none` and the like
+   switch motion off. Every new animation in the polish pass is gated on this. */
+@custom-variant calm (&:where([data-effects='reduced'], [data-effects='reduced'] *));
+
+/* Fluid type for headings: grows with the screen between a phone and a desktop size. */
+@utility text-fluid-xl { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem); line-height: 1.1; }
+@utility text-fluid-2xl { font-size: clamp(1.5rem, 1.1rem + 1.8vw, 2.25rem); line-height: 1.05; }
+
+/* The shared overlay (src/ui/Overlay.tsx). A centered card that rises in; on touch phones held
+   upright, a bottom sheet that slides up and keeps clear of the home indicator. Unlayered, so it
+   wins over the card's own utilities in the sheet case. */
+@keyframes overlay-fade { from { opacity: 0; } }
+@keyframes overlay-rise { from { opacity: 0; transform: translateY(6px) scale(0.985); } }
+@keyframes overlay-slide { from { transform: translateY(100%); } }
+.overlay-backdrop { animation: overlay-fade 150ms ease-out; }
+.overlay-panel { animation: overlay-rise 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (pointer: coarse) and (max-width: 639.98px) and (orientation: portrait) {
+  .overlay-sheet {
+    align-items: flex-end;
+    padding: max(1rem, env(safe-area-inset-top)) 0 0 0;
+  }
+  .overlay-sheet > .overlay-panel {
+    max-width: none;
+    max-height: 92dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-width: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: overlay-slide 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+:root[data-effects='reduced'] .overlay-backdrop,
+:root[data-effects='reduced'] .overlay-panel {
+  animation: none !important;
+}
+
 /* Start screen. One column on phones held upright. On wider landscape screens (laptops, desktops,
    phones turned sideways) two columns: title, station sign and Board the Train on the left, the
    briefing on the right, so the button is in view without scrolling (1280x720 and up). Unlayered,
