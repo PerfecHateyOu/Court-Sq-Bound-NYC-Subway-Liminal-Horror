@@ -56,11 +56,8 @@ for (const [width, height] of SIZES) {
 
     test('the pause menu and route selector fit or scroll, top and bottom', async ({ page, game }) => {
       await game(`G.nightmare = true; G.Q = []; G.startSegment(2); G.pause();`); // Nightmare adds a line
-      await page.locator('text=/Restart Ride/i').click();
-      const dialog = page.locator('[role=alertdialog]');
-      await expectReachable(page, dialog.getByRole('button', { name: 'Cancel' }));
+      await expectReachable(page, page.getByRole('button', { name: 'Restart Ride' }));
       await expectReachable(page, page.getByText('Train Paused'));
-      await dialog.getByRole('button', { name: 'Cancel' }).click();
       await page.getByRole('button', { name: 'Resume Ride' }).click();
 
       await page.getByRole('button', { name: 'Route Lines' }).click();

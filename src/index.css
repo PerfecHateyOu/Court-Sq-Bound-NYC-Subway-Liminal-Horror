@@ -175,6 +175,12 @@
   .start-plaque h2 { font-size: 1.25rem; }
   .start-actions { margin-top: 0.5rem; }
 }
+/* The shortest of those (640×360, an SE turned sideways): the kicker and the motto make way, so
+   Board the Train sits fully on screen. The game's name, tagline and the station sign stay. */
+@media (min-width: 640px) and (orientation: landscape) and (max-height: 400px) {
+  .start-kicker,
+  .start-motto { display: none; }
+}
 
 :root {
   --vig: 0.55;

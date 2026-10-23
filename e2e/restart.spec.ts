@@ -10,20 +10,11 @@ test.describe('flags and restart', () => {
     expect(r).toEqual({ real: 1, fals: 1, dup: 0 });
   });
 
-  test('Restart asks first, Cancel backs out, and a confirmed restart starts clean', async ({ page, game }) => {
+  test('Restart starts a clean ride at once, with no confirmation', async ({ page, game }) => {
     await game(`G.say(0, 'Leftover subtitle from the old ride', 30); G.setPA('Leftover PA', 30); G.san = 55; G.sus = 40; G.peak = 40;`);
     await page.keyboard.press('KeyP');
     await page.locator('text=/Restart Ride/i').click();
-    const dialog = page.locator('[role=alertdialog]');
-    await expect(dialog).toBeVisible();
-    expect(await game(`return G.paused`)).toBe(true);
-    await dialog.locator('text=/^Cancel$/').click();
-    await expect(dialog).toHaveCount(0);
-    expect(await game(`return G.paused && G.segIdx === 0`)).toBe(false); // still paused, nothing restarted
-    expect(await game(`return G.paused`)).toBe(true);
-
-    await page.locator('text=/Restart Ride/i').click();
-    await dialog.locator('text=/^Restart$/').click();
+    await expect(page.locator('[role=alertdialog]')).toHaveCount(0);
     await page.waitForTimeout(500);
     const st = await game(`return { phase: G.phase, paused: G.paused, segIdx: G.segIdx, san: G.san, sus: G.sus, peak: G.peak, sub: G.subHtml, flags: G.segFlags.length,
       runs: JSON.parse(localStorage.getItem('gtrain-runs') || '[]').length }`);
@@ -39,7 +30,6 @@ test.describe('flags and restart', () => {
     expect(inTrial.bed).toBeLessThan(0.2);
     await page.keyboard.press('KeyP');
     await page.locator('text=/Restart Ride/i').click();
-    await page.locator('[role=alertdialog] >> text=/^Restart$/').click();
     const after = await game(`await sleep(1800); return { phase: G.phase, trialVisible: G.trialBuilder.group.visible,
       worldVisible: G.carBuilder.worldGroup.visible, trial: G.trial, bed: A.bedGain.gain.value };`);
     expect(after).toMatchObject({ phase: 'intro', trialVisible: false, worldVisible: true, trial: null });
