@@ -78,12 +78,12 @@ export const MoveStick: React.FC<{ engine: GameEngine }> = ({ engine }) => {
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <span className="absolute inset-x-0 top-2 text-center text-[9px] font-bold tracking-[0.2em] text-[#9a9684]">
+      <span className="absolute inset-x-0 top-2 text-center text-4xs font-bold tracking-[0.2em] text-dim">
         WALK
       </span>
       <div
         className={`absolute left-1/2 top-1/2 w-12 h-12 -ml-6 -mt-6 rounded-full border shadow-lg ${
-          pointerRef.current !== null ? 'bg-[#6cbe45]/35 border-[#6cbe45]' : 'bg-[#ece6d3]/15 border-white/40'
+          pointerRef.current !== null ? 'bg-g-line/35 border-g-line' : 'bg-cream/15 border-white/40'
         }`}
         style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
       />

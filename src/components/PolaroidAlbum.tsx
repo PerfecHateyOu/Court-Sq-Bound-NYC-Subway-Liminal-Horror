@@ -46,12 +46,12 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#191d1a]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#e3a83a]/15 border border-[#e3a83a]/30 flex items-center justify-center text-[#e3a83a]">
+            <div className="w-9 h-9 rounded-lg bg-warn/15 border border-warn/30 flex items-center justify-center text-warn">
               <ImageIcon className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base sm:text-lg text-[#ece6d3] tracking-tight">Evidence Log</h2>
-              <p className="text-xs text-[#9a9684]">
+              <h2 className="font-bold text-base sm:text-lg text-cream tracking-tight">Evidence Log</h2>
+              <p className="text-xs text-dim">
                 {developed
                   ? `${photos.length} prints • ${photos.filter((p) => p.hasAnomalyInFrustum).length} caught something`
                   : `${photos.length} print${photos.length === 1 ? '' : 's'} • they develop after the ride`}
@@ -71,7 +71,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         </div>
 
         {/* Polaroids / Tapes */}
-        <div role="tablist" aria-label="Evidence" className="px-6 pt-2.5 bg-[#101311] flex gap-1 text-xs font-bold tracking-wider">
+        <div role="tablist" aria-label="Evidence" className="px-6 pt-2.5 bg-panel flex gap-1 text-xs font-bold tracking-wider">
           {(
             [
               ['prints', `POLAROIDS (${photos.length})`],
@@ -83,7 +83,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
               role="tab"
               aria-selected={tab === k}
               onClick={() => setTab(k)}
-              className={`px-3 py-2 rounded-t border-b-2 ${tab === k ? 'text-[#ece6d3] border-[#e3a83a]' : 'text-[#9a9684] border-transparent hover:text-[#ece6d3]'}`}
+              className={`px-3 py-2 rounded-t border-b-2 ${tab === k ? 'text-cream border-warn' : 'text-dim border-transparent hover:text-cream'}`}
             >
               {label}
             </button>
@@ -91,9 +91,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         </div>
 
         {tab === 'tapes' ? (
-          <div className="flex-1 overflow-y-auto p-6 bg-[#101311]" role="tabpanel">
+          <div className="flex-1 overflow-y-auto p-6 bg-panel" role="tabpanel">
             {tapes.length === 0 ? (
-              <div className="py-16 text-center text-[#9a9684]">
+              <div className="py-16 text-center text-dim">
                 <Mic className="w-8 h-8 mx-auto opacity-40 mb-3" />
                 <p className="text-sm font-medium">No tapes yet.</p>
                 <p className="text-xs text-white/40 mt-1">
@@ -103,9 +103,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             ) : (
               <ul className="space-y-3">
                 {tapes.map((t) => (
-                  <li key={t.signalId} className="p-3 rounded border border-[#3a3328] bg-[#15130f]">
-                    <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-[#8d8371]">
-                      <span className="font-bold text-[#ece6d3] text-xs">{t.title}</span>
+                  <li key={t.signalId} className="p-3 rounded border border-sepia bg-film-ink">
+                    <div className="flex items-center justify-between gap-3 font-mono text-2xs text-faint">
+                      <span className="font-bold text-cream text-xs">{t.title}</span>
                       <span className="flex items-center gap-2">
                         <span>
                           Stop {t.stop} · {t.freq}
@@ -113,7 +113,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                         {engine && <TapePlayButton engine={engine} tape={t} />}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-sm italic text-[#d9d1bd] leading-snug">{t.transcript}</p>
+                    <p className="mt-1.5 text-sm italic text-film-2 leading-snug">{t.transcript}</p>
                   </li>
                 ))}
               </ul>
@@ -122,14 +122,14 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         ) : (
         <>
         {/* Filter Navigation Bar */}
-        <div className="px-6 py-2.5 bg-[#101311] border-b border-white/5 flex flex-wrap gap-2 text-xs">
+        <div className="px-6 py-2.5 bg-panel border-b border-white/5 flex flex-wrap gap-2 text-xs">
           <button
             onClick={() => setFilter('all')}
             aria-pressed={filter === 'all'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'all'
-                ? 'bg-[#ece6d3] text-black font-semibold'
-                : 'bg-white/5 hover:bg-white/10 text-[#9a9684]'
+                ? 'bg-cream text-black font-semibold'
+                : 'bg-white/5 hover:bg-white/10 text-dim'
             }`}
           >
             All Prints ({photos.length})
@@ -155,8 +155,8 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             aria-pressed={filter === 'carA'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'carA'
-                ? 'bg-[#ece6d3] text-black font-semibold'
-                : 'bg-white/5 hover:bg-white/10 text-[#9a9684]'
+                ? 'bg-cream text-black font-semibold'
+                : 'bg-white/5 hover:bg-white/10 text-dim'
             }`}
           >
             Car A (Lead)
@@ -167,8 +167,8 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             aria-pressed={filter === 'carB'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'carB'
-                ? 'bg-[#ece6d3] text-black font-semibold'
-                : 'bg-white/5 hover:bg-white/10 text-[#9a9684]'
+                ? 'bg-cream text-black font-semibold'
+                : 'bg-white/5 hover:bg-white/10 text-dim'
             }`}
           >
             Car B (Mid)
@@ -179,8 +179,8 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             aria-pressed={filter === 'carC'}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors ${
               filter === 'carC'
-                ? 'bg-[#ece6d3] text-black font-semibold'
-                : 'bg-white/5 hover:bg-white/10 text-[#9a9684]'
+                ? 'bg-cream text-black font-semibold'
+                : 'bg-white/5 hover:bg-white/10 text-dim'
             }`}
           >
             Car C (Rear)
@@ -190,7 +190,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         {/* Photos Grid Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
           {filteredPhotos.length === 0 ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center text-[#9a9684]">
+            <div className="py-20 text-center flex flex-col items-center justify-center text-dim">
               <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-3">
                 <ImageIcon className="w-8 h-8 opacity-40" />
               </div>
@@ -205,7 +205,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                 <div
                   key={photo.id}
                   onClick={() => setSelectedPhoto(photo)}
-                  className="group relative cursor-pointer bg-[#f4efe6] p-2.5 pb-4 rounded shadow-lg border border-black/30 hover:scale-[1.03] transition-all duration-200 text-black flex flex-col"
+                  className="group relative cursor-pointer bg-film p-2.5 pb-4 rounded shadow-lg border border-black/30 hover:scale-[1.03] transition-all duration-200 text-black flex flex-col"
                 >
                   {/* Square Print Image */}
                   <div className="relative aspect-square w-full bg-[#181816] rounded-sm overflow-hidden border border-black/20">
@@ -239,10 +239,10 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
                   {/* Caption Strip */}
                   <div className="mt-2 text-center">
-                    <div className="text-[11px] font-bold font-mono truncate text-gray-800">
+                    <div className="text-2xs font-bold font-mono truncate text-gray-800">
                       {photo.developed ? photo.anomalyName || 'Nothing out of place' : 'Developing…'}
                     </div>
-                    <div className="text-[9px] font-mono text-gray-500">
+                    <div className="text-4xs font-mono text-gray-500">
                       Car {photo.carIndex === 0 ? 'A (Lead)' : photo.carIndex === 2 ? 'C (Rear)' : 'B (Mid)'} • Line {photo.routeId}
                     </div>
                   </div>
@@ -258,7 +258,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
       {/* Single Photo Inspection Lightbox Modal */}
       {selectedPhoto && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg animate-in zoom-in-95 duration-200">
-          <div className="relative max-w-lg w-full bg-[#f4efe6] p-4 pb-6 rounded-lg shadow-2xl text-black border border-black/30">
+          <div className="relative max-w-lg w-full bg-film p-4 pb-6 rounded-lg shadow-2xl text-black border border-black/30">
             {/* Close button */}
             <button
               onClick={() => setSelectedPhoto(null)}
@@ -289,7 +289,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                 </span>
                 {selectedPhoto.developed && (
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
+                  className={`text-3xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
                     selectedPhoto.hasAnomalyInFrustum
                       ? 'bg-red-600 text-white'
                       : 'bg-emerald-700 text-white'
@@ -312,7 +312,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
               <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs text-gray-700">
                 <div>
-                  <span className="text-gray-500 text-[10px] block">CONSIST CAR LOCATION</span>
+                  <span className="text-gray-500 text-3xs block">CONSIST CAR LOCATION</span>
                   <span className="font-semibold">
                     {selectedPhoto.carIndex === 0
                       ? 'Car A (Lead Car)'
@@ -322,7 +322,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-[10px] block">MTA TRANSIT LINE</span>
+                  <span className="text-gray-500 text-3xs block">MTA TRANSIT LINE</span>
                   <span className="font-semibold">{selectedPhoto.routeId} Line</span>
                 </div>
               </div>

@@ -1,5 +1,57 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens (Tailwind v4 @theme): every repeated color, font and small type size lives here.
+ * Use the utilities they generate (bg-ink, text-cream/90, border-paper-line, text-2xs, font-mono)
+ * instead of hex classes. Two palettes: the dark car UI, and the cream "dossier" paper of the Case
+ * Files and the Travel Report.
+ */
+@theme {
+  --font-sans: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* The system monospace stack (Tailwind's default), as before the tokens. index.html loads
+     JetBrains Mono, but only .glitch-text uses it. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Dark car UI */
+  --color-tunnel: #0a0d0b; /* page background behind the 3D view */
+  --color-ink: #0d110e; /* dark green-black panels and overlays */
+  --color-panel: #101411;
+  --color-cream: #ece6d3; /* text on dark */
+  --color-dim: #9a9684; /* muted text on dark */
+  --color-faint: #8d8371; /* captions, the quietest text on dark */
+  --color-g-line: #6cbe45; /* the G line: primary actions, "safe" */
+  --color-g-line-hi: #7ad150;
+  --color-g-line-ink: #0f1a0b; /* text on G-line green */
+  --color-g-deep: #264a22;
+  --color-warn: #e3a83a; /* amber: caution, hints, practice */
+  --color-warn-hi: #f0b84a;
+  --color-bad: #c9513f; /* red: Nightmare, destructive */
+  --color-bad-hi: #e8705e;
+  --color-bad-pale: #e8a49a;
+
+  /* Dossier paper (Case Files, Travel Report) */
+  --color-paper: #e8e2cf;
+  --color-paper-2: #ded7c2; /* tab bar, sunken areas */
+  --color-paper-line: #c4bda7; /* rules and borders */
+  --color-grout: #b8b09a;
+  --color-paper-ink: #1b1d18; /* text on paper */
+  --color-paper-dim: #55574c; /* muted text on paper */
+  --color-paper-mute: #6e6858;
+  --color-paper-faint: #9f9883;
+  --color-paper-red: #9b3526; /* stamps and warnings on paper */
+  --color-sepia: #3a3328;
+
+  /* Polaroid film */
+  --color-film: #f4efe6;
+  --color-film-2: #d9d1bd;
+  --color-film-ink: #15130f;
+
+  /* Small type (labels, kickers, chips) */
+  --text-2xs: 11px;
+  --text-3xs: 10px;
+  --text-4xs: 9px;
+}
+
 /* Full-screen overlays: keep content clear of notches and the home indicator (in full screen or
    from the home screen the page runs under them; see viewport-fit=cover in index.html). */
 @utility safe-pad {
@@ -47,26 +99,15 @@
 }
 
 :root {
-  --tunnel: #0a0d0b;
-  --ink: #ece6d3;
-  --dim: #9a9684;
-  --gline: #6cbe45;
-  --amber: #e3a83a;
-  --tile: #e8e2cf;
-  --tile-ink: #1b1d18;
-  --grout: #b8b09a;
-  --bad: #c9513f;
-  --panel: rgba(9, 12, 10, 0.88);
-  --line: rgba(236, 230, 211, 0.16);
   --vig: 0.55;
-  font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--tunnel);
-  color: var(--ink);
+  background-color: var(--color-tunnel);
+  color: var(--color-cream);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -76,9 +117,9 @@ body {
 
 /* Subway Tile Pattern Background */
 .subway-tile-pattern {
-  background-color: var(--tile);
-  background-image: linear-gradient(var(--grout) 1px, transparent 1px),
-                    linear-gradient(90deg, var(--grout) 1px, transparent 1px);
+  background-color: var(--color-paper);
+  background-image: linear-gradient(var(--color-grout) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--color-grout) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
@@ -100,7 +141,7 @@ body {
 
 /* Distortion / Liminal filter classes */
 .glitch-text {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   letter-spacing: -0.02em;
 }
 

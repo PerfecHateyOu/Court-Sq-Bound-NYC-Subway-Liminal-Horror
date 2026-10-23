@@ -114,7 +114,7 @@ export const HUD: React.FC<HUDProps> = ({
               style={{ strokeDashoffset: `${dashOffset}` }}
             />
           </svg>
-          <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#ece6d3]/80" />
+          <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-cream/80" />
         </div>
       )}
 
@@ -137,7 +137,7 @@ export const HUD: React.FC<HUDProps> = ({
             aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
             aria-keyshortcuts="L"
             data-testid="hud-route-panel"
-            className="min-w-0 flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+            className="min-w-0 flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
           >
             <span
               className="shrink-0 w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
@@ -145,11 +145,11 @@ export const HUD: React.FC<HUDProps> = ({
             >
               {currentRoute.id}
             </span>
-            <span className="hidden lg:inline font-mono text-[10px] tracking-widest text-[#6cbe45] uppercase font-bold">
+            <span className="hidden lg:inline font-mono text-3xs tracking-widest text-g-line uppercase font-bold">
               LAST LOCAL
             </span>
-            <span className="hidden lg:inline text-[#9a9684]">Next:</span>
-            <b className="min-w-0 truncate text-[#ece6d3] font-bold tracking-tight">{nextStopName}</b>
+            <span className="hidden lg:inline text-dim">Next:</span>
+            <b className="min-w-0 truncate text-cream font-bold tracking-tight">{nextStopName}</b>
             <span className="shrink-0 w-px h-4 bg-white/15" aria-hidden="true" />
             <HeartbeatTrace engine={G} />
           </button>
@@ -157,15 +157,15 @@ export const HUD: React.FC<HUDProps> = ({
           {/* Chapter badge (wide screens; elsewhere the top bar is full and the rollsign carries it) */}
           <div
             data-testid="chapter-badge"
-            className="hidden xl:flex shrink-0 items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80"
+            className="hidden xl:flex shrink-0 items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-2xs font-mono text-cream/80"
           >
             CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
             {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
           </div>
 
           {/* Consist Car Badge */}
-          <div className="hidden md:flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-[#ece6d3]/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#6cbe45]" />
+          <div className="hidden md:flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-2xs font-mono text-cream/80">
+            <span className="w-1.5 h-1.5 rounded-full bg-g-line" />
             <span>{carName}</span>
           </div>
         </div>
@@ -184,13 +184,13 @@ export const HUD: React.FC<HUDProps> = ({
               polaroidManager.isViewfinderOpen
                 ? 'bg-red-600 text-white border-red-400'
                 : G.handsBusy
-                ? 'bg-black/50 border-white/10 text-[#ece6d3] opacity-40 cursor-not-allowed'
-                : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+                ? 'bg-black/50 border-white/10 text-cream opacity-40 cursor-not-allowed'
+                : 'bg-black/70 border-white/15 text-cream hover:bg-black/80'
             }`}
           >
-            <Camera className="w-4 h-4 text-[#e3a83a]" />
+            <Camera className="w-4 h-4 text-warn" />
             <span className="hidden xl:inline">Camera</span>
-            <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">
+            <span className="text-3xs opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">
               C
             </span>
           </button>
@@ -207,13 +207,13 @@ export const HUD: React.FC<HUDProps> = ({
                 evp.raised
                   ? 'bg-[#5a2a24] text-white border-red-400/60'
                   : G.handsBusy
-                  ? 'bg-black/50 border-white/10 text-[#ece6d3] opacity-40 cursor-not-allowed'
-                  : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+                  ? 'bg-black/50 border-white/10 text-cream opacity-40 cursor-not-allowed'
+                  : 'bg-black/70 border-white/15 text-cream hover:bg-black/80'
               }`}
             >
-              <Mic className="w-4 h-4 text-[#e8a49a]" />
+              <Mic className="w-4 h-4 text-bad-pale" />
               <span className="hidden xl:inline">Recorder</span>
-              <span className="text-[10px] opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">R</span>
+              <span className="text-3xs opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">R</span>
             </button>
           )}
 
@@ -226,12 +226,12 @@ export const HUD: React.FC<HUDProps> = ({
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
               polaroidManager.isAlbumOpen
                 ? 'bg-amber-600 text-white border-amber-400'
-                : 'bg-black/70 border-white/15 text-[#ece6d3] hover:bg-black/80'
+                : 'bg-black/70 border-white/15 text-cream hover:bg-black/80'
             }`}
           >
-            <ImageIcon className="w-4 h-4 text-[#6cbe45]" />
+            <ImageIcon className="w-4 h-4 text-g-line" />
             <span className="hidden xl:inline">Evidence</span>
-            <span className="text-[10px] text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
+            <span className="text-3xs text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
               {polaroidManager.photos.length}
             </span>
           </button>
@@ -242,9 +242,9 @@ export const HUD: React.FC<HUDProps> = ({
             title="Route lines (L)"
             aria-label="Route Lines"
             aria-keyshortcuts="L"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ece6d3]"
+            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-cream hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
           >
-            <GitBranch className="w-4 h-4 text-[#9a9684]" />
+            <GitBranch className="w-4 h-4 text-dim" />
           </button>
 
           {/* Mute Button */}
@@ -252,7 +252,7 @@ export const HUD: React.FC<HUDProps> = ({
             onClick={onToggleMute}
             aria-label={isMuted ? 'Unmute' : 'Mute'}
             className={`h-10 px-3 flex items-center gap-1.5 rounded-full border bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
-              isMuted ? 'text-[#e3a83a] border-[#e3a83a]/60' : 'text-[#ece6d3] border-white/15'
+              isMuted ? 'text-warn border-warn/60' : 'text-cream border-white/15'
             }`}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -265,7 +265,7 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={toggleFullscreen}
               aria-label={full ? 'Exit full screen' : 'Full screen'}
               title={full ? 'Exit full screen' : 'Full screen'}
-              className="hidden lg:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+              className="hidden lg:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-cream hover:bg-black/80 transition-colors"
             >
               {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
@@ -275,7 +275,7 @@ export const HUD: React.FC<HUDProps> = ({
           <button
             onClick={onPause}
             aria-label="Pause"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-[#ece6d3] hover:bg-black/80 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-cream hover:bg-black/80 transition-colors"
           >
             <Pause className="w-4 h-4" />
           </button>
@@ -287,11 +287,11 @@ export const HUD: React.FC<HUDProps> = ({
         <div className="absolute left-1/2 top-56 sm:top-44 -translate-x-1/2 pointer-events-auto">
           <button
             onClick={() => G.interactGangwayDoor()}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/85 border border-[#6cbe45] text-[#ece6d3] font-bold text-xs sm:text-sm tracking-wide shadow-2xl hover:bg-black transition-all active:scale-95 animate-bounce"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/85 border border-g-line text-cream font-bold text-xs sm:text-sm tracking-wide shadow-2xl hover:bg-black transition-all active:scale-95 animate-bounce"
           >
-            <DoorOpen className="w-4 h-4 text-[#6cbe45]" />
+            <DoorOpen className="w-4 h-4 text-g-line" />
             <span>PUSH GANGWAY DOOR</span>
-            <span className="text-[10px] bg-[#6cbe45]/30 text-[#6cbe45] px-1.5 py-0.5 rounded font-mono">
+            <span className="text-3xs bg-g-line/30 text-g-line px-1.5 py-0.5 rounded font-mono">
               [E]
             </span>
           </button>
@@ -300,16 +300,16 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Subway PA Announcement LED Display */}
       {G.paText && (
-        <div className="absolute left-1/2 top-28 sm:top-16 -translate-x-1/2 max-w-[min(90vw,640px)] px-4 py-2 rounded bg-[#120d05] border border-[#e3a83a]/60 text-[#e3a83a] text-center font-bold text-sm sm:text-base tracking-wide shadow-[0_0_18px_rgba(227,168,58,0.25)] transit-sign-flicker relative overflow-hidden">
+        <div className="absolute left-1/2 top-28 sm:top-16 -translate-x-1/2 max-w-[min(90vw,640px)] px-4 py-2 rounded bg-[#120d05] border border-warn/60 text-warn text-center font-bold text-sm sm:text-base tracking-wide shadow-[0_0_18px_rgba(227,168,58,0.25)] transit-sign-flicker relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-30" />
-          <span className="inline-block w-2 h-2 rounded-full bg-[#e3a83a] mr-2 animate-ping" />
+          <span className="inline-block w-2 h-2 rounded-full bg-warn mr-2 animate-ping" />
           <span className="relative z-10">{G.paText}</span>
         </div>
       )}
 
       {/* Contextual Hint */}
       {G.hintText && G.GT < G.hintUntil && (
-        <div className="absolute left-1/2 top-40 sm:top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/80 border border-white/10 text-[#ece6d3] text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
+        <div className="absolute left-1/2 top-40 sm:top-28 -translate-x-1/2 max-w-[90vw] px-3.5 py-1.5 rounded bg-black/80 border border-white/10 text-cream text-xs sm:text-sm text-center shadow-md transit-sign-flicker-subtle">
           {G.hintText}
         </div>
       )}
@@ -317,7 +317,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* Subtitles (Conversations, Parent Reactions) */}
       {G.subHtml && (
         <div
-          className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/80 border border-white/10 text-center text-sm sm:text-base text-[#ece6d3] leading-relaxed shadow-lg transit-sign-flicker-subtle transition-all duration-300 ${
+          className={`absolute left-1/2 -translate-x-1/2 max-w-[min(92vw,680px)] px-4 py-2.5 rounded bg-black/80 border border-white/10 text-center text-sm sm:text-base text-cream leading-relaxed shadow-lg transit-sign-flicker-subtle transition-all duration-300 ${
             showChoices ? 'bottom-28' : isRestraint ? 'bottom-32' : 'bottom-16'
           }`}
           dangerouslySetInnerHTML={{ __html: G.subHtml }}
@@ -331,7 +331,7 @@ export const HUD: React.FC<HUDProps> = ({
           {isFinite(choice.window) && (
             <div className="w-full h-1 bg-white/15 rounded-full overflow-hidden mb-1">
               <div
-                className="h-full bg-[#e3a83a] transition-all duration-100 ease-linear"
+                className="h-full bg-warn transition-all duration-100 ease-linear"
                 style={{ width: `${Math.max(0, Math.min(100, (choice.left / choice.window) * 100))}%` }}
               />
             </div>
@@ -341,9 +341,9 @@ export const HUD: React.FC<HUDProps> = ({
             <button
               key={idx}
               onClick={() => G.pickChoiceIndex(idx)}
-              className="flex-1 min-w-[160px] min-h-[46px] flex items-center gap-3 px-3.5 py-2.5 rounded bg-[#151916] hover:bg-[#202722] border border-white/15 hover:border-[#6cbe45] text-left text-sm sm:text-base text-[#ece6d3] transition-all active:scale-[0.98]"
+              className="flex-1 min-w-[160px] min-h-[46px] flex items-center gap-3 px-3.5 py-2.5 rounded bg-[#151916] hover:bg-[#202722] border border-white/15 hover:border-g-line text-left text-sm sm:text-base text-cream transition-all active:scale-[0.98]"
             >
-              <span className="w-6 h-6 rounded bg-black/70 border border-white/20 text-[#9a9684] flex items-center justify-center text-xs font-mono font-bold">
+              <span className="w-6 h-6 rounded bg-black/70 border border-white/20 text-dim flex items-center justify-center text-xs font-mono font-bold">
                 {idx + 1}
               </span>
               <span className="flex-1 font-medium">{item.txt}</span>
@@ -366,7 +366,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Bottom Controls / Key Hints Bar (Left) — keyboard only */}
       {!G.isTouch && (
-      <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-[11px] text-[#9a9684] font-mono bg-black/70 px-3 py-1.5 rounded border border-white/10">
+      <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-2xs text-dim font-mono bg-black/70 px-3 py-1.5 rounded border border-white/10">
         {/* The essentials. The gangway door shows its own [E] prompt when you're at one. */}
         <span>[F] FLAG</span>
         <span className="text-white/30">•</span>
@@ -400,16 +400,16 @@ export const HUD: React.FC<HUDProps> = ({
             onContextMenu={(e) => e.preventDefault()}
             className={`flex flex-col items-center justify-center rounded-full border transition-all active:scale-95 shadow-xl ${
               isRestraint
-                ? 'w-24 h-24 sm:w-28 sm:h-28 bg-[#e3a83a]/20 hover:bg-[#e3a83a]/30 border-[#e3a83a] text-[#e3a83a]'
+                ? 'w-24 h-24 sm:w-28 sm:h-28 bg-warn/20 hover:bg-warn/30 border-warn text-warn'
                 : G.flagHeld
-                ? 'w-20 h-20 sm:w-22 sm:h-22 bg-[#6cbe45]/30 border-[#6cbe45] text-[#ece6d3]'
-                : 'w-20 h-20 sm:w-22 sm:h-22 bg-black/65 hover:bg-black/80 border-white/30 text-[#ece6d3]'
+                ? 'w-20 h-20 sm:w-22 sm:h-22 bg-g-line/30 border-g-line text-cream'
+                : 'w-20 h-20 sm:w-22 sm:h-22 bg-black/65 hover:bg-black/80 border-white/30 text-cream'
             }`}
           >
             <span className="font-extrabold tracking-wider text-xs sm:text-sm">
               {isRestraint ? 'HOLD' : 'FLAG'}
             </span>
-            <small className="text-[10px] text-[#9a9684] font-normal">
+            <small className="text-3xs text-dim font-normal">
               {isRestraint ? "don't let go" : 'hold to catch'}
             </small>
           </button>
@@ -418,7 +418,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Spoilers Debug Overlay */}
       {G.debug && (
-        <div className="absolute left-4 top-16 p-3 rounded bg-black/85 border border-[#6cbe45]/40 text-[#6cbe45] font-mono text-[11px] leading-relaxed max-w-sm pointer-events-auto z-30">
+        <div className="absolute left-4 top-16 p-3 rounded bg-black/85 border border-g-line/40 text-g-line font-mono text-2xs leading-relaxed max-w-sm pointer-events-auto z-30">
           <div className="font-bold border-b border-white/10 pb-1 mb-1 text-white">
             DEBUG: Stop {G.seg ? `${G.seg.stop}${G.seg.b ? 'b' : ''}` : '1'} ({G.phase}) | TS: {G.ts.toFixed(1)}s
           </div>

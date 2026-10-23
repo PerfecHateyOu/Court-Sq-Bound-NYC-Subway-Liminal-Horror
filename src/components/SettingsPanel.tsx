@@ -24,7 +24,7 @@ const EFFECTS: Array<{ value: ScreenEffects; label: string }> = [
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <section className="py-3.5 border-t border-white/10 first:border-t-0 first:pt-0">
-    <h3 className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#9a9684] mb-2.5">{title}</h3>
+    <h3 className="text-2xs font-extrabold uppercase tracking-[0.12em] text-dim mb-2.5">{title}</h3>
     <div className="space-y-3">{children}</div>
   </section>
 );
@@ -41,10 +41,10 @@ const Slider: React.FC<{
 }> = ({ id, label, value, min, max, step, display, onChange }) => (
   <div>
     <div className="flex items-baseline justify-between gap-3 text-sm">
-      <label htmlFor={id} className="text-[#ece6d3] font-semibold">
+      <label htmlFor={id} className="text-cream font-semibold">
         {label}
       </label>
-      <output htmlFor={id} className="font-mono text-xs text-[#9a9684] tabular-nums">
+      <output htmlFor={id} className="font-mono text-xs text-dim tabular-nums">
         {display}
       </output>
     </div>
@@ -56,7 +56,7 @@ const Slider: React.FC<{
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="mt-1.5 w-full h-6 accent-[#6cbe45] cursor-pointer"
+      className="mt-1.5 w-full h-6 accent-g-line cursor-pointer"
     />
   </div>
 );
@@ -67,16 +67,16 @@ const Check: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) 
   onChange,
   hint,
 }) => (
-  <label className="flex items-start gap-2.5 cursor-pointer text-sm text-[#ece6d3] font-semibold">
+  <label className="flex items-start gap-2.5 cursor-pointer text-sm text-cream font-semibold">
     <input
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="mt-0.5 w-4 h-4 rounded accent-[#6cbe45] shrink-0"
+      className="mt-0.5 w-4 h-4 rounded accent-g-line shrink-0"
     />
     <span>
       {label}
-      {hint && <span className="block text-xs font-normal text-[#9a9684] mt-0.5">{hint}</span>}
+      {hint && <span className="block text-xs font-normal text-dim mt-0.5">{hint}</span>}
     </span>
   </label>
 );
@@ -118,16 +118,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="w-full max-w-md my-auto rounded bg-[#101411] border border-white/15 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-md my-auto rounded bg-panel border border-white/15 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200"
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
-          <h2 id="settings-title" className="text-xl font-black text-[#ece6d3] uppercase tracking-wide">
+          <h2 id="settings-title" className="text-xl font-black text-cream uppercase tracking-wide">
             Settings
           </h2>
           <button
             onClick={onClose}
             aria-label="Close settings"
-            className="w-9 h-9 -mr-1.5 flex items-center justify-center rounded-full text-[#9a9684] hover:text-[#ece6d3] hover:bg-white/10 transition-colors"
+            className="w-9 h-9 -mr-1.5 flex items-center justify-center rounded-full text-dim hover:text-cream hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -169,7 +169,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               display={pct(s.musicVolume)}
               onChange={(v) => settings.set({ musicVolume: v })}
             />
-            {!isTouch && <p className="text-xs text-[#9a9684]">M mutes everything at any time.</p>}
+            {!isTouch && <p className="text-xs text-dim">M mutes everything at any time.</p>}
           </Section>
 
           <Section title="Screen effects">
@@ -183,7 +183,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
                     aria-checked={on}
                     onClick={() => settings.set({ screenEffects: o.value })}
                     className={`py-2 px-1 rounded text-xs sm:text-sm font-bold transition-colors ${
-                      on ? 'bg-[#6cbe45] text-[#0f1a0b]' : 'text-[#ece6d3] hover:bg-white/10'
+                      on ? 'bg-g-line text-g-line-ink' : 'text-cream hover:bg-white/10'
                     }`}
                   >
                     {o.label}
@@ -191,7 +191,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
                 );
               })}
             </div>
-            <p className="text-xs text-[#9a9684] leading-snug">
+            <p className="text-xs text-dim leading-snug">
               Screen tearing, anxious breathing, and the moving heartbeat line. {effectsNote}
             </p>
           </Section>
@@ -223,19 +223,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
 
           <Section title="Saved progress">
             {erased ? (
-              <p role="status" className="text-sm text-[#6cbe45] font-semibold">
+              <p role="status" className="text-sm text-g-line font-semibold">
                 Saved progress erased.
               </p>
             ) : !saved.length ? (
-              <p className="text-sm text-[#9a9684]">Nothing saved on this device yet.</p>
+              <p className="text-sm text-dim">Nothing saved on this device yet.</p>
             ) : !confirmErase ? (
               <>
-                <p className="text-xs text-[#9a9684] leading-snug mb-2">
+                <p className="text-xs text-dim leading-snug mb-2">
                   Your Case Files, endings, tapes, prints, badges and finished rides on this device. Settings are kept.
                 </p>
                 <button
                   onClick={() => setConfirmErase(true)}
-                  className="w-full py-2.5 px-4 rounded border border-white/20 hover:border-[#e3a83a]/60 text-[#ece6d3] font-bold text-sm transition-colors"
+                  className="w-full py-2.5 px-4 rounded border border-white/20 hover:border-warn/60 text-cream font-bold text-sm transition-colors"
                 >
                   Erase saved progress
                 </button>
@@ -244,21 +244,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               <div
                 role="alertdialog"
                 aria-labelledby="erase-confirm-text"
-                className="p-3 rounded border border-[#e3a83a]/40 bg-[#e3a83a]/10"
+                className="p-3 rounded border border-warn/40 bg-warn/10"
               >
-                <div id="erase-confirm-text" className="text-sm text-[#ece6d3] leading-snug">
+                <div id="erase-confirm-text" className="text-sm text-cream leading-snug">
                   <p>Erase everything saved on this device? This can’t be undone.</p>
-                  <ul className="mt-1.5 list-disc pl-5 text-[#ece6d3]/85" data-testid="erase-list">
+                  <ul className="mt-1.5 list-disc pl-5 text-cream/85" data-testid="erase-list">
                     {saved.map((line) => (
                       <li key={line}>{line}</li>
                     ))}
                   </ul>
                   {saved.some((l) => l.includes('finished ride')) && (
-                    <p className="mt-1.5 text-xs text-[#9a9684]">
+                    <p className="mt-1.5 text-xs text-dim">
                       Nightmare mode and chapter select lock again until you finish a ride.
                     </p>
                   )}
-                  <p className="mt-1.5 text-xs text-[#9a9684]">Your settings are kept.</p>
+                  <p className="mt-1.5 text-xs text-dim">Your settings are kept.</p>
                 </div>
                 <div className="mt-3 flex gap-2">
                   <button
@@ -268,13 +268,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
                       setConfirmErase(false);
                       setErased(true);
                     }}
-                    className="flex-1 py-2.5 px-4 rounded bg-[#e3a83a] hover:bg-[#f0b84a] text-[#1a1205] font-extrabold text-sm transition-colors"
+                    className="flex-1 py-2.5 px-4 rounded bg-warn hover:bg-warn-hi text-[#1a1205] font-extrabold text-sm transition-colors"
                   >
                     Erase
                   </button>
                   <button
                     onClick={() => setConfirmErase(false)}
-                    className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 text-[#ece6d3] font-bold text-sm transition-colors"
+                    className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 text-cream font-bold text-sm transition-colors"
                   >
                     Cancel
                   </button>
@@ -288,7 +288,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
           <button
             autoFocus
             onClick={onClose}
-            className="w-full py-3 px-6 rounded bg-[#6cbe45] hover:bg-[#7ad150] text-[#0f1a0b] font-extrabold text-base tracking-wide transition-all active:scale-[0.98]"
+            className="w-full py-3 px-6 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all active:scale-[0.98]"
           >
             Done
           </button>
