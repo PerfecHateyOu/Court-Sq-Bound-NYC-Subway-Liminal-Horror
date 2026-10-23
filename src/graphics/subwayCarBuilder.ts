@@ -103,16 +103,6 @@ export class SubwayCarBuilder {
   public ambLight!: THREE.AmbientLight;
   public outLights: THREE.PointLight[] = [];
   public lightSegs: LightSegObject[] = [];
-  public powerDip: number = 1.0;
-  private powerFlickerUntil: number = 0;
-
-  /**
-   * Causes car lights to dip and buzz momentarily as third-rail power shoes bridge track gaps.
-   */
-  public triggerPowerFlicker(depth: number = 0.82, duration: number = 0.16) {
-    this.powerDip = Math.max(0.08, 1.0 - depth);
-    this.powerFlickerUntil = performance.now() + duration * 1000;
-  }
   public farLeaves: DoorLeaf[] = [];
   public panes: WindowPaneObject[] = [];
   public acrossAds: AdObject[] = [];
@@ -205,19 +195,6 @@ export class SubwayCarBuilder {
       this.poolSlot[free] = slot;
       this.poolFade[free] = 0;
     }
-
-    if (this.powerFlickerUntil > 0) {
-      const now = performance.now();
-      if (now >= this.powerFlickerUntil) {
-        this.powerDip += (1.0 - this.powerDip) * Math.min(1, dt * 14);
-        if (this.powerDip > 0.98) {
-          this.powerDip = 1.0;
-          this.powerFlickerUntil = 0;
-        }
-      }
-    }
-
-    const dip = this.powerDip;
     for (let p = 0; p < K; p++) {
       const pl = this.lightPool[p];
       const slot = this.poolSlot[p];
@@ -228,24 +205,10 @@ export class SubwayCarBuilder {
       const src = this.carLights[slot];
       this.poolFade[p] = Math.min(1, this.poolFade[p] + dt / SubwayCarBuilder.POOL_FADE_S);
       pl.position.copy(this.worldGroup.worldToLocal(this.tmpV.copy(this.lightWorld[slot])));
-      pl.intensity = src.intensity * this.poolFade[p] * dip;
+      pl.intensity = src.intensity * this.poolFade[p];
       pl.color.copy(src.color);
       pl.distance = src.distance;
       pl.decay = src.decay;
-    }
-
-    if (dip < 0.65) {
-      this.lightSegs.forEach((ls) => {
-        if (ls.mat.color.getHex() !== 0x8cc2ff) {
-          ls.mat.color.set(0x484236);
-        }
-      });
-    } else if (dip >= 0.95) {
-      this.lightSegs.forEach((ls) => {
-        if (ls.mat.color.getHex() !== 0x8cc2ff) {
-          ls.mat.color.set(SubwayCarBuilder.LIGHT_ON);
-        }
-      });
     }
   }
 
