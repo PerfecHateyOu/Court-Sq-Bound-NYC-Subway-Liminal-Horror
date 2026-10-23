@@ -7,7 +7,7 @@ import React from 'react';
 import { GameEngine } from '../game/gameState';
 import { RunHistoryRecord, StopLogRecord } from '../types';
 import { RESTRAINT_RAISE, CHAPTERS } from '../constants';
-import { RotateCcw, Camera, Sparkles, Compass, Lock, DoorOpen, BookOpen } from 'lucide-react';
+import { RotateCcw, Camera, Compass, Lock, DoorOpen, BookOpen, Home } from 'lucide-react';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState } from '../game/psychLog';
 import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
@@ -16,15 +16,18 @@ import { practice } from '../game/practice';
 import { resolveEnding, endingSummary, endingText, loadEndingsArchive, ENDINGS, ENDING_IDS } from '../game/endings';
 import { routeText } from '../game/routeText';
 import { CaseFilesModal } from './CaseFilesModal';
+import { StatusChip } from '../ui/StatusChip';
 
 interface ReportScreenProps {
   engine: GameEngine;
   runs: RunHistoryRecord[];
   /** `looped` is true for "Get back on" after The Eternal Commute. */
   onPlayAgain: (looped?: boolean) => void;
+  /** Back to the title screen. */
+  onTitle: () => void;
 }
 
-export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlayAgain }) => {
+export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlayAgain, onTitle }) => {
   const [showCaseFiles, setShowCaseFiles] = React.useState(false);
   const G = engine;
   const b = G.getBand(13);
@@ -84,7 +87,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                 </span>
                 MTA NYCT // LAST LOCAL RIDE RECORD
               </div>
-              <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-none text-paper-ink">
+              <h2 className="text-fluid-2xl font-black uppercase tracking-tight leading-none text-paper-ink">
                 Travel Report
               </h2>
               <p className="text-xs sm:text-sm text-paper-dim mt-1 font-semibold">
@@ -109,22 +112,6 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
               <Compass className="w-3.5 h-3.5 text-warn" />
               <span>{endingBadge}</span>
             </div>
-            {G.nightmare && (
-              <span
-                data-testid="nightmare-tag"
-                className="inline-flex ml-2 mb-2 px-2 py-0.5 rounded bg-[#7a1f14] text-[#ffd9d2] font-mono text-2xs font-bold tracking-wider"
-              >
-                NIGHTMARE
-              </span>
-            )}
-            {G.isPractice && (
-              <span
-                data-testid="practice-tag"
-                className="inline-flex ml-2 mb-2 px-2 py-0.5 rounded bg-paper-dim text-cream font-mono text-2xs font-bold tracking-wider"
-              >
-                PRACTICE
-              </span>
-            )}
             <div className="font-semibold text-paper-ink">{endingNarrative}</div>
             {G.isPractice && (
               <p data-testid="practice-note" className="mt-2 text-xs text-paper-dim font-semibold">
@@ -134,13 +121,34 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             )}
           </div>
 
-          {/* Core Evaluation Pillars */}
+          {/* One badge row: what kind of ride this was */}
+          {(secret || G.nightmare || G.isPractice) && (
+            <div className="-mt-2 mb-4 flex flex-wrap gap-2 relative z-10" data-testid="report-badges">
+              {secret && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-g-deep text-paper font-mono text-2xs font-black tracking-wider">
+                  ★ ZERO SUSPICION RUN
+                </span>
+              )}
+              {G.nightmare && (
+                <span data-testid="nightmare-tag" className="inline-flex items-center px-2.5 py-1 rounded-sm bg-[#7a1f14] text-[#ffd9d2] font-mono text-2xs font-bold tracking-wider">
+                  NIGHTMARE
+                </span>
+              )}
+              {G.isPractice && (
+                <span data-testid="practice-tag" className="inline-flex items-center px-2.5 py-1 rounded-sm bg-paper-dim text-cream font-mono text-2xs font-bold tracking-wider">
+                  PRACTICE
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Core Evaluation Pillars: one two-column table, numbers in tabular mono */}
           <dl className="border-t border-paper-ink divide-y divide-paper-faint/60 text-xs sm:text-sm">
             {/* Sanity Retained */}
-            <div className="py-2.5 grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-1 sm:gap-3">
-              <dt className="font-extrabold uppercase text-paper-ink tracking-wide">Sanity Retained</dt>
+            <div className="py-2.5 grid grid-cols-[7.5rem_1fr] sm:grid-cols-[10rem_1fr] gap-3 items-baseline">
+              <dt className="font-extrabold uppercase text-paper-ink tracking-wide" title="How well you held on, stop by stop: where your sanity sat inside each stop's band, averaged over the ride.">Sanity Retained</dt>
               <dd>
-                <span className="text-base sm:text-lg font-black text-g-deep">{sanityPct}%</span>
+                <span className="font-mono tabular-nums text-base sm:text-lg font-black text-g-deep">{sanityPct}%</span>
                 <p className="text-paper-dim text-xs mt-0.5 leading-snug">
                   Average position inside each stop's band (floor 0% to ceiling 100%).
                   <br />
@@ -151,15 +159,11 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             </div>
 
             {/* Mask Integrity */}
-            <div className="py-2.5 grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-1 sm:gap-3">
-              <dt className="font-extrabold uppercase text-paper-ink tracking-wide">Mask Integrity</dt>
+            <div className="py-2.5 grid grid-cols-[7.5rem_1fr] sm:grid-cols-[10rem_1fr] gap-3 items-baseline">
+              <dt className="font-extrabold uppercase text-paper-ink tracking-wide" title="How well you hid it: the highest your parents' Suspicion got this ride. Lower is better.">Mask Integrity</dt>
               <dd>
-                <span className="text-base sm:text-lg font-black">Peak Suspicion: {G.peak}</span>
-                {secret && (
-                  <p className="text-g-deep font-bold text-xs mt-0.5">
-                    ★ Zero Suspicion run achieved! They never suspected a thing.
-                  </p>
-                )}
+                <span className="text-base sm:text-lg font-black">Peak Suspicion: <span className="font-mono tabular-nums">{G.peak}</span></span>
+                {secret && <p className="text-g-deep font-bold text-xs mt-0.5">They never suspected a thing.</p>}
                 {G.interventions > 0 && (
                   <p className="text-paper-red text-xs font-semibold mt-0.5">
                     Parents intervened {G.interventions} time{G.interventions > 1 ? 's' : ''}.
@@ -180,11 +184,11 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             </div>
 
             {/* Anomaly Accuracy */}
-            <div className="py-2.5 grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-1 sm:gap-3">
-              <dt className="font-extrabold uppercase text-paper-ink tracking-wide">Anomaly Accuracy</dt>
+            <div className="py-2.5 grid grid-cols-[7.5rem_1fr] sm:grid-cols-[10rem_1fr] gap-3 items-baseline">
+              <dt className="font-extrabold uppercase text-paper-ink tracking-wide" title="Anomalies you flagged or photographed in time, out of all that appeared.">Anomaly Accuracy</dt>
               <dd>
                 <span className="text-base sm:text-lg font-black">
-                  {G.acc.correct} of {totalAn} Caught
+                  <span className="font-mono tabular-nums">{G.acc.correct}</span> of <span className="font-mono tabular-nums">{totalAn}</span> Caught
                 </span>
                 <p className="text-paper-dim text-xs mt-0.5">
                   {G.acc.miss} missed, {G.acc.fp} false flag{G.acc.fp === 1 ? '' : 's'}.
@@ -193,7 +197,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             </div>
 
             {/* Restraint Moment */}
-            <div className="py-2.5 grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-1 sm:gap-3">
+            <div className="py-2.5 grid grid-cols-[7.5rem_1fr] sm:grid-cols-[10rem_1fr] gap-3 items-baseline">
               <dt className="font-extrabold uppercase text-paper-ink tracking-wide">Restraint (Stop 11)</dt>
               <dd className="font-bold">
                 <span className={G.restraintOK ? 'text-g-deep' : 'text-paper-red'}>
@@ -203,7 +207,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
             </div>
 
             {/* False Stop Trials */}
-            <div className="py-2.5 grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-1 sm:gap-3">
+            <div className="py-2.5 grid grid-cols-[7.5rem_1fr] sm:grid-cols-[10rem_1fr] gap-3 items-baseline">
               <dt className="font-extrabold uppercase text-paper-ink tracking-wide">False Stop Trials</dt>
               <dd className="font-semibold text-xs sm:text-sm">
                 {G.trials.length > 0
@@ -503,12 +507,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                   <div key={photo.id} className="bg-white p-1.5 pb-2 rounded shadow-sm border border-paper-faint text-4xs">
                     <div className="aspect-square bg-black rounded-xs overflow-hidden relative">
                       <img src={photo.dataUrl} alt="Polaroid print" className="w-full h-full object-cover" />
-                      {photo.hasAnomalyInFrustum && (
-                        <div className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[7px] font-mono px-1 rounded-xs flex items-center gap-0.5">
-                          <Sparkles className="w-2 h-2" />
-                          <span>CAUGHT</span>
-                        </div>
-                      )}
+                      {photo.hasAnomalyInFrustum && <StatusChip state="caught" className="absolute top-0.5 right-0.5 text-4xs! px-1!" />}
                     </div>
                     <div className="mt-1 truncate font-mono font-bold text-gray-800 text-[8px] text-center">
                       {photo.anomalyName || 'Nothing out of place'}
@@ -556,20 +555,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
           </div>
         </article>
 
-        {/* Action Buttons */}
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <button
-            onClick={() => setShowCaseFiles(true)}
-            className="px-5 py-3.5 rounded bg-paper-ink hover:bg-[#2e312b] text-cream font-bold text-sm tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
-          >
-            <BookOpen className="w-4 h-4 text-g-line" />
-            Case Files Dossier
-          </button>
-
+        {/* Actions: ride again first; the Case Files and the title screen after it */}
+        <div className="mt-5 flex flex-col items-stretch gap-2.5 max-w-sm mx-auto">
           {endingDef.id === 'eternal_commute' ? (
             <button
               onClick={() => onPlayAgain(true)}
-              className="px-6 py-3.5 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
+              className="px-6 py-3.5 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-colors shadow-xl active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream flex items-center justify-center gap-2"
             >
               <DoorOpen className="w-4 h-4" />
               Get back on
@@ -577,12 +568,28 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
           ) : (
             <button
               onClick={() => onPlayAgain()}
-              className="px-6 py-3.5 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all shadow-xl active:scale-95 flex items-center gap-2"
+              className="px-6 py-3.5 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-colors shadow-xl active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream flex items-center justify-center gap-2"
             >
               <RotateCcw className="w-4 h-4" />
               Ride Again
             </button>
           )}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              onClick={() => setShowCaseFiles(true)}
+              className="px-4 py-3 rounded border border-white/20 hover:border-white/40 bg-black/40 hover:bg-white/5 text-cream font-bold text-sm transition-colors active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream flex items-center justify-center gap-2"
+            >
+              <BookOpen className="w-4 h-4 text-g-line" />
+              Case Files
+            </button>
+            <button
+              onClick={onTitle}
+              className="px-4 py-3 rounded border border-white/20 hover:border-white/40 bg-black/40 hover:bg-white/5 text-cream font-bold text-sm transition-colors active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream flex items-center justify-center gap-2"
+            >
+              <Home className="w-4 h-4" />
+              Title
+            </button>
+          </div>
         </div>
 
         {/* Case Files Dossier Modal */}

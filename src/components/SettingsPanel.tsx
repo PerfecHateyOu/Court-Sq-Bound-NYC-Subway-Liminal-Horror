@@ -1,15 +1,15 @@
 /**
- * Settings: look speed, volumes, screen effects, vibration, and erasing saved progress.
+ * Settings, in five groups: Controls · Audio · Accessibility · Display · Data.
  * Opens over the start screen or the pause menu. Every change applies at once and is saved
  * on this device.
  */
 import { fullscreenSupported } from '../ui/fullscreen';
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Check as CheckIcon } from 'lucide-react';
 import { settings, useSettings, savedProgress, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
 import { haptics } from '../game/haptics';
 import { useEscape } from '../ui/escape';
-import { useFocusTrap } from '../ui/focus';
+import { Overlay } from '../ui/Overlay';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -44,7 +44,7 @@ const Slider: React.FC<{
       <label htmlFor={id} className="text-cream font-semibold">
         {label}
       </label>
-      <output htmlFor={id} className="font-mono text-xs text-dim tabular-nums">
+      <output htmlFor={id} className="w-[5ch] text-right font-mono text-xs text-cream/80 tabular-nums">
         {display}
       </output>
     </div>
@@ -56,7 +56,7 @@ const Slider: React.FC<{
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="mt-1.5 w-full h-6 accent-g-line cursor-pointer"
+      className="mt-1.5 w-full h-6 accent-g-line cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
     />
   </div>
 );
@@ -72,7 +72,7 @@ const Check: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) 
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="mt-0.5 w-4 h-4 rounded accent-g-line shrink-0"
+      className="mt-0.5 w-4 h-4 rounded accent-g-line shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
     />
     <span>
       {label}
@@ -89,40 +89,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
   // Counted when the confirmation opens, so it names exactly what will go.
   const saved = React.useMemo(() => savedProgress(), [confirmErase, erased]);
   const canVibrate = isTouch && haptics.supported;
-  // Esc closes the panel, or first cancels the erase confirmation if it's open.
-  useEscape(onClose);
+  // Esc closes the panel (Overlay), or first cancels the erase confirmation if it's open.
   useEscape(() => setConfirmErase(false), confirmErase);
-  // Tab stays in the panel; closing it puts focus back on the button that opened it.
-  const dialogRef = React.useRef<HTMLDivElement>(null);
-  useFocusTrap(dialogRef);
   const pct = (v: number) => `${Math.round(v * 100)}%`;
 
+  // One line: what these are, then what they're doing right now.
+  const effectsOn = !settings.effectsReduced();
   const effectsNote =
     s.screenEffects === 'system'
-      ? settings.systemPrefersReduced()
-        ? 'Your device asks for reduced motion, so these are off.'
-        : 'Your device doesn’t ask for reduced motion, so these are on.'
+      ? `Following your device: ${effectsOn ? 'On' : 'Off'}.`
       : s.screenEffects === 'reduced'
-      ? 'Off. The heartbeat line still shows your tier, without moving.'
-      : 'On, whatever your device setting.';
+      ? 'Off.'
+      : 'Always on.';
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center safe-pad bg-black/70 backdrop-blur-sm"
-      onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-title"
-        // Never taller than the screen: the header and Done stay put, only the body scrolls.
-        className="w-full max-w-md max-h-full flex flex-col rounded bg-panel border border-white/15 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200"
-      >
-        <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
-          <h2 id="settings-title" className="text-xl font-black text-cream uppercase tracking-wide">
+    <Overlay
+      onClose={onClose}
+      labelledBy="settings-title"
+      width="md"
+      layer={40}
+      backdropClassName="bg-black/70 backdrop-blur-sm"
+      testId="settings-panel"
+      header={
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
+          <h2 id="settings-title" className="text-fluid-xl font-black text-cream uppercase tracking-wide">
             Settings
           </h2>
           <button
@@ -133,9 +123,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4" data-testid="settings-body">
-          <Section title="Look">
+      }
+      footer={
+        <div className="px-5 pt-3 pb-4 border-t border-white/10">
+          <button
+            autoFocus
+            onClick={onClose}
+            className="w-full py-3 px-6 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all active:scale-[0.98]"
+          >
+            Done
+          </button>
+        </div>
+      }
+    >
+      <div data-testid="settings-body">
+          <Section title="Controls">
             <Slider
               id="set-sens"
               label="Look speed"
@@ -147,9 +149,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               onChange={(v) => settings.set({ lookSensitivity: v })}
             />
             <Check label="Invert vertical look" checked={s.invertY} onChange={(v) => settings.set({ invertY: v })} />
+            {!isTouch && (
+              <Check
+                label="Show control hints"
+                hint="The key strip at the bottom of the screen, for the first minute of your first ride."
+                checked={s.showHints}
+                onChange={(v) => settings.set({ showHints: v })}
+              />
+            )}
           </Section>
 
-          <Section title="Sound">
+          <Section title="Audio">
             <Slider
               id="set-game-vol"
               label="Game sounds"
@@ -170,31 +180,61 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               display={pct(s.musicVolume)}
               onChange={(v) => settings.set({ musicVolume: v })}
             />
-            {!isTouch && <p className="text-xs text-dim">M mutes everything at any time.</p>}
+            <Check
+              label="Start rides muted"
+              hint={isTouch ? 'Tap the sound button to turn it on.' : 'M turns sound on and off at any time.'}
+              checked={s.startMuted}
+              onChange={(v) => settings.set({ startMuted: v })}
+            />
           </Section>
 
-          <Section title="Screen effects">
-            <div role="radiogroup" aria-label="Screen effects" className="grid grid-cols-3 gap-1 p-1 rounded bg-black/40 border border-white/10">
-              {EFFECTS.map((o) => {
-                const on = s.screenEffects === o.value;
-                return (
-                  <button
-                    key={o.value}
-                    role="radio"
-                    aria-checked={on}
-                    onClick={() => settings.set({ screenEffects: o.value })}
-                    className={`py-2 px-1 rounded text-xs sm:text-sm font-bold transition-colors ${
-                      on ? 'bg-g-line text-g-line-ink' : 'text-cream hover:bg-white/10'
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                );
-              })}
+          <Section title="Accessibility">
+            <div>
+              <div id="set-effects-label" className="text-sm text-cream font-semibold mb-1.5">
+                Screen effects
+              </div>
+              <div
+                role="radiogroup"
+                aria-labelledby="set-effects-label"
+                aria-describedby="set-effects-note"
+                className="grid grid-cols-3 gap-1 p-1 rounded bg-black/40 border border-white/10"
+              >
+                {EFFECTS.map((o) => {
+                  const on = s.screenEffects === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => settings.set({ screenEffects: o.value })}
+                      // Selected reads by shape as well as color: a check, a ring and heavier type.
+                      className={`py-2 px-1 rounded text-xs sm:text-sm transition-colors inline-flex items-center justify-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream ${
+                        on
+                          ? 'bg-g-line text-g-line-ink font-black ring-2 ring-inset ring-g-line-ink/40'
+                          : 'text-cream font-semibold hover:bg-white/10 active:translate-y-px'
+                      }`}
+                    >
+                      {on && <CheckIcon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p id="set-effects-note" className="mt-1.5 text-xs text-dim leading-snug">
+                Screen tearing, breathing and heartbeat line. {effectsNote}
+              </p>
             </div>
-            <p className="text-xs text-dim leading-snug">
-              Screen tearing, anxious breathing, and the moving heartbeat line. {effectsNote}
-            </p>
+            {canVibrate && (
+              <Check
+                label="Vibrate for catches"
+                hint="At each stop, a soft pulse for every anomaly you caught on the way in."
+                checked={vibrate}
+                onChange={(v) => {
+                  setVibrate(v);
+                  haptics.setEnabled(v);
+                }}
+              />
+            )}
           </Section>
 
           {fullscreenSupported() && (
@@ -208,21 +248,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
             </Section>
           )}
 
-          {canVibrate && (
-            <Section title="Vibration">
-              <Check
-                label="Vibrate for catches"
-                hint="At each stop, a soft pulse for every anomaly you caught on the way in."
-                checked={vibrate}
-                onChange={(v) => {
-                  setVibrate(v);
-                  haptics.setEnabled(v);
-                }}
-              />
-            </Section>
-          )}
-
-          <Section title="Saved progress">
+          <Section title="Data">
             {erased ? (
               <p role="status" className="text-sm text-g-line font-semibold">
                 Saved progress erased.
@@ -236,7 +262,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
                 </p>
                 <button
                   onClick={() => setConfirmErase(true)}
-                  className="w-full py-2.5 px-4 rounded border border-white/20 hover:border-warn/60 text-cream font-bold text-sm transition-colors"
+                  className="w-full py-2.5 px-4 rounded border border-bad/70 text-bad-hi hover:bg-bad/10 hover:border-bad-hi active:translate-y-px font-bold text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bad-hi"
                 >
                   Erase saved progress
                 </button>
@@ -245,7 +271,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               <div
                 role="alertdialog"
                 aria-labelledby="erase-confirm-text"
-                className="p-3 rounded border border-warn/40 bg-warn/10"
+                className="p-3 rounded border border-bad/50 bg-bad/10"
               >
                 <div id="erase-confirm-text" className="text-sm text-cream leading-snug">
                   <p>Erase everything saved on this device? This can’t be undone.</p>
@@ -269,13 +295,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
                       setConfirmErase(false);
                       setErased(true);
                     }}
-                    className="flex-1 py-2.5 px-4 rounded bg-warn hover:bg-warn-hi text-[#1a1205] font-extrabold text-sm transition-colors"
+                    className="flex-1 py-2.5 px-4 rounded bg-bad hover:bg-bad-hi active:translate-y-px text-white font-extrabold text-sm transition-colors"
                   >
                     Erase
                   </button>
                   <button
                     onClick={() => setConfirmErase(false)}
-                    className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 text-cream font-bold text-sm transition-colors"
+                    className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 active:translate-y-px text-cream font-bold text-sm transition-colors"
                   >
                     Cancel
                   </button>
@@ -283,18 +309,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               </div>
             )}
           </Section>
-        </div>
-
-        <div className="shrink-0 px-5 pt-3 pb-4 border-t border-white/10">
-          <button
-            autoFocus
-            onClick={onClose}
-            className="w-full py-3 px-6 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all active:scale-[0.98]"
-          >
-            Done
-          </button>
-        </div>
       </div>
-    </div>
+    </Overlay>
   );
 };

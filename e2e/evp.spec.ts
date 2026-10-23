@@ -208,8 +208,8 @@ test.describe('EVP recorder', () => {
     // Kept on the device: the Case Files count it on the next visit.
     await page.goto('/');
     await page.getByRole('button', { name: /Case Files/ }).click();
-    const files = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
-    await expect(files.getByText(/^Tapes: /)).toHaveText(`Tapes: 1/${EVP_SIGNALS.length}`);
+    const files = page.getByRole('dialog', { name: 'Case Files' });
+    await expect(files.getByTestId('stat-tapes')).toHaveText(`1/${EVP_SIGNALS.length}`);
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'Settings' }).click();

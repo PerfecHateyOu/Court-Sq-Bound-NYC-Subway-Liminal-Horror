@@ -7,8 +7,7 @@ import React, { useRef } from 'react';
 import { routeManager, ROUTES } from '../game/routeManager';
 import { TransitLineRoute } from '../types';
 import { X, GitBranch, ArrowRight, ShieldCheck, AlertOctagon } from 'lucide-react';
-import { useEscape } from '../ui/escape';
-import { useFocusTrap } from '../ui/focus';
+import { Overlay } from '../ui/Overlay';
 
 interface RouteSelectorProps {
   onClose: () => void;
@@ -19,12 +18,8 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
   const currentRoute = routeManager.activeRoute;
   const allRoutes = routeManager.getAllRoutes();
 
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const currentRef = useRef<HTMLButtonElement>(null);
-  useEscape(onClose);
-
   // Focus starts on the line you're on, stays in the dialog, and goes back to whatever opened it.
-  useFocusTrap(dialogRef, () => currentRef.current);
+  const currentRef = useRef<HTMLButtonElement>(null);
 
   const handleSelect = (r: TransitLineRoute) => {
     // Picking the line you're on just closes the selector: nothing switched, so nothing to say.
@@ -36,16 +31,18 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center safe-pad bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="route-selector-title"
-        className="relative w-full max-w-2xl my-auto max-h-full bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col"
-      >
-        {/* Header */}
-        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between gap-3 bg-[#191d1a]">
+    <Overlay
+      onClose={onClose}
+      labelledBy="route-selector-title"
+      width="2xl"
+      layer={50}
+      backdropClassName="bg-black/85 backdrop-blur-md"
+      panelClassName="bg-[#141715] border border-white/15 rounded-xl text-cream select-none"
+      bodyClassName="p-4 sm:p-6 space-y-3 sm:space-y-4"
+      initialFocus={() => currentRef.current}
+      testId="route-selector"
+      header={
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between gap-3 bg-[#191d1a]">
           <div className="flex items-center gap-3 min-w-0">
             <div className="shrink-0 w-9 h-9 rounded-lg bg-g-line/15 border border-g-line/30 flex items-center justify-center text-g-line">
               <GitBranch className="w-5 h-5" />
@@ -69,9 +66,14 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Route Cards List */}
-        <div className="min-h-0 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
+      }
+      footer={
+        <div className="px-4 sm:px-6 py-3 bg-panel border-t border-white/5 text-2xs text-dim flex items-center justify-between gap-3">
+          <span>Switching renames the stops and announcements ahead, from now on. Every new ride starts on the G.</span>
+          <span className="shrink-0 whitespace-nowrap text-white/40 font-mono">LAST LOCAL v5.2</span>
+        </div>
+      }
+    >
           {allRoutes.map((r) => {
             const isSelected = r.id === currentRoute.id;
 
@@ -137,14 +139,6 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
               </button>
             );
           })}
-        </div>
-
-        {/* Footer Guidance */}
-        <div className="shrink-0 px-4 sm:px-6 py-3 bg-panel border-t border-white/5 text-2xs text-dim flex items-center justify-between gap-3">
-          <span>Switching renames the stops and announcements ahead, from now on. Every new ride starts on the G.</span>
-          <span className="shrink-0 whitespace-nowrap text-white/40 font-mono">LAST LOCAL v5.2</span>
-        </div>
-      </div>
-    </div>
+    </Overlay>
   );
 };

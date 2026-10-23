@@ -5,7 +5,14 @@ import type { Locator, Page } from '@playwright/test';
 // both reachable), and content stays out of notches and the home indicator.
 
 /** Scrolled into view, the whole element is on screen. */
+/** Panels at rest, after their opening animation (src/ui/Overlay.tsx). */
+const settled = (page: Page) =>
+  page.evaluate(() =>
+    Promise.all(document.getAnimations().filter((a) => /^overlay-/.test((a as CSSAnimation).animationName)).map((a) => a.finished))
+  );
+
 async function expectReachable(page: Page, el: Locator) {
+  await settled(page);
   await el.scrollIntoViewIfNeeded();
   const b = (await el.boundingBox())!;
   const vp = page.viewportSize()!;
@@ -49,11 +56,8 @@ for (const [width, height] of SIZES) {
 
     test('the pause menu and route selector fit or scroll, top and bottom', async ({ page, game }) => {
       await game(`G.nightmare = true; G.Q = []; G.startSegment(2); G.pause();`); // Nightmare adds a line
-      await page.locator('text=/Restart Ride/i').click();
-      const dialog = page.locator('[role=alertdialog]');
-      await expectReachable(page, dialog.getByRole('button', { name: 'Cancel' }));
+      await expectReachable(page, page.getByRole('button', { name: 'Restart Ride' }));
       await expectReachable(page, page.getByText('Train Paused'));
-      await dialog.getByRole('button', { name: 'Cancel' }).click();
       await page.getByRole('button', { name: 'Resume Ride' }).click();
 
       await page.getByRole('button', { name: 'Route Lines' }).click();
@@ -76,6 +80,7 @@ test.describe('with a notch and a home indicator', () => {
     await cdp.send('Emulation.setSafeAreaInsetsOverride' as never, { insets: INSET } as never);
     await game(`G.Q = []; G.startSegment(2);`);
     const inside = async (el: Locator) => {
+      await settled(page);
       const b = (await el.boundingBox())!;
       expect(b.x).toBeGreaterThanOrEqual(INSET.left);
       expect(b.x + b.width).toBeLessThanOrEqual(844 - INSET.right);

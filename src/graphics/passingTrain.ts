@@ -44,6 +44,7 @@ function windowTexture(): THREE.CanvasTexture {
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8; // three clamps this to what the GPU supports
   return t;
 }
 

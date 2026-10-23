@@ -31,7 +31,7 @@ test.describe('Chapters', () => {
 
     expect((await show(4)).sign).toEqual({ title: 'SIGNAL DRIFT', subtitle: 'Myrtle–Willoughby Avs to Nassau Av' });
     await expect(sign).toContainText('CHAPTER II');
-    await expect(badge).toContainText('CH. II // SIGNAL DRIFT');
+    await expect(badge).toContainText('CH. II · SIGNAL DRIFT');
 
     const three = await show(10);
     expect(three).toEqual({ chimes: 0, sign: { title: 'OPERATION SKYWARD', subtitle: 'Greenpoint Av to Court Sq' } });
@@ -147,8 +147,8 @@ test.describe('Endings', () => {
 
     await page.goto('/');
     await page.getByRole('button', { name: /Case Files/ }).click();
-    const files = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
-    await expect(files.getByText(/^Endings: /)).toHaveText(`Endings: 2/${ENDING_IDS.length}`);
+    const files = page.getByRole('dialog', { name: 'Case Files' });
+    await expect(files.getByTestId('stat-endings')).toHaveText(`2/${ENDING_IDS.length}`);
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'Settings' }).click();

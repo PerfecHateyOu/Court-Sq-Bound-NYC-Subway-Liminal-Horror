@@ -6,7 +6,7 @@
  * 3. Frequencies & Tapes (recorded broadcasts and secret station channels with audio player)
  * 4. Endings & Achievements (8 escape endings + career investigation badges)
  */
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { X, Volume2, ShieldCheck, Eye, Award, Image as ImageIcon, Radio, CheckCircle2, Lock } from 'lucide-react';
 import { GameEngine } from '../game/gameState';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState, loadArchive } from '../game/psychLog';
@@ -15,9 +15,9 @@ import { ENDINGS, ENDING_IDS, loadEndingsArchive, endingText } from '../game/end
 import { loadPersistentPolaroids, polaroidManager } from '../game/polaroidManager';
 import { ACHIEVEMENTS, ACHIEVEMENT_IDS, loadAchievements } from '../game/achievements';
 import { TapePlayButton } from './TapePlayButton';
-import { useEscape } from '../ui/escape';
-import { useFocusTrap } from '../ui/focus';
+import { Overlay } from '../ui/Overlay';
 import { PolaroidPhoto } from '../types';
+import { StatusChip } from '../ui/StatusChip';
 
 interface CaseFilesModalProps {
   engine?: GameEngine;
@@ -32,12 +32,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'anomalies' | 'polaroids' | 'tapes' | 'endings'>(initialTab);
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
-  // Esc closes an enlarged print first, then the Case Files, wherever they're opened from.
-  useEscape(onClose);
-  useEscape(() => setSelectedPhoto(null), !!selectedPhoto);
-  // Tab stays in the files; closing them puts focus back on the button that opened them.
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(dialogRef);
+  // Esc closes an enlarged print first (its own Overlay is on top), then the Case Files.
 
   // What's saved on this device (the last ride's result only exists after a ride ends).
   const archive = loadArchive();
@@ -59,47 +54,52 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
   const unlockedAchievementsCount = ACHIEVEMENT_IDS.filter((id) => !!achievements[id]).length;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center safe-pad bg-black/85 backdrop-blur-md"
-      onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="case-files-title"
-        className="w-full max-w-2xl max-h-full flex flex-col bg-paper text-paper-ink rounded-sm shadow-2xl border border-paper-faint overflow-hidden relative"
-      >
-        {/* Subtle scanline overlay */}
-        <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-20" />
-
+    <>
+    <Overlay
+      onClose={onClose}
+      labelledBy="case-files-title"
+      width="2xl"
+      layer={50}
+      backdropClassName="bg-black/85 backdrop-blur-md"
+      panelClassName="bg-paper text-paper-ink rounded-sm border border-paper-faint"
+      bodyClassName="p-4 sm:p-6"
+      testId="case-files"
+      header={
+        <>
         {/* Header */}
-        <div className="flex items-start justify-between border-b-2 border-paper-ink p-4 sm:p-6 pb-3 relative z-10 bg-paper">
-          <div>
+        <div className="flex items-start justify-between gap-3 border-b-2 border-paper-ink p-4 sm:p-6 pb-3 relative z-10 bg-paper">
+          <div className="min-w-0 flex-1">
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-paper-ink text-cream text-3xs font-mono font-bold tracking-wider mb-1">
               <span className="w-3.5 h-3.5 rounded-full bg-g-line text-paper-ink font-black inline-flex items-center justify-center text-4xs">
                 G
               </span>
               ARCHIVE DOSSIER
             </div>
-            <h2 id="case-files-title" className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-none">
-              Case Files & Career Archive
+            <h2 id="case-files-title" className="text-fluid-2xl font-black uppercase tracking-tight leading-none">
+              Case Files
             </h2>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-paper-dim mt-1.5 font-medium">
-              <span>Anomalies: <strong className="text-paper-ink">{documentedCount}/13</strong></span>
-              <span>·</span>
-              <span>Tapes: <strong className="text-paper-ink">{tapeCount}/{EVP_SIGNALS.length}</strong></span>
-              <span>·</span>
-              <span>Endings: <strong className="text-paper-ink">{endingCount}/8</strong></span>
-              <span>·</span>
-              <span>Badges: <strong className="text-paper-ink">{unlockedAchievementsCount}/{ACHIEVEMENT_IDS.length}</strong></span>
-            </div>
+            {/* 4-up stat row, 2×2 on phones: no separators to strand at a line start */}
+            <dl className="mt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-paper-ink">
+              {(
+                [
+                  ['anomalies', 'Anomalies', `${documentedCount}/13`],
+                  ['tapes', 'Tapes', `${tapeCount}/${EVP_SIGNALS.length}`],
+                  ['endings', 'Endings', `${endingCount}/8`],
+                  ['badges', 'Badges', `${unlockedAchievementsCount}/${ACHIEVEMENT_IDS.length}`],
+                ] as const
+              ).map(([id, label, value]) => (
+                <div key={id} className="px-2 py-1 rounded-sm border border-paper-line bg-paper-2/60">
+                  <dt className="font-mono text-3xs font-bold uppercase tracking-wider text-paper-dim">{label}</dt>
+                  <dd data-testid={`stat-${id}`} className="font-mono text-sm font-black tabular-nums">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-black/10 text-paper-ink transition-colors"
+            className="tap shrink-0 -mr-1 inline-flex items-center justify-center rounded hover:bg-black/10 active:translate-y-px text-paper-ink transition-colors focus-visible:outline-2 focus-visible:outline-paper-ink"
             aria-label="Close Case Files"
           >
             <X className="w-5 h-5" />
@@ -141,69 +141,82 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
           })}
         </div>
 
-        {/* Tab Content Body */}
-        <div id="cf-panel" role="tabpanel" aria-labelledby={`cf-tab-${activeTab}`} className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10">
-          {/* TAB 1: ANOMALIES */}
+        </>
+      }
+      footer={
+        <div className="p-3 sm:p-4 border-t border-paper-faint bg-paper-2 flex justify-end relative z-10">
+          <button
+            onClick={onClose}
+            className="tap px-5 py-2 bg-paper-ink hover:bg-[#2e312b] active:translate-y-px text-cream text-xs font-bold rounded transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper-ink"
+          >
+            Close
+          </button>
+        </div>
+      }
+    >
+        {/* Subtle scanline overlay */}
+        <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-20" />
+        <div id="cf-panel" role="tabpanel" aria-labelledby={`cf-tab-${activeTab}`} className="relative z-10">
+          {/* TAB 1: ANOMALIES: a card per anomaly, grouped by class */}
           {activeTab === 'anomalies' && (
-            <ul className="divide-y divide-paper-line text-xs">
-              {PSYCH_IDS.map((id) => {
-                const def = PSYCH_ENTRIES[id];
-                const state = entryState(archive[id]);
-                const rec = archive[id];
-
+            <div className="space-y-5">
+              {documentedCount === 0 && !PSYCH_IDS.some((id) => entryState(archive[id]) === 'unconfirmed') && (
+                <p className="text-xs italic text-paper-dim">Nothing witnessed yet. Anomalies you see on a ride are filed here.</p>
+              )}
+              {PSYCH_CLASS.map((cls, tier) => {
+                const ids = PSYCH_IDS.filter((id) => PSYCH_ENTRIES[id].tier === tier);
+                if (!ids.length) return null;
                 return (
-                  <li key={id} className="py-2.5">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono font-bold text-3xs text-paper-dim uppercase tracking-wider">
-                        Class {PSYCH_CLASS[def.tier]}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {state === 'documented' && (
-                          <span className="px-1.5 py-0.5 rounded text-3xs font-bold bg-g-line/30 text-g-deep">
-                            DOCUMENTED
-                          </span>
-                        )}
-                        {state === 'unconfirmed' && (
-                          <span className="px-1.5 py-0.5 rounded text-3xs font-bold bg-warn/30 text-[#6d4b0f]">
-                            UNCONFIRMED
-                          </span>
-                        )}
-                        {state === 'redacted' && (
-                          <span className="px-1.5 py-0.5 rounded text-3xs font-bold bg-black/10 text-paper-dim">
-                            REDACTED
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {state === 'documented' && (
-                      <div className="mt-1">
-                        <strong className="font-extrabold text-paper-ink text-sm">{def.title}</strong>
-                        <p className="mt-0.5 text-[#3a3b34] leading-relaxed">{def.note}</p>
-                        <div className="mt-1 text-3xs text-paper-dim">
-                          Encountered {rec.seen} time{rec.seen === 1 ? '' : 's'}, caught {rec.caught}.
-                        </div>
-                      </div>
-                    )}
-
-                    {state === 'unconfirmed' && (
-                      <div className="mt-1">
-                        <strong className="font-extrabold text-paper-ink text-sm">{def.title}</strong>
-                        <p className="mt-0.5 italic text-paper-dim leading-relaxed">
-                          Manifested before your eyes, but you failed to flag it in time. Notice what changes next time.
-                        </p>
-                      </div>
-                    )}
-
-                    {state === 'redacted' && (
-                      <div className="mt-1 italic text-[#777468]">
-                        [Anomaly parameters not yet witnessed]
-                      </div>
-                    )}
-                  </li>
+                  <section key={cls} aria-labelledby={`cf-class-${cls}`}>
+                    <h3 id={`cf-class-${cls}`} className="mb-2 font-mono text-2xs font-bold uppercase tracking-[0.18em] text-paper-dim">
+                      Class {cls}
+                    </h3>
+                    <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {ids.map((id) => {
+                        const def = PSYCH_ENTRIES[id];
+                        const state = entryState(archive[id]);
+                        const rec = archive[id];
+                        if (state === 'redacted') {
+                          return (
+                            <li key={id} data-state="redacted" className="p-2 rounded-sm border border-dashed border-paper-line bg-black/5 text-paper-dim" aria-label={`Class ${cls}, not yet witnessed`}>
+                              <div className="aspect-[4/3] rounded-sm bg-paper-2 flex items-center justify-center">
+                                <Lock className="w-4 h-4 opacity-50" aria-hidden="true" />
+                              </div>
+                              <div className="mt-1.5 h-3 w-3/4 rounded-sm bg-paper-ink/80" aria-hidden="true" />
+                              <div className="mt-1 h-2 w-1/2 rounded-sm bg-paper-ink/25" aria-hidden="true" />
+                            </li>
+                          );
+                        }
+                        return (
+                          <li key={id} data-state={state} className="p-2 rounded-sm border border-paper-line bg-white/60 text-paper-ink">
+                            {/* A polaroid slot */}
+                            <div className="aspect-[4/3] rounded-sm bg-film p-1 shadow-sm border border-paper-line">
+                              <div className="w-full h-full rounded-[1px] bg-paper-ink/90 flex items-center justify-center">
+                                <Eye className="w-4 h-4 text-film-2/70" aria-hidden="true" />
+                              </div>
+                            </div>
+                            <div className="mt-1.5 flex items-start justify-between gap-1">
+                              <strong className="font-extrabold text-xs leading-tight">{def.title}</strong>
+                            </div>
+                            <StatusChip state={state} className="mt-1" />
+                            {state === 'documented' ? (
+                              <>
+                                <p className="mt-1 text-2xs leading-snug text-[#3a3b34]">{def.note}</p>
+                                <p className="mt-1 font-mono text-3xs text-paper-dim">
+                                  Seen {rec.seen}× · caught {rec.caught}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="mt-1 text-2xs italic leading-snug text-paper-dim">Seen, not flagged in time.</p>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
                 );
               })}
-            </ul>
+            </div>
           )}
 
           {/* TAB 2: POLAROID GALLERY */}
@@ -211,11 +224,9 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
             <div>
               {allPhotos.length === 0 ? (
                 <div className="py-12 text-center text-paper-mute">
-                  <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="font-bold text-sm">No Polaroid Evidence Saved Yet</p>
-                  <p className="text-xs mt-1 max-w-sm mx-auto">
-                    Raise the Polaroid 600 during a ride (press P or tap Camera) and press the red shutter button to capture anomalies. Prints develop fully after each ride.
-                  </p>
+                  <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" aria-hidden="true" />
+                  <p className="font-bold text-sm">No Polaroids yet</p>
+                  <p className="text-xs mt-1">{engine?.isTouch ? 'Tap Camera' : 'Press C'} on the train to take one. Prints develop after the ride.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -236,9 +247,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                           <span className="text-3xs font-mono text-faint">SILVER PRINT</span>
                         )}
                         {photo.hasAnomalyInFrustum && (
-                          <span className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-600 text-white font-mono text-[8px] font-bold rounded">
-                            EVIDENCE
-                          </span>
+                          <StatusChip state="caught" className="absolute top-1 right-1" />
                         )}
                       </div>
                       <div className="text-3xs font-mono text-paper-dim truncate">
@@ -252,59 +261,6 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                 </div>
               )}
 
-              {/* Photo Zoom Modal */}
-              {selectedPhoto && (
-                <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-black/80">
-                  {/* Scrolls when the print is taller than the screen (landscape phones), centered otherwise. */}
-                  <div
-                    className="min-h-full flex items-center justify-center safe-pad"
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) setSelectedPhoto(null);
-                    }}
-                  >
-                  <div
-                    className="bg-[#f7f5ed] p-4 sm:p-5 rounded-sm max-w-md w-full shadow-2xl border border-paper-faint text-paper-ink"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="aspect-square bg-black rounded-sm overflow-hidden mb-3 flex items-center justify-center">
-                      {selectedPhoto.dataUrl ? (
-                        <img
-                          src={selectedPhoto.dataUrl}
-                          alt="Enlarged polaroid"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="font-mono text-sm text-faint">Undeveloped Silver Print</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between border-b border-paper-line pb-2 mb-2">
-                      <span className="font-mono text-xs font-bold text-paper-dim">
-                        STOP {selectedPhoto.stop} // CAR {selectedPhoto.carIndex === 0 ? 'A' : selectedPhoto.carIndex === 1 ? 'B' : 'C'}
-                      </span>
-                      <span className="font-mono text-xs text-paper-dim">
-                        EXP {selectedPhoto.exposureQuality}%
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-base text-paper-ink">
-                      {selectedPhoto.hasAnomalyInFrustum
-                        ? selectedPhoto.anomalyName || 'Verified Anomaly Evidence'
-                        : 'Routine Commute'}
-                    </h3>
-                    <p className="text-xs text-paper-dim mt-1 leading-relaxed">
-                      {selectedPhoto.description || 'No unusual phenomena detected in frame.'}
-                    </p>
-                    <div className="mt-4 pt-2 border-t border-paper-line flex justify-end">
-                      <button
-                        onClick={() => setSelectedPhoto(null)}
-                        className="px-3 py-1.5 bg-paper-ink text-cream text-xs font-bold rounded"
-                      >
-                        Close Print
-                      </button>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -473,16 +429,50 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-3 sm:p-4 border-t border-paper-faint bg-paper-2 flex justify-end relative z-10">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-paper-ink hover:bg-[#2e312b] text-cream text-xs font-bold rounded transition-colors"
-          >
-            Return to Briefing
-          </button>
-        </div>
-      </div>
-    </div>
+    </Overlay>
+      {/* An enlarged print, on top of the files (Esc or the backdrop closes it first). */}
+      {selectedPhoto && (
+        <Overlay
+          onClose={() => setSelectedPhoto(null)}
+          labelledBy="cf-print-title"
+          width="md"
+          layer={60}
+          sheet={false}
+          backdropClassName="bg-black/80"
+          panelClassName="bg-[#f7f5ed] rounded-sm border border-paper-faint text-paper-ink"
+          bodyClassName="p-4 sm:p-5"
+          testId="case-files-print"
+        >
+          <div className="aspect-square max-h-[60dvh] mx-auto bg-black rounded-sm overflow-hidden mb-3 flex items-center justify-center">
+            {selectedPhoto.dataUrl ? (
+              <img src={selectedPhoto.dataUrl} alt="Enlarged polaroid" className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-mono text-sm text-faint">Undeveloped Silver Print</span>
+            )}
+          </div>
+          <div className="flex items-center justify-between border-b border-paper-line pb-2 mb-2">
+            <span className="font-mono text-xs font-bold text-paper-dim">
+              STOP {selectedPhoto.stop} // CAR {selectedPhoto.carIndex === 0 ? 'A' : selectedPhoto.carIndex === 1 ? 'B' : 'C'}
+            </span>
+            <span className="font-mono text-xs text-paper-dim">EXP {selectedPhoto.exposureQuality}%</span>
+          </div>
+          <h3 id="cf-print-title" className="font-bold text-base text-paper-ink">
+            {selectedPhoto.hasAnomalyInFrustum ? selectedPhoto.anomalyName || 'Verified Anomaly Evidence' : 'Routine Commute'}
+          </h3>
+          <p className="text-xs text-paper-dim mt-1 leading-relaxed">
+            {selectedPhoto.description || 'No unusual phenomena detected in frame.'}
+          </p>
+          <div className="mt-4 pt-2 border-t border-paper-line flex justify-end">
+            <button
+              autoFocus
+              onClick={() => setSelectedPhoto(null)}
+              className="tap px-3 py-1.5 bg-paper-ink text-cream text-xs font-bold rounded"
+            >
+              Close Print
+            </button>
+          </div>
+        </Overlay>
+      )}
+    </>
   );
 };

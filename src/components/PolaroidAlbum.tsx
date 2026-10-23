@@ -9,9 +9,10 @@ import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import type { GameEngine } from '../game/gameState';
 import { TapePlayButton } from './TapePlayButton';
-import { useEscape } from '../ui/escape';
+import { Overlay } from '../ui/Overlay';
+import { StatusChip } from '../ui/StatusChip';
 import { PolaroidPhoto } from '../types';
-import { X, Image as ImageIcon, Sparkles, CheckCircle2, AlertTriangle, ZoomIn, Mic } from 'lucide-react';
+import { X, Image as ImageIcon, Sparkles, ZoomIn, Mic } from 'lucide-react';
 
 interface PolaroidAlbumProps {
   onClose: () => void;
@@ -23,9 +24,8 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
   const [filter, setFilter] = useState<'all' | 'anomalies' | 'carA' | 'carB' | 'carC'>('all');
   const [tab, setTab] = useState<'prints' | 'tapes'>('prints');
-  // Esc closes an enlarged print first, then the log (rather than pausing the ride behind it).
-  useEscape(onClose);
-  useEscape(() => setSelectedPhoto(null), !!selectedPhoto);
+  // Esc closes an enlarged print first, then the log (rather than pausing the ride behind it):
+  // each is an Overlay, and the topmost one gets the key.
   const tapes = evp.tapes;
 
   const photos = polaroidManager.photos;
@@ -40,17 +40,25 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center safe-pad bg-black/80 backdrop-blur-md select-none animate-in fade-in duration-200">
-      {/* Album Container */}
-      <div className="relative w-full max-w-4xl max-h-full flex flex-col bg-[#141715] border border-white/15 rounded-xl shadow-2xl overflow-hidden">
+    <>
+    <Overlay
+      onClose={onClose}
+      labelledBy="evidence-title"
+      width="4xl"
+      layer={50}
+      panelClassName="bg-[#141715] border border-white/15 rounded-xl text-cream select-none"
+      bodyClassName="bg-panel p-4 sm:p-6"
+      testId="evidence-log"
+      header={
+        <>
         {/* Header Bar */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#191d1a]">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between bg-[#191d1a]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-warn/15 border border-warn/30 flex items-center justify-center text-warn">
               <ImageIcon className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base sm:text-lg text-cream tracking-tight">Evidence Log</h2>
+              <h2 id="evidence-title" className="font-bold text-base sm:text-lg text-cream tracking-tight">Evidence Log</h2>
               <p className="text-xs text-dim">
                 {developed
                   ? `${photos.length} prints • ${photos.filter((p) => p.hasAnomalyInFrustum).length} caught something`
@@ -71,7 +79,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
         </div>
 
         {/* Polaroids / Tapes */}
-        <div role="tablist" aria-label="Evidence" className="px-6 pt-2.5 bg-panel flex gap-1 text-xs font-bold tracking-wider">
+        <div role="tablist" aria-label="Evidence" className="px-4 sm:px-6 pt-2.5 bg-panel flex gap-1 text-xs font-bold tracking-wider">
           {(
             [
               ['prints', `POLAROIDS (${photos.length})`],
@@ -90,39 +98,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
           ))}
         </div>
 
-        {tab === 'tapes' ? (
-          <div className="flex-1 overflow-y-auto p-6 bg-panel" role="tabpanel">
-            {tapes.length === 0 ? (
-              <div className="py-16 text-center text-dim">
-                <Mic className="w-8 h-8 mx-auto opacity-40 mb-3" />
-                <p className="text-sm font-medium">No tapes yet.</p>
-                <p className="text-xs text-white/40 mt-1">
-                  {evp.hasRecorder ? 'Raise the recorder, tune slowly, and hold record when something comes through.' : 'You don\u2019t have anything to record with.'}
-                </p>
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {tapes.map((t) => (
-                  <li key={t.signalId} className="p-3 rounded border border-sepia bg-film-ink">
-                    <div className="flex items-center justify-between gap-3 font-mono text-2xs text-faint">
-                      <span className="font-bold text-cream text-xs">{t.title}</span>
-                      <span className="flex items-center gap-2">
-                        <span>
-                          Stop {t.stop} · {t.freq}
-                        </span>
-                        {engine && <TapePlayButton engine={engine} tape={t} />}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm italic text-film-2 leading-snug">{t.transcript}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-        <>
         {/* Filter Navigation Bar */}
-        <div className="px-6 py-2.5 bg-panel border-b border-white/5 flex flex-wrap gap-2 text-xs">
+        {tab === 'prints' && (
+        <div className="px-4 sm:px-6 py-2.5 bg-panel border-b border-white/5 flex flex-wrap gap-2 text-xs">
           <button
             onClick={() => setFilter('all')}
             aria-pressed={filter === 'all'}
@@ -187,17 +165,50 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
           </button>
         </div>
 
-        {/* Photos Grid Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {filteredPhotos.length === 0 ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center text-dim">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-3">
-                <ImageIcon className="w-8 h-8 opacity-40" />
+        )}
+        </>
+      }
+    >
+        {tab === 'tapes' ? (
+          <div role="tabpanel">
+            {tapes.length === 0 ? (
+              <div className="py-16 text-center text-dim">
+                <Mic className="w-8 h-8 mx-auto opacity-40 mb-3" />
+                <p className="text-sm font-medium">No tapes yet.</p>
+                <p className="text-xs text-dim mt-1">
+                  {evp.hasRecorder
+                    ? `${engine?.isTouch ? 'Tap the recorder' : 'Press R'} to raise it, tune slowly, and hold record when something comes through.`
+                    : 'You don\u2019t have anything to record with.'}
+                </p>
               </div>
-              <p className="text-sm font-medium">No Polaroid prints in this category yet.</p>
-              <p className="text-xs text-white/40 mt-1">
-                Press [C] or click the camera icon on the HUD to frame and capture evidence.
-              </p>
+            ) : (
+              <ul className="space-y-3">
+                {tapes.map((t) => (
+                  <li key={t.signalId} className="p-3 rounded border border-sepia bg-film-ink">
+                    <div className="flex items-center justify-between gap-3 font-mono text-2xs text-faint">
+                      <span className="font-bold text-cream text-xs">{t.title}</span>
+                      <span className="flex items-center gap-2">
+                        <span>
+                          Stop {t.stop} · {t.freq}
+                        </span>
+                        {engine && <TapePlayButton engine={engine} tape={t} />}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm italic text-film-2 leading-snug">{t.transcript}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+        <div role="tabpanel">
+          {filteredPhotos.length === 0 ? (
+            <div className="py-16 text-center flex flex-col items-center justify-center text-dim">
+              <ImageIcon className="w-8 h-8 opacity-40 mb-3" aria-hidden="true" />
+              <p className="text-sm font-medium">{photos.length ? 'No prints from this car.' : 'No Polaroids yet.'}</p>
+              {!photos.length && (
+                <p className="text-xs text-dim mt-1">{engine?.isTouch ? 'Tap Camera' : 'Press C'} on the train to take one.</p>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
@@ -219,16 +230,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                       <UndevelopedPrint />
                     )}
 
-                    {/* Badge (developed prints only) */}
-                    {!photo.developed ? null : photo.hasAnomalyInFrustum ? (
-                      <div className="absolute top-1.5 right-1.5 bg-red-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-0.5">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        <span>ANOMALY</span>
-                      </div>
-                    ) : (
-                      <div className="absolute top-1.5 right-1.5 bg-black/60 text-white/80 text-[8px] font-mono px-1.5 py-0.5 rounded">
-                        BASELINE
-                      </div>
+                    {/* Status (developed prints only), the same chip as the Case Files */}
+                    {photo.developed && (
+                      <StatusChip tone="dark" state={photo.hasAnomalyInFrustum ? 'caught' : 'nothing'} className="absolute top-1.5 right-1.5 shadow" />
                     )}
 
                     {/* Hover Zoom Prompt */}
@@ -251,21 +255,22 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             </div>
           )}
         </div>
-        </>
         )}
-      </div>
+    </Overlay>
 
       {/* Single Photo Inspection Lightbox Modal */}
       {selectedPhoto && (
-        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-black/90 backdrop-blur-lg animate-in zoom-in-95 duration-200">
-          {/* Scrolls when the print is taller than the screen (landscape phones), centered otherwise. */}
-          <div
-            className="min-h-full flex items-center justify-center safe-pad"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setSelectedPhoto(null);
-            }}
-          >
-          <div className="relative max-w-lg w-full bg-film p-4 pb-6 rounded-lg shadow-2xl text-black border border-black/30">
+        <Overlay
+          onClose={() => setSelectedPhoto(null)}
+          labelledBy="print-title"
+          width="lg"
+          layer={60}
+          sheet={false}
+          backdropClassName="bg-black/90 backdrop-blur-lg"
+          panelClassName="bg-film text-black border border-black/30"
+          bodyClassName="p-4 pb-6"
+          testId="print-lightbox"
+        >
             {/* Close button: on the print, so it's on screen whatever the print's size */}
             <button
               onClick={() => setSelectedPhoto(null)}
@@ -276,7 +281,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             </button>
 
             {/* Print Photo */}
-            <div className="relative aspect-square w-full bg-[#181816] rounded overflow-hidden border border-black/25">
+            <div className="relative aspect-square w-full max-w-[60dvh] mx-auto bg-[#181816] rounded overflow-hidden border border-black/25">
               {selectedPhoto.developed ? (
                 <img
                   src={selectedPhoto.dataUrl}
@@ -291,29 +296,11 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
             {/* Inspection Technical Details */}
             <div className="mt-4 font-mono">
               <div className="flex items-center justify-between pb-2 border-b border-black/15">
-                <span className="font-bold text-sm tracking-tight text-gray-900">
+                <span id="print-title" className="font-bold text-sm tracking-tight text-gray-900">
                   {selectedPhoto.developed ? selectedPhoto.anomalyName || 'NOTHING OUT OF PLACE' : 'STILL DEVELOPING'}
                 </span>
                 {selectedPhoto.developed && (
-                <span
-                  className={`text-3xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                    selectedPhoto.hasAnomalyInFrustum
-                      ? 'bg-red-600 text-white'
-                      : 'bg-emerald-700 text-white'
-                  }`}
-                >
-                  {selectedPhoto.hasAnomalyInFrustum ? (
-                    <>
-                      <AlertTriangle className="w-3 h-3" />
-                      ANOMALOUS
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3 h-3" />
-                      NEGATIVE
-                    </>
-                  )}
-                </span>
+                  <StatusChip tone="dark" state={selectedPhoto.hasAnomalyInFrustum ? 'caught' : 'nothing'} />
                 )}
               </div>
 
@@ -340,11 +327,9 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                   : 'Polaroid 600 prints take their time. This one will be ready at the end of the ride.'}
               </p>
             </div>
-          </div>
-          </div>
-        </div>
+        </Overlay>
       )}
-    </div>
+    </>
   );
 };
 

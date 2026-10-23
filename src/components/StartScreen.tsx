@@ -3,7 +3,7 @@
  * Authentic NYC subway mosaic plaque and station briefing, plus the Case Files dossier.
  */
 import React from 'react';
-import { Smartphone, HelpCircle, Settings as SettingsIcon, BookOpen, X, GraduationCap } from 'lucide-react';
+import { Smartphone, Keyboard, Hand, Settings as SettingsIcon, BookOpen, GraduationCap, Lock } from 'lucide-react';
 import { loadArchive, entryState, PSYCH_ENTRIES, PSYCH_IDS, PSYCH_CLASS } from '../game/psychLog';
 import { loadEvpArchive, EVP_SIGNALS } from '../game/evpManager';
 import { loadEndingsArchive, ENDING_IDS } from '../game/endings';
@@ -12,22 +12,42 @@ import { CaseFilesModal } from './CaseFilesModal';
 import { GameEngine } from '../game/gameState';
 import { CHAPTERS } from '../constants';
 import { chapterOrigin } from '../game/practice';
+import { BRIEFING_CONTROLS, CONTROLS, how, type InputKind } from '../ui/controls';
 
 /** "SIGNAL DRIFT" → "Signal Drift" */
 const titleCase = (t: string) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
+/** Key names in a control description, shown as key caps ("Hold F", "Esc or P"). */
+const KEY_TOKEN = /\b(F|C|M|P|Tab|Esc|Space|WASD|1|2|3)\b/g;
+const Keys: React.FC<{ text: string }> = ({ text }) => (
+  <>
+    {text.split(KEY_TOKEN).map((part, i) =>
+      i % 2 ? (
+        <kbd key={i} className="inline-block min-w-[1.4em] px-1 rounded border border-white/25 bg-white/10 font-mono text-[0.92em] text-cream text-center leading-snug">
+          {part}
+        </kbd>
+      ) : (
+        part
+      )
+    )}
+  </>
+);
+
+/** Secondary title actions share one look: icon + label, same height and gap. */
+const SECONDARY =
+  'tap inline-flex items-center justify-center gap-1.5 h-10 touch:h-11 px-3 rounded border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/30 active:translate-y-px text-cream text-xs sm:text-sm font-semibold transition-colors';
+
 interface StartScreenProps {
-  onStart: (muted: boolean, debug: boolean, nightmare: boolean, startChapter: number) => void;
+  onStart: (nightmare: boolean, startChapter: number) => void;
   onOpenSettings: () => void;
   /** Replay the practice stretch (it runs by itself before the first ride). */
-  onPractice?: (muted: boolean) => void;
+  onPractice?: () => void;
   isTouch: boolean;
   engine?: GameEngine;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSettings, onPractice, isTouch, engine }) => {
-  const [startMuted, setStartMuted] = React.useState(false);
-  const [showDebug, setShowDebug] = React.useState(false);
+  const input: InputKind = isTouch ? 'touch' : 'keyboard';
   const [nightmare, setNightmare] = React.useState(false);
   // Chapter II and III are practice runs (nothing is saved); kept from the last ride's choice.
   const [startChapter, setStartChapter] = React.useState(() => engine?.startChapter ?? 1);
@@ -53,7 +73,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
       <div className="start-card w-full max-w-xl my-auto animate-in fade-in zoom-in-95 duration-400">
         {/* Game Title & Branding Header */}
         <div className="start-head mb-4 text-center select-none">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-panel/90 border border-white/10 text-3xs sm:text-2xs font-mono tracking-[0.22em] text-dim uppercase mb-1.5 shadow-md">
+          <div className="start-kicker inline-flex items-center gap-2 px-3 py-1 rounded bg-panel/90 border border-white/10 text-3xs sm:text-2xs font-mono tracking-[0.22em] text-dim uppercase mb-1.5 shadow-md">
             <span>A Liminal Subway Horror Game</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight uppercase text-white drop-shadow-md">
@@ -68,7 +88,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
         </div>
 
         {/* MTA Station Mosaic Tablet */}
-        <div className="start-plaque relative rounded-sm p-3 sm:p-4 bg-paper text-paper-ink shadow-2xl border-4 border-[#1c241e]">
+        <div className="start-plaque relative rounded-sm p-2 sm:p-4 bg-paper text-paper-ink shadow-2xl border-4 border-[#1c241e]">
           {/* Mosaic Tile Texture Grid */}
           <div
             className="absolute inset-0 opacity-40 pointer-events-none"
@@ -80,94 +100,72 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
           />
 
           {/* Mosaic Border Frame */}
-          <div className="start-frame relative border-8 border-transparent px-4 py-3 sm:p-6 bg-paper"
+          <div className="start-frame relative border-8 border-transparent px-4 py-2 sm:p-6 bg-paper"
                style={{
                  borderImage: 'repeating-linear-gradient(90deg, #6cbe45 0 14px, #264a22 14px 28px, #e8e2cf 28px 42px) 8',
                }}>
-            <h2 className="text-[26px] min-[360px]:text-3xl sm:text-5xl font-black tracking-tight leading-none uppercase">
+            {/* Scales with the screen; breaks only after "Hoyt–", never inside a word. */}
+            <h2 className="text-[clamp(1.5rem,7.5vw,3rem)] font-black tracking-tight leading-none uppercase [overflow-wrap:normal] hyphens-none">
               Hoyt–<br />Schermerhorn
             </h2>
-            <div className="mt-3 flex items-center gap-2 text-sm sm:text-base font-bold text-paper-ink">
+            <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:text-base font-bold text-paper-ink">
               <span className="w-6 h-6 rounded-full bg-g-line text-black flex items-center justify-center text-xs font-black">
                 G
               </span>
-              <span>LAST LOCAL — to Court Sq (13 stops)</span>
+              <span className="whitespace-nowrap">LAST LOCAL — to Court Sq</span>
+              <span className="px-1.5 py-0.5 rounded-sm bg-paper-ink text-cream font-mono text-3xs tracking-wider whitespace-nowrap">13 STOPS</span>
             </div>
           </div>
         </div>
 
-        {/* Action Controls & Settings */}
-        <div className="start-actions mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Board the Train, then the secondary actions as one row, then what's locked */}
+        <div className="start-actions mt-4 flex flex-col gap-3">
           <button
-            onClick={() => onStart(startMuted, showDebug, nightmareUnlocked && nightmare, nightmareUnlocked ? startChapter : 1)}
-            className="px-6 py-3.5 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base sm:text-lg tracking-wide transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+            onClick={() => onStart(nightmareUnlocked && nightmare, nightmareUnlocked ? startChapter : 1)}
+            className="px-6 py-3.5 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base sm:text-lg tracking-wide transition-all shadow-lg active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream flex items-center justify-center gap-2"
           >
             Board the Train
           </button>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-dim">
-            <button
-              onClick={() => setShowLog(true)}
-              className="flex items-center gap-1.5 py-1.5 px-2.5 -ml-2.5 sm:ml-0 rounded border border-transparent hover:border-white/20 text-cream font-semibold transition-colors"
-            >
+          <div className="grid grid-cols-2 min-[420px]:flex min-[420px]:flex-wrap gap-2">
+            <button onClick={() => setShowLog(true)} className={SECONDARY}>
               <BookOpen className="w-4 h-4 text-g-line" />
               Case Files ({documentedCount}/13)
             </button>
-
-            <button
-              onClick={onOpenSettings}
-              className="flex items-center gap-1.5 py-1.5 px-2.5 rounded border border-transparent hover:border-white/20 text-cream font-semibold transition-colors"
-            >
+            <button onClick={onOpenSettings} className={SECONDARY}>
               <SettingsIcon className="w-4 h-4" />
               Settings
             </button>
-
             {onPractice && (
-              <button
-                onClick={() => onPractice(startMuted)}
-                className="flex items-center gap-1.5 py-1.5 px-2.5 rounded border border-transparent hover:border-white/20 text-cream font-semibold transition-colors"
-              >
+              <button onClick={() => onPractice()} className={`${SECONDARY} col-span-2 min-[420px]:col-span-1`}>
                 <GraduationCap className="w-4 h-4 text-warn" />
                 Practice stretch
               </button>
             )}
-
-            {nightmareUnlocked ? (
-              <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors" title="Faster train, flickering tubes, sharper-eyed parents, faster sanity loss">
-                <input
-                  type="checkbox"
-                  checked={nightmare}
-                  onChange={(e) => setNightmare(e.target.checked)}
-                  className="w-4 h-4 rounded accent-bad"
-                />
-                <span className={nightmare ? 'text-bad-hi font-semibold' : ''}>Nightmare mode</span>
-              </label>
-            ) : (
-              <span className="text-[#6d6a5c]" data-testid="nightmare-locked">
-                Nightmare mode and chapter select: finish a ride to unlock
-              </span>
-            )}
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-              <input
-                type="checkbox"
-                checked={startMuted}
-                onChange={(e) => setStartMuted(e.target.checked)}
-                className="w-4 h-4 rounded accent-g-line"
-              />
-              Start muted
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-              <input
-                type="checkbox"
-                checked={showDebug}
-                onChange={(e) => setShowDebug(e.target.checked)}
-                className="w-4 h-4 rounded accent-g-line"
-              />
-              Debug overlay
-            </label>
           </div>
+
+          {nightmareUnlocked ? (
+            <label
+              className="tap self-start flex items-center gap-2 text-xs text-dim cursor-pointer hover:text-cream transition-colors"
+              title="Faster train, flickering tubes, sharper-eyed parents, faster sanity loss"
+            >
+              <input
+                type="checkbox"
+                checked={nightmare}
+                onChange={(e) => setNightmare(e.target.checked)}
+                className="w-4 h-4 rounded accent-bad"
+              />
+              <span className={nightmare ? 'text-bad-hi font-semibold' : ''}>Nightmare mode</span>
+            </label>
+          ) : (
+            <p
+              className="flex items-center gap-2 px-3 py-2 rounded border border-dashed border-white/15 text-xs text-dim"
+              data-testid="nightmare-locked"
+            >
+              <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Nightmare mode and chapter select: finish a ride to unlock</span>
+            </p>
+          )}
         </div>
 
         {nightmareUnlocked && (
@@ -212,22 +210,27 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
             </p>
           </div>
 
-          <div className="text-xs text-dim border-t border-white/10 pt-3 flex items-start gap-2">
-            <HelpCircle className="w-4 h-4 text-dim shrink-0 mt-0.5" />
-            <span>
-              {isTouch
-                ? 'Drag the screen to look. Use the WALK stick (bottom left) to move between cars. Hold the round FLAG button. Tap choices when asked. Play in landscape for the best field of view.'
-                : 'Click inside the train to look with the mouse (or use the arrow keys). Hold F to flag. Press 1, 2 or 3 to answer. Hold Space when told to. C raises the camera, Tab opens the evidence log, WASD walks between cars. Esc or P pauses, M mutes.'}
-            </span>
+          {/* Controls: only this device's input (src/ui/controls.ts is the one list) */}
+          <div className="border-t border-white/10 pt-3" data-testid="start-controls">
+            <h3 className="flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-[0.12em] text-dim mb-2">
+              {isTouch ? <Hand className="w-3.5 h-3.5" aria-hidden="true" /> : <Keyboard className="w-3.5 h-3.5" aria-hidden="true" />}
+              Controls · {isTouch ? 'Touch' : 'Keyboard and mouse'}
+            </h3>
+            <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
+              {BRIEFING_CONTROLS.map((id) => (
+                <React.Fragment key={id}>
+                  <dt className="text-dim">{CONTROLS[id].action}</dt>
+                  <dd className="text-cream/90">{isTouch ? how(id, input) : <Keys text={how(id, input)} />}</dd>
+                </React.Fragment>
+              ))}
+            </dl>
+            {isTouch && (
+              <p className="landscape:hidden mt-2 flex items-center gap-2 text-xs text-warn" data-testid="landscape-tip">
+                <Smartphone className="w-4 h-4 shrink-0 animate-tilt calm:animate-none" aria-hidden="true" />
+                Turn your phone sideways for the widest view.
+              </p>
+            )}
           </div>
-
-          {/* Orientation Tip for Mobile */}
-          {isTouch && (
-            <div className="flex items-center gap-2 text-xs text-warn bg-warn/10 p-2.5 rounded border border-warn/25">
-              <Smartphone className="w-4 h-4 animate-tilt shrink-0" />
-              <span>Best experienced with your phone turned sideways (landscape).</span>
-            </div>
-          )}
         </div>
 
         {/* Case Files Dossier Modal */}

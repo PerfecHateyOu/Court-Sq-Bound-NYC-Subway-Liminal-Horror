@@ -7,8 +7,8 @@ import * as THREE from 'three';
 import { PassingTrain, FAR_WALL_Z } from './passingTrain';
 import { TrestleBuilder } from './trestleBuilder';
 import { ACROSS_ADS, NEAR_ADS, STOPS, AdDefinition } from '../constants';
-import { TextureGenerator } from './textureGenerator';
-import { CharacterBuilder } from './characterBuilder';
+import { TextureGenerator, hiDpiCanvas } from './textureGenerator';
+import { CharacterBuilder, seededRandom } from './characterBuilder';
 import { PersonObject } from '../types';
 
 export interface TargetEntry {
@@ -249,7 +249,9 @@ export class SubwayCarBuilder {
   }
 
   private setupLighting() {
-    this.hemiLight = new THREE.HemisphereLight(0xfff3dc, 0x3a3b36, 0.65);
+    // Ground colour raised a little: light bouncing off the floor, so legs and shoes near the
+    // camera keep a readable silhouette instead of falling into pure black. Still a dark car.
+    this.hemiLight = new THREE.HemisphereLight(0xfff3dc, 0x5a5850, 0.65);
     this.scene.add(this.hemiLight);
 
     this.ambLight = new THREE.AmbientLight(0xffffff, 0.15);
@@ -502,6 +504,10 @@ export class SubwayCarBuilder {
         })
       );
       decal.position.set(x + (Math.random() - 0.5) * 0.8, 1.25 + Math.random() * 0.3, -1.505);
+      // Each pane's decal sits a little differently, so repeats don't look stamped.
+      const vary = seededRandom(tid);
+      decal.rotation.z = (vary() - 0.5) * 0.6;
+      decal.scale.setScalar(0.85 + vary() * 0.3);
       decal.visible = false;
       decal.userData.tid = tid;
       this.carGroup.add(decal);
@@ -520,14 +526,9 @@ export class SubwayCarBuilder {
     // Across ads (far wall, upper panel)
     const acrossXs = [-7, -2.6, 0, 2.6, 7];
     this.acrossAds = ACROSS_ADS.map((def, i) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 200;
+      const canvas = hiDpiCanvas(640, 200);
       this.textureGen.drawAdOnCanvas(canvas, def, def.h);
-
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = this.textureGen['aniso'];
+      const tex = this.textureGen.textTexture(canvas);
 
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1.3, 0.406),
@@ -549,14 +550,9 @@ export class SubwayCarBuilder {
     // Near ads (wall behind player)
     const nearXs = [-7, -2.6, 2.6, 7];
     this.nearAds = NEAR_ADS.map((def, i) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 200;
+      const canvas = hiDpiCanvas(640, 200);
       this.textureGen.drawAdOnCanvas(canvas, def, def.h);
-
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = this.textureGen['aniso'];
+      const tex = this.textureGen.textTexture(canvas);
 
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1.3, 0.406),
@@ -578,14 +574,9 @@ export class SubwayCarBuilder {
 
   private buildRouteMaps() {
     [-4.5, 4.5].forEach((x, i) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 160;
+      const canvas = hiDpiCanvas(640, 160);
       this.textureGen.drawRouteMap(canvas, 'normal');
-
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = this.textureGen['aniso'];
+      const tex = this.textureGen.textTexture(canvas);
 
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1.22, 0.31),

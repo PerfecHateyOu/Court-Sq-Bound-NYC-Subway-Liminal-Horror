@@ -16,6 +16,7 @@
 import type * as THREE from 'three';
 import type { GameEngine } from './gameState';
 import { audioEngine } from '../audio/audioEngine';
+import { how, type InputKind } from '../ui/controls';
 
 export const TUTORIAL_KEY = 'gtrain-tutorial';
 
@@ -83,6 +84,11 @@ export class Tutorial {
     return this.G.isTouch;
   }
 
+  /** Control wording comes from src/ui/controls.ts, for this device's input. */
+  private get input(): InputKind {
+    return this.touch ? 'touch' : 'keyboard';
+  }
+
   private makeView(title = '', body = '', canNext = false): TutorialView {
     const index = Math.min(4, ORDER.indexOf(this.step) + 1);
     return { step: this.step, index, total: 4, title, body, canNext };
@@ -118,9 +124,7 @@ export class Tutorial {
       case 'look':
         this.show(
           'Look around',
-          this.touch
-            ? 'Drag the screen to look. Look to your left, then to your right.'
-            : 'Click inside the train, then move the mouse (or use the arrow keys) to look. Look to your left, then to your right.'
+          `${how('look', this.input)} to look. Look to your left, then to your right.`
         );
         break;
       case 'flag':
@@ -247,9 +251,7 @@ export class Tutorial {
           G.segFlags = [];
           this.show(
             'Notice',
-            this.touch
-              ? 'Something across the aisle just changed. Find it, then hold the FLAG button while looking at it.'
-              : 'Something across the aisle just changed. Find it, then hold F while looking at it.'
+            `Something across the aisle just changed. Find it, then ${how('flag', this.input).replace(/^Hold/, 'hold')} while looking at it.`
           );
         }
         return;

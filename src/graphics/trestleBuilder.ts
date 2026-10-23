@@ -120,6 +120,7 @@ export class TrestleBuilder {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.repeat.set(2, 1);
+    tex.anisotropy = 8; // three clamps this to what the GPU supports
     // Alpha cutout instead of blending: the empty sky above the towers is skipped, not blended.
     const mat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.BackSide, fog: false });
     this.skyline = new THREE.Mesh(new THREE.CylinderGeometry(72, 72, 22, 64, 1, true), mat);
@@ -158,6 +159,7 @@ export class TrestleBuilder {
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(8, 8);
+    tex.anisotropy = 8;
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(400, 400),
       new THREE.MeshBasicMaterial({ map: tex, fog: false })
@@ -192,6 +194,7 @@ export class TrestleBuilder {
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.repeat.set(57 / 1.2, 0.85 / 1.2);
+      tex.anisotropy = 8;
       const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.6, depthWrite: false, fog: false });
       const strip = new THREE.Mesh(new THREE.PlaneGeometry(57, 0.85), mat);
       strip.position.set(0, 1.325, s * 1.6);

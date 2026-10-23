@@ -5,7 +5,7 @@ const ALL_TAPES = `JSON.stringify(Object.fromEntries(['dispatch-hold','passenger
 
 const openCaseFiles = async (page: import('@playwright/test').Page, tab: RegExp) => {
   await page.getByRole('button', { name: /Case Files/ }).click();
-  const files = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
+  const files = page.getByRole('dialog', { name: 'Case Files' });
   await files.getByRole('tab', { name: tab }).click();
   return files;
 };

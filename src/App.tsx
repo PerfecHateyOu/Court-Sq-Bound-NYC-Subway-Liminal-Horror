@@ -47,6 +47,21 @@ const TAP_MAX_MS = 350;
 // The engine notifies React on discrete events only. These HUD values change every frame,
 // so refresh at ~30 Hz while any of them is on screen.
 const HUD_REFRESH_MS = 33;
+/** Seconds without input before the HUD's non-essential parts dim (see hudIdle). */
+const HUD_IDLE_S = 6;
+
+/**
+ * The HUD can rest: nothing is asking for the player (no prompt, restraint, live hint, held flag
+ * or raised camera or recorder, the same signals that keep the HUD refreshing live) and they
+ * haven't touched anything for a while. Its station card, tools and key hints then dim to 40%
+ * (index.css, .hud-dim), which suits the empty car.
+ */
+function hudIdle(G: GameEngine, quietFor: number): boolean {
+  if (G.paused || G.phase === 'menu' || G.phase === 'end') return false;
+  if (quietFor < HUD_IDLE_S || hudNeedsLiveRefresh(G)) return false;
+  return !G.subHtml && !G.paText && !G.tutorial && !polaroidManager.isViewfinderOpen && !polaroidManager.isAlbumOpen;
+}
+
 function hudNeedsLiveRefresh(G: GameEngine): boolean {
   if (G.paused || G.phase === 'menu' || G.phase === 'end') return false;
   return (
@@ -492,16 +507,47 @@ export default function App() {
     setRouteSelectorOpen(true);
   }, [releaseHeldKeys]);
 
+  // Idle HUD: any input wakes it; a slow timer checks whether it can rest (hudIdle). A data
+  // attribute on <html> does the dimming in CSS, so the HUD doesn't re-render for it.
+  useEffect(() => {
+    let last = performance.now();
+    const poke = () => {
+      last = performance.now();
+      if (document.documentElement.hasAttribute('data-hud-idle')) document.documentElement.removeAttribute('data-hud-idle');
+    };
+    const opts = { passive: true, capture: true } as const;
+    const events = ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'] as const;
+    events.forEach((ev) => window.addEventListener(ev, poke, opts));
+    const timer = window.setInterval(() => {
+      const G = engineRef.current;
+      const idle = !!G && hudIdle(G, (performance.now() - last) / 1000);
+      document.documentElement.toggleAttribute('data-hud-idle', idle);
+    }, 500);
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, poke, opts));
+      window.clearInterval(timer);
+      document.documentElement.removeAttribute('data-hud-idle');
+    };
+  }, []);
+
   // The evidence log can open mid-ride (Tab, the HUD, the viewfinder). The ride keeps going behind
   // it, so, like the route selector, it frees a captured mouse (without pausing) so its tabs,
   // filters and close button can be clicked.
+  // Closing it (Tab again, Esc, its close button) captures the mouse again, so you're straight back
+  // to looking around.
   const albumOpen = polaroidManager.isAlbumOpen;
+  const albumFreedLockRef = useRef(false);
   useEffect(() => {
     if (albumOpen && document.pointerLockElement) {
       quietUnlockRef.current = true;
+      albumFreedLockRef.current = true;
       document.exitPointerLock();
+    } else if (!albumOpen && albumFreedLockRef.current) {
+      albumFreedLockRef.current = false;
+      const G = engineRef.current;
+      if (G && !G.paused && G.phase !== 'menu' && G.phase !== 'end') requestLock();
     }
-  }, [albumOpen]);
+  }, [albumOpen, requestLock]);
 
   // Keyboard Event Handlers
   useEffect(() => {
@@ -739,7 +785,8 @@ export default function App() {
     };
   }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys, openRouteSelector]);
 
-  const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false, startChapter = 1) => {
+  const handleStartGame = (nightmare = false, startChapter = 1) => {
+    const { startMuted } = settings.get();
     // Inside the click, as browsers require: go full screen for the ride.
     if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
@@ -748,7 +795,7 @@ export default function App() {
 
     const G = engineRef.current;
     if (G) {
-      G.debug = showDebug;
+      G.debug = false; // the backquote key turns it on (development builds)
       G.nightmare = nightmare; // kept for Ride Again / Restart until the next start screen
       G.startChapter = startChapter; // likewise; Chapter II and III are practice runs
       // The first ride starts with the practice stretch (skippable); after that, straight in.
@@ -759,7 +806,8 @@ export default function App() {
   };
 
   /** The title screen's "Practice stretch": the lesson again, then a normal ride. */
-  const handleStartTutorial = (startMuted: boolean) => {
+  const handleStartTutorial = () => {
+    const { startMuted } = settings.get();
     if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
     audioEngine.wake();
@@ -819,7 +867,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-ink text-cream font-sans">
+    <div className="relative w-screen h-dvh overflow-hidden bg-ink text-cream font-sans">
       {/* 3D Canvas Stage */}
       <div
         ref={containerRef}
@@ -945,6 +993,8 @@ export default function App() {
           engine={engineRef.current}
           runs={runsHistory}
           onPlayAgain={handlePlayAgain}
+          // The ride is already saved; a fresh page is the cleanest way back to the title.
+          onTitle={() => window.location.reload()}
         />
       )}
     </div>
