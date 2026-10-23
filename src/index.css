@@ -8,8 +8,7 @@
  */
 @theme {
   --font-sans: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  /* The system monospace stack (Tailwind's default), as before the tokens. index.html loads
-     JetBrains Mono, but only .glitch-text uses it. */
+  /* The system monospace stack (Tailwind's default): what every mono label has always used. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Dark car UI */
@@ -217,11 +216,6 @@ body {
   background: rgba(236, 230, 211, 0.45);
 }
 
-/* Distortion / Liminal filter classes */
-.glitch-text {
-  font-family: var(--font-mono);
-  letter-spacing: -0.02em;
-}
 
 /* Animations */
 @keyframes tiltPhone {

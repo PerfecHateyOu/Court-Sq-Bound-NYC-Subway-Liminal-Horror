@@ -588,7 +588,9 @@ export default function App() {
         return;
       }
 
-      if (e.code === 'Backquote') {
+      // The spoiler overlay is a development tool: backquote toggles it in `vite dev` only, and
+      // production builds compile it out entirely (HUD.tsx).
+      if (import.meta.env.DEV && e.code === 'Backquote') {
         G.debug = !G.debug;
         triggerUpdate();
         return;
