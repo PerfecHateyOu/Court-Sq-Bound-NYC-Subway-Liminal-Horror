@@ -49,6 +49,7 @@ import { polaroidManager } from './polaroidManager';
 import { evp, EVP_SIGNALS } from './evpManager';
 import { passengerBehavior } from './passengerBehavior';
 import { carLife } from './carLife';
+import { shuffle } from './shuffle';
 import { PassingTrain } from '../graphics/passingTrain';
 import { routeManager } from './routeManager';
 import { routeText, fillRoute } from './routeText';
@@ -647,22 +648,6 @@ export class GameEngine {
   }
 
   /**
-   * Return to the main start/briefing screen.
-   */
-  public returnToMenu() {
-    this.newGame();
-    this.phase = 'menu';
-    polaroidManager.reset();
-    routeManager.reset();
-    audioEngine.stopLastLocalAnnouncement(0.1);
-    audioEngine.setBedLevel(1.0, 0.3);
-    audioEngine.setMasterLevel(0.85, 0.3);
-    audioEngine.resetRideMusic();
-    audioEngine.exitPause();
-    this.notifyUI();
-  }
-
-  /**
    * A new ride. `looped` is "Get back on" after The Eternal Commute: the same ride, but you've
    * been here before (no tutorial hint, and Dad's line lands as a repeat). Nothing else carries over.
    */
@@ -1238,11 +1223,11 @@ export class GameEngine {
     this.setSub(`<b>${p.label}:</b> ${L.line}`, 6.0);
 
     const win = (this.harder > 0 ? 3.0 : 4.0) + (this.isTouch ? 0.5 : 0);
-    const items: ChoiceItem[] = [
+    const items: ChoiceItem[] = shuffle([
       { txt: L.calm, val: 'calm' },
       { txt: L.off[0], val: 'off' },
       { txt: L.off[1], val: 'off' },
-    ].sort(() => Math.random() - 0.5);
+    ]);
 
     this.presentChoice({
       items,
@@ -1464,7 +1449,7 @@ export class GameEngine {
       [toward.replace(/^To (\S)(\S)/, 'To $2$1').replace(/trains$/, 'trians'), 'Ext', 'To You'],
       [rt.origin, rt.origin, rt.origin],
     ];
-    const signs = [...signsPool[Math.min(d, 3)]].sort(() => Math.random() - 0.5);
+    const signs = shuffle(signsPool[Math.min(d, 3)]);
 
     this.trialBuilder.open.forEach((o, i) => {
       const isDoor = tr.mode === 'board' && i !== 1;

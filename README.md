@@ -2,7 +2,7 @@
 
 A first-person liminal horror ride on the NYC G train, from Hoyt–Schermerhorn to Court Square, 13 stops, with your parents. Notice what changes in the car, hide that you noticed, and learn which doors are safe.
 
-Built with React, TypeScript, Three.js, and Vite. The game logic follows the master design document, build v5.1. (The game was called Court Sq-Bound until October 2026.)
+Built with React, TypeScript, Three.js, and Vite. The game logic follows the master design document, build v5.3. (The game was called Court Sq-Bound until October 2026.)
 
 ## Run it
 
@@ -123,7 +123,7 @@ The music steps back for the doors at each stop, nearly vanishes under PA announ
 | Pause | P or Esc | Pause button |
 | Mute | M | Sound button |
 | Close a dialog or confirmation | Esc | Close / Cancel button |
-| Debug overlay (spoilers) | Backquote | Start-screen checkbox |
+| Debug overlay (spoilers; development builds only) | Backquote, in `bun run dev` | None (compiled out of the released game) |
 
 ## Project layout
 
