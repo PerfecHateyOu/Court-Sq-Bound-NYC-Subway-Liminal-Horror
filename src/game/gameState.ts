@@ -103,7 +103,7 @@ export class GameEngine {
   // Multi-Car Consist & Player Movement
   public moveFwd: number = 0;
   public moveRight: number = 0;
-  public currentCarIndex: number = 1; // 0: Car A (Lead), 1: Car B (Center), 2: Car C (Rear)
+  public currentCarIndex: number = 1; // 0: Car A (Lead), 1: Car B (Mid), 2: Car C (Rear)
   public isCrossingGangway: boolean = false;
   public nearGangwayDoor: 'front' | 'rear' | null = null;
   public stepTimer: number = 0;

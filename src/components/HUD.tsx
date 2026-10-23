@@ -45,6 +45,22 @@ export const HUD: React.FC<HUDProps> = ({
   onOpenRouteSelector,
 }) => {
   const full = useFullscreen();
+  // Publish the top bar's height (--hud-h) so cards that dock under it (the practice stretch's
+  // coach) never cover it, whether it's one row (wide) or two (portrait phones).
+  const topBarRef = React.useRef<HTMLDivElement>(null);
+  const hudShown = engine.phase !== 'menu' && engine.phase !== 'end';
+  React.useLayoutEffect(() => {
+    const el = topBarRef.current;
+    if (!el) return;
+    const publish = () => {
+      if (!el.offsetHeight) return; // hidden (viewfinder up): keep the last value
+      document.documentElement.style.setProperty('--hud-h', `${el.offsetTop + el.offsetHeight}px`);
+    };
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hudShown]);
   const canFull = fullscreenSupported();
   const G = engine;
   if (G.phase === 'menu' || G.phase === 'end') return null;
@@ -75,10 +91,10 @@ export const HUD: React.FC<HUDProps> = ({
     G.isCrossingGangway
       ? 'GANGWAY COUPLING'
       : G.currentCarIndex === 0
-      ? 'CAR 1 (LEAD)'
+      ? 'CAR A (LEAD)'
       : G.currentCarIndex === 2
-      ? 'CAR 3 (REAR)'
-      : 'CAR 2 (MID)';
+      ? 'CAR C (REAR)'
+      : 'CAR B (MID)'; // the same letters as the Evidence Log, the viewfinder and the Case Files
 
   return (
     <div
@@ -120,16 +136,19 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/*
         Top bar: one row, so the route panel and the controls can't overlap. The controls keep
-        their size; the route panel gives way (the station name truncates last). On narrow
-        (portrait) screens the route panel drops to a second row, under the controls; on the
+        their size; the route panel gives way (the station name truncates last). Below 768px
+        (phones either way up, whose touch-size buttons need the room) the route panel drops to a
+        second row, under the controls; on the
         narrowest phones (320px) the controls close up to fit in one row. Hidden under
         the camera viewfinder, which has its own Album and Lower buttons along the top.
       */}
       <div
-        className={`absolute inset-x-3 min-[360px]:inset-x-4 top-4 ${polaroidManager.isViewfinderOpen ? 'hidden' : 'flex'} flex-wrap sm:flex-nowrap items-start sm:items-center justify-end sm:justify-between gap-2 pointer-events-none`}
+        ref={topBarRef}
+        data-testid="hud-top"
+        className={`absolute inset-x-3 min-[360px]:inset-x-4 top-4 ${polaroidManager.isViewfinderOpen ? 'hidden' : 'flex'} flex-wrap md:flex-nowrap items-start md:items-center justify-end md:justify-between gap-2 pointer-events-none`}
       >
         {/* Route Bullet, Next Station, Consist Location */}
-        <div className="order-last basis-full sm:order-none sm:basis-auto min-w-0 flex items-center gap-2 *:pointer-events-auto">
+        <div className="order-last basis-full md:order-none md:basis-auto min-w-0 flex items-center gap-2 *:pointer-events-auto">
           <button
             type="button"
             onClick={onOpenRouteSelector}

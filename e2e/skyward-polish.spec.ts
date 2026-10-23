@@ -6,7 +6,7 @@ const ALL_TAPES = `JSON.stringify(Object.fromEntries(['dispatch-hold','passenger
 const openCaseFiles = async (page: import('@playwright/test').Page, tab: RegExp) => {
   await page.getByRole('button', { name: /Case Files/ }).click();
   const files = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
-  await files.getByRole('button', { name: tab }).click();
+  await files.getByRole('tab', { name: tab }).click();
   return files;
 };
 
@@ -15,7 +15,7 @@ test.describe('Case Files keep secrets', () => {
     await game(`localStorage.setItem('gtrain-endings', JSON.stringify({ civilian_extraction: { id: 'civilian_extraction', discoveredAt: 1, count: 1 } }));
       localStorage.setItem('gtrain-achievements', JSON.stringify({ first_anomaly: { unlockedAt: 1 } }));`);
     await page.goto('/');
-    const files = await openCaseFiles(page, /Endings & Badges/);
+    const files = await openCaseFiles(page, /^Endings/);
 
     await expect(files.getByText('Civilian Extraction', { exact: true })).toBeVisible();
     await expect(files.getByText('Undocumented Outcome')).toHaveCount(7);
@@ -40,7 +40,7 @@ test.describe('Broadcasts', () => {
       await game(`localStorage.setItem('gtrain-tapes', ${ALL_TAPES});`);
       await page.goto('/');
       await page.evaluate((r) => (window as any).__RT.setRoute(r), route);
-      const files = await openCaseFiles(page, /Frequencies & Tapes/);
+      const files = await openCaseFiles(page, /^Tapes/);
       for (const t of expectTitles) await expect(files.getByText(t, { exact: true })).toBeVisible();
       for (const a of absent) await expect(files).not.toContainText(a);
       await expect(files).not.toContainText('{');

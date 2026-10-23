@@ -257,13 +257,20 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
       {/* Single Photo Inspection Lightbox Modal */}
       {selectedPhoto && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-black/90 backdrop-blur-lg animate-in zoom-in-95 duration-200">
+          {/* Scrolls when the print is taller than the screen (landscape phones), centered otherwise. */}
+          <div
+            className="min-h-full flex items-center justify-center safe-pad"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedPhoto(null);
+            }}
+          >
           <div className="relative max-w-lg w-full bg-film p-4 pb-6 rounded-lg shadow-2xl text-black border border-black/30">
-            {/* Close button */}
+            {/* Close button: on the print, so it's on screen whatever the print's size */}
             <button
               onClick={() => setSelectedPhoto(null)}
               aria-label="Close photo"
-              className="absolute -top-12 right-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              className="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -315,10 +322,10 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                   <span className="text-gray-500 text-3xs block">CONSIST CAR LOCATION</span>
                   <span className="font-semibold">
                     {selectedPhoto.carIndex === 0
-                      ? 'Car A (Lead Car)'
+                      ? 'Car A (Lead)'
                       : selectedPhoto.carIndex === 2
-                      ? 'Car C (Rear Car)'
-                      : 'Car B (Center Car)'}
+                      ? 'Car C (Rear)'
+                      : 'Car B (Mid)'}
                   </span>
                 </div>
                 <div>
@@ -333,6 +340,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                   : 'Polaroid 600 prints take their time. This one will be ready at the end of the ride.'}
               </p>
             </div>
+          </div>
           </div>
         </div>
       )}

@@ -52,6 +52,41 @@
   --text-4xs: 9px;
 }
 
+/* Layout by input and shape, not by guessing from the width:
+   touch = a coarse pointer; short-land = a phone turned sideways (landscape, at most 480px tall). */
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant short-land (@media (orientation: landscape) and (max-height: 480px));
+
+/* Hit areas: every control is at least 32px with a mouse and 44px on touch. The visible chrome
+   can stay smaller (padding takes the rest). Checked by e2e/tap-targets.spec.ts. */
+@utility tap {
+  min-height: 2rem;
+  min-width: 2rem;
+  @media (pointer: coarse) {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+
+/* The same minimum for every control, so none (and no future one) slips under it. Base layer:
+   any explicit min-h-/min-w- utility still wins where a design needs it. */
+@layer base {
+  button,
+  a[href],
+  select,
+  input[type='range'],
+  [role='tab'],
+  [role='radio'],
+  label:has(> input[type='checkbox']) {
+    min-height: 2rem;
+    min-width: 2rem;
+    @media (pointer: coarse) {
+      min-height: 2.75rem;
+      min-width: 2.75rem;
+    }
+  }
+}
+
 /* Full-screen overlays: keep content clear of notches and the home indicator (in full screen or
    from the home screen the page runs under them; see viewport-fit=cover in index.html). */
 @utility safe-pad {
