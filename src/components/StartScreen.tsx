@@ -73,7 +73,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, onOpenSetting
       <div className="start-card w-full max-w-xl my-auto animate-in fade-in zoom-in-95 duration-400">
         {/* Game Title & Branding Header */}
         <div className="start-head mb-4 text-center select-none">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-panel/90 border border-white/10 text-3xs sm:text-2xs font-mono tracking-[0.22em] text-dim uppercase mb-1.5 shadow-md">
+          <div className="start-kicker inline-flex items-center gap-2 px-3 py-1 rounded bg-panel/90 border border-white/10 text-3xs sm:text-2xs font-mono tracking-[0.22em] text-dim uppercase mb-1.5 shadow-md">
             <span>A Liminal Subway Horror Game</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight uppercase text-white drop-shadow-md">
