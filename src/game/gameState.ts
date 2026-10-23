@@ -61,6 +61,16 @@ import { Tutorial, markTutorialSeen } from './tutorial';
 const TRESTLE_FOG = new THREE.Color('#322018');
 /** Chance a tape played out loud makes a parent who wasn't watching turn to look. */
 const TAPE_GLANCE_CHANCE = 0.5;
+/** "The next stop is…" PA: seconds into the stretch, and how long it shows. */
+const NEXT_STOP_PA_AT = 7.0;
+const NEXT_STOP_PA_S = 4.5;
+/** The parents' chat on a stretch: when its two lines start, and how long each shows. */
+const CHAT_AT = [15.0, 18.6] as const;
+const CHAT_LINE_S = 3.4;
+/** How long a mask check (line, answer, reaction) keeps the subtitles busy, at most. */
+const MASK_CHECK_S = 10;
+/** The in-transit conductor's garbled lines (audioEngine.conductorBroadcast variants 1–3), subtitled (doc 6). */
+const CONDUCTOR_LINES = ['…stand clear of the closing doors…', '…next stop… transfer available…', '…held momentarily by the dispatcher…'];
 /** Chance a flash makes a parent who wasn't watching turn to look. */
 const FLASH_GLANCE_CHANCE = 0.5;
 /** Game seconds while the print ejects before the next shot (stops a double tap or a held key from burning film). */
@@ -101,6 +111,10 @@ export class GameEngine {
   public powerFlickerAt: number | null = null;
   /** Seconds into this stretch when an in-transit conductor announcement plays, or null. */
   public conductorAt: number | null = null;
+  /** Start times (s into the stretch) where the conductor fits without talking over a scripted line. */
+  public conductorFree: [number, number][] = [];
+  /** Game time until which the background intercom is talking. */
+  public intercomUntil: number = 0;
   /** Whether the brake wheel flange squeal already played this deceleration. */
   public squealedThisBrake: boolean = false;
   /** Passenger lean and habits (src/game/carLife.ts). */
@@ -552,6 +566,7 @@ export class GameEngine {
     this.heartBeats = [];
     this.intercomT = INTERCOM_FIRST[0] + Math.random() * (INTERCOM_FIRST[1] - INTERCOM_FIRST[0]);
     this.intercomCount = 0;
+    this.intercomUntil = 0;
     this.glitch = null;
     this.glitchDecoyT = 30;
     this.glitchLog = [];
@@ -562,6 +577,7 @@ export class GameEngine {
     this.trestleShow = false;
     this.powerFlickerAt = null;
     this.conductorAt = null;
+    this.conductorFree = [];
     this.squealedThisBrake = false;
     // Put the tunnel back: the intro doesn't run the world placement that would otherwise do it.
     this.carBuilder.trestle?.reset();
@@ -808,12 +824,13 @@ export class GameEngine {
     }
     this.planAnomalies(seg);
     this.planPassingTrain(seg);
-    this.planAtmosphere(seg);
 
     // Mask checks are timed for the normal ride; a shorter Nightmare ride brings them forward too,
     // so none lands on the approach.
     const maskScale = this.nightmare ? NIGHTMARE.cruise : 1;
     seg._masks = (seg.mask || []).map((t) => ({ t: Math.max(6, t * maskScale), done: false }));
+    // After the mask checks are placed: the conductor keeps clear of them.
+    this.planAtmosphere(seg);
     seg._havenSaid = false;
     seg._screech = false;
     seg._mislead = false;
@@ -822,13 +839,13 @@ export class GameEngine {
     const L = this.segLen(seg);
 
     if (!seg.silent) {
-      this.sched(7.0, () => this.setPA(`The next stop is ${routeManager.getStopName(seg.stop)}.`, 4.5));
+      this.sched(NEXT_STOP_PA_AT, () => this.setPA(`The next stop is ${routeManager.getStopName(seg.stop)}.`, NEXT_STOP_PA_S));
     }
 
     if (seg.chat !== undefined) {
       const c = this.tier >= 2 && seg.chat < 3 ? CHATS[3] : this.chatSwap[seg.chat] ?? CHATS[seg.chat];
-      this.sched(15.0, () => this.chatDialogue(c[0]));
-      this.sched(18.6, () => this.chatDialogue(c[1]));
+      this.sched(CHAT_AT[0], () => this.chatDialogue(c[0]));
+      this.sched(CHAT_AT[1], () => this.chatDialogue(c[1]));
     }
 
     if (seg.final) {
@@ -848,7 +865,7 @@ export class GameEngine {
     });
     const speaker = this.carBuilder.parents[who].label;
     const listener = this.carBuilder.parents[1 - who].label;
-    this.setSub(`<b>${speaker}:</b> ${line} <em>(to ${listener})</em>`, 3.4);
+    this.setSub(`<b>${speaker}:</b> ${line} <em>(to ${listener})</em>`, CHAT_LINE_S);
   }
 
   /**
@@ -872,6 +889,7 @@ export class GameEngine {
   private planAtmosphere(seg: SegmentDef) {
     this.powerFlickerAt = null;
     this.conductorAt = null;
+    this.conductorFree = [];
     this.squealedThisBrake = false;
 
     const trestle = Number.isFinite(this.trestleExitAt) || this.trestleEnterAt !== null;
@@ -881,9 +899,64 @@ export class GameEngine {
     if (cruise > 12 && Math.random() < 0.5) {
       this.powerFlickerAt = TA + 3 + Math.random() * (cruise - 7);
     }
-    if (cruise > 18 && seg.chat === undefined && Math.random() < 0.45) {
-      this.conductorAt = TA + 5 + Math.random() * (cruise - 9);
+    // Whether the conductor speaks doesn't depend on the stretch (no chat/no-chat tell for Stops
+    // 4, 6 and 9); only when does, so it never talks over a scripted line.
+    if (cruise > 18 && Math.random() < GameEngine.CONDUCTOR_CHANCE) {
+      this.conductorFree = this.conductorSlots(seg);
+      this.conductorAt = this.pickIn(this.conductorFree);
     }
+  }
+
+  /** In-transit conductor PA: chance per stretch, how long its subtitle shows (s), and the gap kept around other lines (s). */
+  public static CONDUCTOR_CHANCE = 0.45;
+  public static CONDUCTOR_S = 2.6;
+  public static CONDUCTOR_GAP = 0.5;
+
+  /**
+   * Where the conductor may start on a stretch: after the departure "Stand clear" PA and at least
+   * INTERCOM_MIN_ROOM s before braking, but never over the "The next stop is…" PA (every
+   * stretch, so it doesn't depend on seg.silent), the parents' chat or a mask check. The slot
+   * between departure and the next-stop PA is always free, so every eligible stretch has room.
+   */
+  public conductorSlots(seg: SegmentDef): [number, number][] {
+    const D = GameEngine.CONDUCTOR_S;
+    const M = GameEngine.CONDUCTOR_GAP;
+    const blocks: [number, number][] = [[NEXT_STOP_PA_AT, NEXT_STOP_PA_AT + NEXT_STOP_PA_S]];
+    if (seg.chat !== undefined) blocks.push([CHAT_AT[0], CHAT_AT[1] + CHAT_LINE_S]);
+    (seg._masks || []).forEach((m) => blocks.push([m.t, m.t + MASK_CHECK_S]));
+    const latest = TA + this.cruiseOf(seg) - INTERCOM_MIN_ROOM - D;
+    let free: [number, number][] = [[1.0, latest]];
+    for (const [a, b] of blocks) {
+      free = free.flatMap(([s, e]): [number, number][] => [
+        [s, Math.min(e, a - M - D)],
+        [Math.max(s, b + M), e],
+      ]).filter(([s, e]) => e > s);
+    }
+    return free;
+  }
+
+  /** A uniformly random point in a set of ranges, or null if they're empty. */
+  private pickIn(ranges: [number, number][]): number | null {
+    const total = ranges.reduce((n, [s, e]) => n + (e - s), 0);
+    if (total <= 0) return null;
+    let r = Math.random() * total;
+    for (const [s, e] of ranges) {
+      if (r <= e - s) return s + r;
+      r -= e - s;
+    }
+    return ranges[ranges.length - 1][1];
+  }
+
+  /** Something is already talking or on screen: a PA, a subtitle, a prompt, the intercom. */
+  private conductorBusy(): boolean {
+    return !!this.paText || !!this.subHtml || !!this.choice || !!this.restraint || this.intervening || this.GT < this.intercomUntil;
+  }
+
+  /** Play one garbled conductor line, through setPA so it's subtitled and the music ducks. */
+  private playConductor() {
+    const v = Math.floor(Math.random() * CONDUCTOR_LINES.length) + 1; // 1, 2, or 3
+    audioEngine.conductorBroadcast(v);
+    this.setPA(CONDUCTOR_LINES[v - 1], GameEngine.CONDUCTOR_S);
   }
 
   private lifeRolesCache: { noHabits: Set<PersonObject>; still: Set<PersonObject> } | null = null;
@@ -1676,6 +1749,7 @@ export class GameEngine {
     this.passAt = null;
     this.powerFlickerAt = null;
     this.conductorAt = null;
+    this.conductorFree = [];
     this.squealedThisBrake = false;
     evp.lower();
     // The report replaces the ride: put the camera down and close the evidence log, so neither
@@ -1863,6 +1937,7 @@ export class GameEngine {
       return;
     }
     const duration = audioEngine.intercom(this.tier);
+    this.intercomUntil = this.GT + duration;
     this.intercomCount++;
     this.intercomT = duration + INTERCOM_EVERY[0] + Math.random() * (INTERCOM_EVERY[1] - INTERCOM_EVERY[0]);
   }
@@ -1979,12 +2054,16 @@ export class GameEngine {
       audioEngine.thirdRailSpark();
     }
 
-    // In-transit garbled conductor PA announcement
+    // In-transit garbled conductor PA (planAtmosphere). If something is talking, wait for a
+    // quiet moment that's still in a free slot; give up if none is left.
     if (this.phase === 'ride' && this.conductorAt !== null && this.ts >= this.conductorAt) {
-      this.conductorAt = null;
-      if (!this.choice && !this.intervening && !this.restraint) {
-        const v = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-        audioEngine.conductorBroadcast(v);
+      if (!this.conductorBusy()) {
+        this.conductorAt = null;
+        this.playConductor();
+      } else {
+        const next = this.ts + 0.5;
+        const slot = this.conductorFree.find(([, e]) => e >= next);
+        this.conductorAt = slot ? Math.max(next, slot[0]) : null;
       }
     }
 

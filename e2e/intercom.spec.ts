@@ -5,7 +5,8 @@ const SETUP = `if (!window.__peakRms) { const an = A.ac.createAnalyser(); an.fft
       const d = new Float32Array(an.fftSize); an.getFloatTimeDomainData(d); let s = 0; for (const v of d) s += v * v;
       m = Math.max(m, Math.sqrt(s / d.length)); await sleep(30); } return m; };
     window.__calls = []; const o = A.intercom.bind(A); A.intercom = (t) => { window.__calls.push(t); return o(t); }; }
-  const quiet = () => { G.paText = ''; G.subHtml = ''; };`;
+  // Quiet also means no conductor PA due (it can land on any stretch: e2e/conductor-pa.spec.ts).
+  const quiet = () => { G.paText = ''; G.subHtml = ''; G.conductorAt = null; };`;
 
 test.describe('background intercom', () => {
   test('plays during rides, audibly, then schedules the next one 28–55 s out', async ({ game }) => {
