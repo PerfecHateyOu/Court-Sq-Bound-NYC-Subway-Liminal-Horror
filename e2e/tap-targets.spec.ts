@@ -9,7 +9,11 @@ const CONTROLS = 'button, a[href], select, input:not([type=hidden]):not([type=ch
 /** Visible controls smaller than `min` in either direction, with a name to find them by. */
 async function undersized(page: Page, min: number, scope = 'body') {
   return page.evaluate(
-    ({ sel, min, scope }) => {
+    async ({ sel, min, scope }) => {
+      // Measure panels at rest, not mid-way through their opening animation (src/ui/Overlay.tsx).
+      await Promise.all(
+        document.getAnimations().filter((a) => /^overlay-/.test((a as CSSAnimation).animationName)).map((a) => a.finished)
+      );
       const root = document.querySelector(scope) || document.body;
       const out: string[] = [];
       for (const el of root.querySelectorAll<HTMLElement>(sel)) {

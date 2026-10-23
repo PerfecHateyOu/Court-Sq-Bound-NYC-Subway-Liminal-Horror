@@ -9,7 +9,7 @@ import { X } from 'lucide-react';
 import { settings, useSettings, savedProgress, SENSITIVITY_RANGE, type ScreenEffects } from '../settings';
 import { haptics } from '../game/haptics';
 import { useEscape } from '../ui/escape';
-import { useFocusTrap } from '../ui/focus';
+import { Overlay } from '../ui/Overlay';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -89,12 +89,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
   // Counted when the confirmation opens, so it names exactly what will go.
   const saved = React.useMemo(() => savedProgress(), [confirmErase, erased]);
   const canVibrate = isTouch && haptics.supported;
-  // Esc closes the panel, or first cancels the erase confirmation if it's open.
-  useEscape(onClose);
+  // Esc closes the panel (Overlay), or first cancels the erase confirmation if it's open.
   useEscape(() => setConfirmErase(false), confirmErase);
-  // Tab stays in the panel; closing it puts focus back on the button that opened it.
-  const dialogRef = React.useRef<HTMLDivElement>(null);
-  useFocusTrap(dialogRef);
   const pct = (v: number) => `${Math.round(v * 100)}%`;
 
   const effectsNote =
@@ -107,22 +103,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
       : 'On, whatever your device setting.';
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center safe-pad bg-black/70 backdrop-blur-sm"
-      onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-title"
-        // Never taller than the screen: the header and Done stay put, only the body scrolls.
-        className="w-full max-w-md max-h-full flex flex-col rounded bg-panel border border-white/15 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200"
-      >
-        <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
-          <h2 id="settings-title" className="text-xl font-black text-cream uppercase tracking-wide">
+    <Overlay
+      onClose={onClose}
+      labelledBy="settings-title"
+      width="md"
+      layer={40}
+      backdropClassName="bg-black/70 backdrop-blur-sm"
+      testId="settings-panel"
+      header={
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
+          <h2 id="settings-title" className="text-fluid-xl font-black text-cream uppercase tracking-wide">
             Settings
           </h2>
           <button
@@ -133,8 +123,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4" data-testid="settings-body">
+      }
+      footer={
+        <div className="px-5 pt-3 pb-4 border-t border-white/10">
+          <button
+            autoFocus
+            onClick={onClose}
+            className="w-full py-3 px-6 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all active:scale-[0.98]"
+          >
+            Done
+          </button>
+        </div>
+      }
+    >
+      <div data-testid="settings-body">
           <Section title="Look">
             <Slider
               id="set-sens"
@@ -283,18 +285,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
               </div>
             )}
           </Section>
-        </div>
-
-        <div className="shrink-0 px-5 pt-3 pb-4 border-t border-white/10">
-          <button
-            autoFocus
-            onClick={onClose}
-            className="w-full py-3 px-6 rounded bg-g-line hover:bg-g-line-hi text-g-line-ink font-extrabold text-base tracking-wide transition-all active:scale-[0.98]"
-          >
-            Done
-          </button>
-        </div>
       </div>
-    </div>
+    </Overlay>
   );
 };

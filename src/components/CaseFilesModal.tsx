@@ -6,7 +6,7 @@
  * 3. Frequencies & Tapes (recorded broadcasts and secret station channels with audio player)
  * 4. Endings & Achievements (8 escape endings + career investigation badges)
  */
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { X, Volume2, ShieldCheck, Eye, Award, Image as ImageIcon, Radio, CheckCircle2, Lock } from 'lucide-react';
 import { GameEngine } from '../game/gameState';
 import { PSYCH_CLASS, PSYCH_ENTRIES, PSYCH_IDS, entryState, loadArchive } from '../game/psychLog';
@@ -15,8 +15,7 @@ import { ENDINGS, ENDING_IDS, loadEndingsArchive, endingText } from '../game/end
 import { loadPersistentPolaroids, polaroidManager } from '../game/polaroidManager';
 import { ACHIEVEMENTS, ACHIEVEMENT_IDS, loadAchievements } from '../game/achievements';
 import { TapePlayButton } from './TapePlayButton';
-import { useEscape } from '../ui/escape';
-import { useFocusTrap } from '../ui/focus';
+import { Overlay } from '../ui/Overlay';
 import { PolaroidPhoto } from '../types';
 
 interface CaseFilesModalProps {
@@ -32,12 +31,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'anomalies' | 'polaroids' | 'tapes' | 'endings'>(initialTab);
   const [selectedPhoto, setSelectedPhoto] = useState<PolaroidPhoto | null>(null);
-  // Esc closes an enlarged print first, then the Case Files, wherever they're opened from.
-  useEscape(onClose);
-  useEscape(() => setSelectedPhoto(null), !!selectedPhoto);
-  // Tab stays in the files; closing them puts focus back on the button that opened them.
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(dialogRef);
+  // Esc closes an enlarged print first (its own Overlay is on top), then the Case Files.
 
   // What's saved on this device (the last ride's result only exists after a ride ends).
   const archive = loadArchive();
@@ -59,22 +53,18 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
   const unlockedAchievementsCount = ACHIEVEMENT_IDS.filter((id) => !!achievements[id]).length;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center safe-pad bg-black/85 backdrop-blur-md"
-      onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="case-files-title"
-        className="w-full max-w-2xl max-h-full flex flex-col bg-paper text-paper-ink rounded-sm shadow-2xl border border-paper-faint overflow-hidden relative"
-      >
-        {/* Subtle scanline overlay */}
-        <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-20" />
-
+    <>
+    <Overlay
+      onClose={onClose}
+      labelledBy="case-files-title"
+      width="2xl"
+      layer={50}
+      backdropClassName="bg-black/85 backdrop-blur-md"
+      panelClassName="bg-paper text-paper-ink rounded-sm border border-paper-faint"
+      bodyClassName="p-4 sm:p-6"
+      testId="case-files"
+      header={
+        <>
         {/* Header */}
         <div className="flex items-start justify-between border-b-2 border-paper-ink p-4 sm:p-6 pb-3 relative z-10 bg-paper">
           <div>
@@ -84,7 +74,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
               </span>
               ARCHIVE DOSSIER
             </div>
-            <h2 id="case-files-title" className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-none">
+            <h2 id="case-files-title" className="text-fluid-2xl font-black uppercase tracking-tight leading-none">
               Case Files & Career Archive
             </h2>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-paper-dim mt-1.5 font-medium">
@@ -141,8 +131,22 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
           })}
         </div>
 
-        {/* Tab Content Body */}
-        <div id="cf-panel" role="tabpanel" aria-labelledby={`cf-tab-${activeTab}`} className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10">
+        </>
+      }
+      footer={
+        <div className="p-3 sm:p-4 border-t border-paper-faint bg-paper-2 flex justify-end relative z-10">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 bg-paper-ink hover:bg-[#2e312b] text-cream text-xs font-bold rounded transition-colors"
+          >
+            Return to Briefing
+          </button>
+        </div>
+      }
+    >
+        {/* Subtle scanline overlay */}
+        <div className="absolute inset-0 pointer-events-none transit-sign-raster opacity-20" />
+        <div id="cf-panel" role="tabpanel" aria-labelledby={`cf-tab-${activeTab}`} className="relative z-10">
           {/* TAB 1: ANOMALIES */}
           {activeTab === 'anomalies' && (
             <ul className="divide-y divide-paper-line text-xs">
@@ -252,59 +256,6 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                 </div>
               )}
 
-              {/* Photo Zoom Modal */}
-              {selectedPhoto && (
-                <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-black/80">
-                  {/* Scrolls when the print is taller than the screen (landscape phones), centered otherwise. */}
-                  <div
-                    className="min-h-full flex items-center justify-center safe-pad"
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) setSelectedPhoto(null);
-                    }}
-                  >
-                  <div
-                    className="bg-[#f7f5ed] p-4 sm:p-5 rounded-sm max-w-md w-full shadow-2xl border border-paper-faint text-paper-ink"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="aspect-square bg-black rounded-sm overflow-hidden mb-3 flex items-center justify-center">
-                      {selectedPhoto.dataUrl ? (
-                        <img
-                          src={selectedPhoto.dataUrl}
-                          alt="Enlarged polaroid"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="font-mono text-sm text-faint">Undeveloped Silver Print</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between border-b border-paper-line pb-2 mb-2">
-                      <span className="font-mono text-xs font-bold text-paper-dim">
-                        STOP {selectedPhoto.stop} // CAR {selectedPhoto.carIndex === 0 ? 'A' : selectedPhoto.carIndex === 1 ? 'B' : 'C'}
-                      </span>
-                      <span className="font-mono text-xs text-paper-dim">
-                        EXP {selectedPhoto.exposureQuality}%
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-base text-paper-ink">
-                      {selectedPhoto.hasAnomalyInFrustum
-                        ? selectedPhoto.anomalyName || 'Verified Anomaly Evidence'
-                        : 'Routine Commute'}
-                    </h3>
-                    <p className="text-xs text-paper-dim mt-1 leading-relaxed">
-                      {selectedPhoto.description || 'No unusual phenomena detected in frame.'}
-                    </p>
-                    <div className="mt-4 pt-2 border-t border-paper-line flex justify-end">
-                      <button
-                        onClick={() => setSelectedPhoto(null)}
-                        className="px-3 py-1.5 bg-paper-ink text-cream text-xs font-bold rounded"
-                      >
-                        Close Print
-                      </button>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -473,16 +424,50 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-3 sm:p-4 border-t border-paper-faint bg-paper-2 flex justify-end relative z-10">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-paper-ink hover:bg-[#2e312b] text-cream text-xs font-bold rounded transition-colors"
-          >
-            Return to Briefing
-          </button>
-        </div>
-      </div>
-    </div>
+    </Overlay>
+      {/* An enlarged print, on top of the files (Esc or the backdrop closes it first). */}
+      {selectedPhoto && (
+        <Overlay
+          onClose={() => setSelectedPhoto(null)}
+          labelledBy="cf-print-title"
+          width="md"
+          layer={60}
+          sheet={false}
+          backdropClassName="bg-black/80"
+          panelClassName="bg-[#f7f5ed] rounded-sm border border-paper-faint text-paper-ink"
+          bodyClassName="p-4 sm:p-5"
+          testId="case-files-print"
+        >
+          <div className="aspect-square max-h-[60dvh] mx-auto bg-black rounded-sm overflow-hidden mb-3 flex items-center justify-center">
+            {selectedPhoto.dataUrl ? (
+              <img src={selectedPhoto.dataUrl} alt="Enlarged polaroid" className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-mono text-sm text-faint">Undeveloped Silver Print</span>
+            )}
+          </div>
+          <div className="flex items-center justify-between border-b border-paper-line pb-2 mb-2">
+            <span className="font-mono text-xs font-bold text-paper-dim">
+              STOP {selectedPhoto.stop} // CAR {selectedPhoto.carIndex === 0 ? 'A' : selectedPhoto.carIndex === 1 ? 'B' : 'C'}
+            </span>
+            <span className="font-mono text-xs text-paper-dim">EXP {selectedPhoto.exposureQuality}%</span>
+          </div>
+          <h3 id="cf-print-title" className="font-bold text-base text-paper-ink">
+            {selectedPhoto.hasAnomalyInFrustum ? selectedPhoto.anomalyName || 'Verified Anomaly Evidence' : 'Routine Commute'}
+          </h3>
+          <p className="text-xs text-paper-dim mt-1 leading-relaxed">
+            {selectedPhoto.description || 'No unusual phenomena detected in frame.'}
+          </p>
+          <div className="mt-4 pt-2 border-t border-paper-line flex justify-end">
+            <button
+              autoFocus
+              onClick={() => setSelectedPhoto(null)}
+              className="tap px-3 py-1.5 bg-paper-ink text-cream text-xs font-bold rounded"
+            >
+              Close Print
+            </button>
+          </div>
+        </Overlay>
+      )}
+    </>
   );
 };
