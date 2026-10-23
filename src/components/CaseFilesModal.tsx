@@ -316,7 +316,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                           “{transcript}”
                         </div>
                       ) : (
-                        <p className="mt-1 text-xs italic text-[#777468]">
+                        <p className="mt-1 text-xs italic text-paper-dim">
                           Broadcast signal not yet intercepted. Tune during Stops {sig.stops.join(', ')} to lock onto this frequency.
                         </p>
                       )}
@@ -353,7 +353,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                         className={`p-2.5 rounded border transition-all ${
                           isReached
                             ? 'bg-white/70 border-paper-ink/40 text-paper-ink'
-                            : 'bg-black/5 border-dashed border-paper-line text-[#777468]'
+                            : 'bg-black/5 border-dashed border-paper-line text-paper-dim'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1 mb-1">
@@ -397,7 +397,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                         className={`p-2.5 rounded border flex items-start gap-2.5 transition-all ${
                           unlocked
                             ? 'bg-white/80 border-g-line text-paper-ink shadow-sm'
-                            : 'bg-black/5 border-paper-line text-[#777468]'
+                            : 'bg-black/5 border-paper-line text-paper-dim'
                         }`}
                       >
                         <div

@@ -483,8 +483,8 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                     ) : (
                       <>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <Lock className="w-3 h-3 text-[#7a786e]" />
-                          <span className="font-bold text-[#7a786e] italic">Undocumented Outcome</span>
+                          <Lock className="w-3 h-3 text-paper-dim" />
+                          <span className="font-bold text-paper-dim italic">Undocumented Outcome</span>
                         </div>
                       </>
                     )}

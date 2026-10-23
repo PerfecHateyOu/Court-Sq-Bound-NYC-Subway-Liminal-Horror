@@ -46,7 +46,8 @@ for (const vp of VIEWPORTS) {
   test.describe(vp.name, () => {
     test.use({ viewport: { width: vp.w, height: vp.h }, hasTouch: vp.touch, isMobile: vp.touch });
     const dir = join(OUT, vp.name);
-    const shot = (page: Page, name: string) => page.screenshot({ path: join(dir, `${name}.png`) });
+    // Finite animations (a panel opening) jump to their end, so a busy machine can't catch one mid-way.
+    const shot = (page: Page, name: string) => page.screenshot({ path: join(dir, `${name}.png`), animations: 'disabled' });
 
     test('menus', async ({ page }) => {
       mkdirSync(dir, { recursive: true });

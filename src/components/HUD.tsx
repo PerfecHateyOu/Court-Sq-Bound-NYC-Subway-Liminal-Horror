@@ -416,7 +416,7 @@ export const HUD: React.FC<HUDProps> = ({
         <div className="hud-dim absolute left-4 bottom-5 hidden md:block pointer-events-none">
           <div
             data-testid="hint-strip"
-            className={`flex items-center gap-2 text-2xs text-dim font-mono ${GLASS} px-3 py-1.5 rounded-xl transition-opacity duration-1000 calm:transition-none ${
+            className={`flex items-center gap-2 text-2xs text-cream/80 font-mono ${GLASS} px-3 py-1.5 rounded-xl transition-opacity duration-1000 calm:transition-none ${
               hintsFading ? 'opacity-0' : 'opacity-100'
             }`}
           >

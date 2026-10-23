@@ -246,7 +246,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                     <div className="text-2xs font-bold font-mono truncate text-gray-800">
                       {photo.developed ? photo.anomalyName || 'Nothing out of place' : 'Developing…'}
                     </div>
-                    <div className="text-4xs font-mono text-gray-500">
+                    <div className="text-4xs font-mono text-paper-dim">
                       Car {photo.carIndex === 0 ? 'A (Lead)' : photo.carIndex === 2 ? 'C (Rear)' : 'B (Mid)'} • Line {photo.routeId}
                     </div>
                   </div>
@@ -306,7 +306,7 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
 
               <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs text-gray-700">
                 <div>
-                  <span className="text-gray-500 text-3xs block">CONSIST CAR LOCATION</span>
+                  <span className="text-paper-dim text-3xs block">CONSIST CAR LOCATION</span>
                   <span className="font-semibold">
                     {selectedPhoto.carIndex === 0
                       ? 'Car A (Lead)'
@@ -316,12 +316,12 @@ export const PolaroidAlbum: React.FC<PolaroidAlbumProps> = ({ onClose, engine })
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-3xs block">MTA TRANSIT LINE</span>
+                  <span className="text-paper-dim text-3xs block">MTA TRANSIT LINE</span>
                   <span className="font-semibold">{selectedPhoto.routeId} Line</span>
                 </div>
               </div>
 
-              <p className="mt-3 text-xs text-gray-600 leading-relaxed bg-black/5 p-2.5 rounded border border-black/10">
+              <p className="mt-3 text-xs text-paper-dim leading-relaxed bg-black/5 p-2.5 rounded border border-black/10">
                 {selectedPhoto.developed
                   ? selectedPhoto.description || 'Evidentiary photo captured on Polaroid 600 emulsion.'
                   : 'Polaroid 600 prints take their time. This one will be ready at the end of the ride.'}
