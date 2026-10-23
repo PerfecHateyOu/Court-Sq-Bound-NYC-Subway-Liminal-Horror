@@ -210,14 +210,15 @@ export class CharacterBuilder {
 
     if (cfg.archetype) this.addHeadwear(head, cfg.archetype, hairMat);
 
-    // Smartphone: a thin dark slab held in both hands, its screen lit and tilted up toward the face.
+    // Smartphone: a thin dark slab held in both hands, its lit screen tipped up and out over the lap.
     let phone: THREE.Object3D | null = null;
     if (cfg.phone) {
       const phoneGroup = this.makePhone(0x1b1d20);
       phoneGroup.position.set(0, 0.735 + up, 0.3);
-      // Screen toward the eyes, tipped up about 40° from the lap, so from across the aisle you see
-      // its dark back between the hands and the glow around it, never the screen itself.
-      phoneGroup.rotation.x = -2.27;
+      // Tipped the same way as before §5 (screen up and toward the aisle), so from your seat you see
+      // the lit screen between the hands. Mom's pale-skin anomaly hides her phone, and that only reads
+      // as a tell if the phone is plain to see; turned toward her face it was a dark slab you missed.
+      phoneGroup.rotation.x = -0.92;
       g.add(phoneGroup);
       phone = phoneGroup;
     }
@@ -310,7 +311,8 @@ export class CharacterBuilder {
   private makePhone(body: number): THREE.Group {
     const phone = new THREE.Group();
     this.box(phone, 0.074, 0.145, 0.011, new THREE.MeshLambertMaterial({ color: body }), 0, 0, 0);
-    const screenMat = new THREE.MeshLambertMaterial({ color: 0x0b1018, emissive: 0x9cc1ea, emissiveIntensity: 0.85 });
+    // Self-lit at full strength so it reads from across the car under any lighting, as on main.
+    const screenMat = new THREE.MeshLambertMaterial({ color: 0x0b1018, emissive: 0xb5d4ff, emissiveIntensity: 1 });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.064, 0.132), screenMat);
     screen.position.z = 0.0058;
     phone.add(screen);
