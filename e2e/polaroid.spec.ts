@@ -44,7 +44,6 @@ test.describe('polaroid camera', () => {
     expect(before).toEqual({ film: 6, photos: 2, route: 'L' });
     await page.keyboard.press('KeyP');
     await page.locator('text=/Restart Ride/i').click();
-    await page.locator('[role=alertdialog] >> text=/^Restart$/').click();
     await page.waitForTimeout(500);
     const after = await game(`const P = window.__P;
       return { film: P.remainingFilm, photos: P.photos.length, viewfinder: P.isViewfinderOpen, album: P.isAlbumOpen,

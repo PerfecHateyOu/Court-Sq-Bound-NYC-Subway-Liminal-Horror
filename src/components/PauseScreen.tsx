@@ -5,9 +5,7 @@ import React from 'react';
 import { Play, RotateCcw, Settings as SettingsIcon, Maximize2, Minimize2 } from 'lucide-react';
 import { fullscreenSupported, isStandalone, toggleFullscreen, useFullscreen } from '../ui/fullscreen';
 import { routeManager } from '../game/routeManager';
-import { chapterOrigin } from '../game/practice';
 import { GameEngine } from '../game/gameState';
-import { useEscape } from '../ui/escape';
 import { Overlay } from '../ui/Overlay';
 
 /** Settings and Full Screen: the secondary actions, outlined. */
@@ -26,19 +24,10 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
   const nextStop = routeManager.getStopName(engine.seg ? engine.seg.stop : 2);
   // The strip shows the line's name without its leading bullet letter.
   const lineName = route.name.replace(/^\S+\s+/, '');
-  // A restart begins this ride's chapter again, back on the G (see GameEngine.startIntro),
-  // whichever line you're on now.
-  const origin = chapterOrigin(engine.startChapter);
-  const restartOrigin = route.id === 'G' ? origin : `the G at ${origin}`;
-  // Restarting throws away the current ride, so it takes a second, explicit click (not in a
-  // practice run: nothing in it is saved).
-  const [confirmRestart, setConfirmRestart] = React.useState(false);
   const full = useFullscreen();
   const canFull = fullscreenSupported();
   // iPhone Safari can't go full screen from a page; the home-screen app can.
   const showHomeScreenTip = !canFull && engine.isTouch && !isStandalone();
-  // Esc on the confirmation cancels it (rather than resuming the ride).
-  useEscape(() => setConfirmRestart(false), confirmRestart);
   // Keys go to the menu, starting on Resume, not to the HUD behind it.
   const resumeRef = React.useRef<HTMLButtonElement>(null);
 
@@ -127,41 +116,15 @@ export const PauseScreen: React.FC<PauseScreenProps> = ({ engine, onResume, onRe
             </p>
           )}
 
-          {/* Destructive, so set apart: a red ghost button at the bottom, with a confirm step. */}
-          {!confirmRestart ? (
-            <button
-              onClick={() => (engine.isPractice ? onRestart() : setConfirmRestart(true))}
-              className="w-full mt-2 pt-3 short-land:mt-0 short-land:pt-2.5 py-2.5 px-6 rounded border border-transparent hover:border-bad/60 hover:bg-bad/10 active:translate-y-px text-bad-hi font-bold text-sm tracking-wide transition-colors flex items-center justify-center gap-2 relative before:absolute before:-top-1 before:left-4 before:right-4 before:border-t before:border-white/10 short-land:before:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bad-hi"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Restart Ride
-            </button>
-          ) : (
-            <div
-              role="alertdialog"
-              aria-labelledby="restart-confirm-text"
-              className="w-full p-3 rounded border border-bad/50 bg-bad/10 text-left short-land:col-span-2"
-            >
-              <p id="restart-confirm-text" className="text-sm text-cream leading-snug">
-                Start over from {restartOrigin}? This ride won't be saved to your history.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <button
-                  autoFocus
-                  onClick={onRestart}
-                  className="flex-1 py-2.5 px-4 rounded bg-bad hover:bg-bad-hi text-white font-extrabold text-sm transition-colors active:translate-y-px shadow-md"
-                >
-                  Restart
-                </button>
-                <button
-                  onClick={() => setConfirmRestart(false)}
-                  className="flex-1 py-2.5 px-4 rounded border border-white/20 hover:border-white/40 text-cream font-bold text-sm transition-colors active:translate-y-px"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Destructive, so set apart: a red ghost button at the bottom. It restarts at once, with no
+              "are you sure" step, on every ride (Williams, Oct 23). */}
+          <button
+            onClick={onRestart}
+            className="w-full mt-2 pt-3 short-land:mt-0 short-land:pt-2.5 py-2.5 px-6 rounded border border-transparent hover:border-bad/60 hover:bg-bad/10 active:translate-y-px text-bad-hi font-bold text-sm tracking-wide transition-colors flex items-center justify-center gap-2 relative before:absolute before:-top-1 before:left-4 before:right-4 before:border-t before:border-white/10 short-land:before:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bad-hi"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Restart Ride
+          </button>
         </div>
     </Overlay>
   );
