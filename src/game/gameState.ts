@@ -97,8 +97,13 @@ export class GameEngine {
   public speed: number = 0;
   /** Seconds into this stretch when a train passes on the other track, or null for none. */
   public passAt: number | null = null;
-  /** Seconds into this stretch when third-rail gap sparks cause an interior light dip, or null. */
-  public powerFlickerAt: number | null = null;
+  /**
+   * Seconds into this stretch when a third-rail gap makes one ceiling tube flicker, or null.
+   * One tube only, never the whole car (that's the False Stop flicker tick, doc 2.4 / 4.4).
+   */
+  public tubeFlickerAt: number | null = null;
+  /** The tube flickering now: its index in carBuilder.lightSegs and until when (game time). */
+  public tubeFlicker: { i: number; until: number } | null = null;
   /** Seconds into this stretch when an in-transit conductor announcement plays, or null. */
   public conductorAt: number | null = null;
   /** Whether the brake wheel flange squeal already played this deceleration. */
@@ -560,7 +565,8 @@ export class GameEngine {
     this.trestleEnterAt = null;
     this.trestleOutside = 0;
     this.trestleShow = false;
-    this.powerFlickerAt = null;
+    this.tubeFlickerAt = null;
+    this.tubeFlicker = null;
     this.conductorAt = null;
     this.squealedThisBrake = false;
     // Put the tunnel back: the intro doesn't run the world placement that would otherwise do it.
@@ -867,10 +873,15 @@ export class GameEngine {
   }
 
   /**
-   * Plans atmospheric third-rail power gap flickers and occasional in-transit conductor broadcasts.
+   * Plans the third-rail gap tube flicker and occasional in-transit conductor broadcasts.
+   *
+   * The flicker follows the Nightmare bulb rules (doc 4.4): one tube, never the whole car, so the
+   * arrival flicker tick stays unique. It is done at least TUBE_FLICKER_CLEAR s before braking
+   * (like the passing train, doc 4.5), and never planned with Screen effects: Reduced.
    */
   private planAtmosphere(seg: SegmentDef) {
-    this.powerFlickerAt = null;
+    this.tubeFlickerAt = null;
+    this.tubeFlicker = null;
     this.conductorAt = null;
     this.squealedThisBrake = false;
 
@@ -878,8 +889,11 @@ export class GameEngine {
     if (seg.b || seg.restraint || seg.stop === 13 || trestle) return;
 
     const cruise = this.cruiseOf(seg);
-    if (cruise > 12 && Math.random() < 0.5) {
-      this.powerFlickerAt = TA + 3 + Math.random() * (cruise - 7);
+    // Braking starts at TA + cruise.
+    const earliest = TA + 3;
+    const latest = TA + cruise - GameEngine.TUBE_FLICKER_CLEAR - GameEngine.TUBE_FLICKER_S;
+    if (!settings.effectsReduced() && latest > earliest && Math.random() < GameEngine.TUBE_FLICKER_CHANCE) {
+      this.tubeFlickerAt = earliest + Math.random() * (latest - earliest);
     }
     if (cruise > 18 && seg.chat === undefined && Math.random() < 0.45) {
       this.conductorAt = TA + 5 + Math.random() * (cruise - 9);
@@ -897,6 +911,25 @@ export class GameEngine {
 
   /** Share of stretches with a passing train. */
   public static PASS_CHANCE = 0.35;
+  /** Chance of a single-tube flicker on a stretch, its length (s), and its minimum gap before braking (s). */
+  public static TUBE_FLICKER_CHANCE = 0.5;
+  public static TUBE_FLICKER_S = 0.16;
+  public static TUBE_FLICKER_CLEAR = 10;
+
+  /**
+   * Flicker one ceiling tube for TUBE_FLICKER_S of game time, with the third-rail spark. Skips a
+   * tube showing the cold-light anomaly and tubes already out. Returns the tube's index, or -1.
+   */
+  public flickerOneTube(): number {
+    const segs = this.carBuilder.lightSegs;
+    const COLD = 0x8cc2ff;
+    const ok = segs.map((l, i) => i).filter((i) => segs[i].m.visible && segs[i].mat.color.getHex() !== COLD);
+    if (!ok.length) return -1;
+    const i = ok[Math.floor(Math.random() * ok.length)];
+    this.tubeFlicker = { i, until: this.GT + GameEngine.TUBE_FLICKER_S };
+    audioEngine.thirdRailSpark();
+    return i;
+  }
 
   private planAnomalies(seg: SegmentDef) {
     this.active = [];
@@ -1674,7 +1707,8 @@ export class GameEngine {
     this.phase = 'end';
     this.carBuilder.passingTrain.stop();
     this.passAt = null;
-    this.powerFlickerAt = null;
+    this.tubeFlickerAt = null;
+    this.tubeFlicker = null;
     this.conductorAt = null;
     this.squealedThisBrake = false;
     evp.lower();
@@ -1971,13 +2005,12 @@ export class GameEngine {
     }
     train.update(dt, speed, !this.trestleShow);
 
-    // Atmospheric third-rail power gap arc flicker
-    if (this.phase === 'ride' && this.powerFlickerAt !== null && this.ts >= this.powerFlickerAt) {
-      this.powerFlickerAt = null;
-      const red = settings.effectsReduced();
-      this.carBuilder.triggerPowerFlicker(red ? 0.35 : 0.82, 0.16);
-      audioEngine.thirdRailSpark();
+    // Third-rail gap: one tube flickers (planAtmosphere). Reduced can be switched on mid-ride.
+    if (this.phase === 'ride' && this.tubeFlickerAt !== null && this.ts >= this.tubeFlickerAt) {
+      this.tubeFlickerAt = null;
+      if (!settings.effectsReduced()) this.flickerOneTube();
     }
+    if (this.tubeFlicker && this.GT >= this.tubeFlicker.until) this.tubeFlicker = null;
 
     // In-transit garbled conductor PA announcement
     if (this.phase === 'ride' && this.conductorAt !== null && this.ts >= this.conductorAt) {
@@ -2591,7 +2624,8 @@ export class GameEngine {
 
     cb.carLights.forEach((l) => (l.intensity = 0.55 * k * (1 - this.tier * 0.08)));
     cb.hemiLight.intensity = off ? 0.05 : 0.65 * (0.55 + 0.45 * k) * (1 - this.tier * 0.07);
-    cb.lightSegs.forEach((l, i) => (l.m.visible = !off && !(this.GT < (this.bulbOut[i] ?? -1))));
+    const tube = this.tubeFlicker && this.GT < this.tubeFlicker.until ? this.tubeFlicker.i : -1;
+    cb.lightSegs.forEach((l, i) => (l.m.visible = !off && i !== tube && !(this.GT < (this.bulbOut[i] ?? -1))));
   }
 
   /**
