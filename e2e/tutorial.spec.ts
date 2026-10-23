@@ -122,8 +122,9 @@ test.describe('Practice stretch', () => {
     const game = runner(page);
     await expect(coach(page)).toBeVisible();
     await page.keyboard.press('KeyP');
+    // Restart never asks "are you sure" (Williams, Oct 23), so the practice stretch ends at once.
     await page.getByRole('button', { name: /Restart Ride/i }).click();
-    await page.locator('[role=alertdialog]').getByRole('button', { name: 'Restart', exact: true }).click();
+    await expect(page.locator('[role=alertdialog]')).toHaveCount(0);
     await expect(coach(page)).toHaveCount(0);
     expect(await game(`return { tut: G.tutorial, phase: G.phase };`)).toEqual({ tut: null, phase: 'intro' });
   });

@@ -80,16 +80,6 @@ test.describe('Place names follow the route', () => {
     await expect(page.locator('[data-testid=pause-line]')).toHaveText('14th St–Canarsie Express');
     await expect(page.locator('[data-testid=pause-next-stop]')).toContainText('LLorimer St');
     await expect(page.locator('[data-testid=pause-next-stop]')).not.toContainText('Flushing Av');
-    // A restart starts a new ride on the G, so the confirmation says so.
-    await page.locator('text=/Restart Ride/i').click();
-    await expect(page.locator('[role=alertdialog]')).toContainText('Start over from the G at Hoyt–Schermerhorn?');
-  });
-
-  test('on the G, the restart confirmation reads as before', async ({ page, game }) => {
-    await game(`ride(2);`);
-    await page.keyboard.press('KeyP');
-    await page.locator('text=/Restart Ride/i').click();
-    await expect(page.locator('[role=alertdialog]')).toContainText('Start over from Hoyt–Schermerhorn?');
   });
 
   test('in a practice run (nothing to lose), Restart starts over at the chapter’s first station right away', async ({ page, game }) => {
