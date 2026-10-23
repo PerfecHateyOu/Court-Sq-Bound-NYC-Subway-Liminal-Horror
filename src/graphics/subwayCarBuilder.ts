@@ -83,6 +83,8 @@ export class SubwayCarBuilder {
     rearGroup: null as THREE.Group | null,
   };
 
+  public static readonly LIGHT_ON = 0xfff4de;
+
   // Game world elements
   /**
    * The 12 ceiling lights, 4 per car. Game code sets their intensity and colour as before, but
@@ -101,6 +103,16 @@ export class SubwayCarBuilder {
   public ambLight!: THREE.AmbientLight;
   public outLights: THREE.PointLight[] = [];
   public lightSegs: LightSegObject[] = [];
+  public powerDip: number = 1.0;
+  private powerFlickerUntil: number = 0;
+
+  /**
+   * Causes car lights to dip and buzz momentarily as third-rail power shoes bridge track gaps.
+   */
+  public triggerPowerFlicker(depth: number = 0.82, duration: number = 0.16) {
+    this.powerDip = Math.max(0.08, 1.0 - depth);
+    this.powerFlickerUntil = performance.now() + duration * 1000;
+  }
   public farLeaves: DoorLeaf[] = [];
   public panes: WindowPaneObject[] = [];
   public acrossAds: AdObject[] = [];
@@ -193,6 +205,19 @@ export class SubwayCarBuilder {
       this.poolSlot[free] = slot;
       this.poolFade[free] = 0;
     }
+
+    if (this.powerFlickerUntil > 0) {
+      const now = performance.now();
+      if (now >= this.powerFlickerUntil) {
+        this.powerDip += (1.0 - this.powerDip) * Math.min(1, dt * 14);
+        if (this.powerDip > 0.98) {
+          this.powerDip = 1.0;
+          this.powerFlickerUntil = 0;
+        }
+      }
+    }
+
+    const dip = this.powerDip;
     for (let p = 0; p < K; p++) {
       const pl = this.lightPool[p];
       const slot = this.poolSlot[p];
@@ -203,10 +228,24 @@ export class SubwayCarBuilder {
       const src = this.carLights[slot];
       this.poolFade[p] = Math.min(1, this.poolFade[p] + dt / SubwayCarBuilder.POOL_FADE_S);
       pl.position.copy(this.worldGroup.worldToLocal(this.tmpV.copy(this.lightWorld[slot])));
-      pl.intensity = src.intensity * this.poolFade[p];
+      pl.intensity = src.intensity * this.poolFade[p] * dip;
       pl.color.copy(src.color);
       pl.distance = src.distance;
       pl.decay = src.decay;
+    }
+
+    if (dip < 0.65) {
+      this.lightSegs.forEach((ls) => {
+        if (ls.mat.color.getHex() !== 0x8cc2ff) {
+          ls.mat.color.set(0x484236);
+        }
+      });
+    } else if (dip >= 0.95) {
+      this.lightSegs.forEach((ls) => {
+        if (ls.mat.color.getHex() !== 0x8cc2ff) {
+          ls.mat.color.set(SubwayCarBuilder.LIGHT_ON);
+        }
+      });
     }
   }
 
@@ -311,7 +350,7 @@ export class SubwayCarBuilder {
     this.carGroup.add(ceil);
 
     // Ceiling Lights (continuous luminaire strip)
-    const LIGHT_ON = 0xfff4de;
+    const LIGHT_ON = SubwayCarBuilder.LIGHT_ON;
     [-0.62, 0.62].forEach((z, si) => {
       for (let i = 0; i < 6; i++) {
         const mat = new THREE.MeshBasicMaterial({ color: LIGHT_ON });
@@ -737,6 +776,19 @@ export class SubwayCarBuilder {
         this.tunnelGroup.add(pier);
         this.tunnelItems.push({ m: pier, base: i * 3 + (s > 0 ? 1.5 : 0), s });
       }
+
+      // Trackside signal lantern markers
+      const sigColor = s > 0 ? 0xdf8c18 : 0x2e7d32;
+      const sigLensMat = new THREE.MeshBasicMaterial({ color: sigColor });
+      for (let i = 0; i < 6; i++) {
+        const sig = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.28, 0.12), mTunnelColumn);
+        const lens = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.04), sigLensMat);
+        lens.position.set(0, 0.04, 0.06);
+        sig.add(lens);
+        sig.position.set(0, 1.55, s * 2.4);
+        this.tunnelGroup.add(sig);
+        this.tunnelItems.push({ m: sig, base: i * 14 + (s > 0 ? 5 : 2), s });
+      }
     });
   }
 
@@ -789,6 +841,37 @@ export class SubwayCarBuilder {
       lamp.position.set(x, 2.8, -1.95);
       g.add(lamp);
     }
+
+    // Platform commuter shadow silhouettes (eerie PS1 ambient commuter figures standing quietly)
+    const shadowMat = new THREE.MeshBasicMaterial({ color: 0x0c0e0c });
+    const silhouetteCoords = [
+      { x: -14, z: -2.12, rotY: Math.PI / 2, coat: true },
+      { x: -8, z: -2.0, rotY: 0.1, coat: false },
+      { x: 3, z: -2.14, rotY: -Math.PI / 4, coat: true },
+      { x: 12, z: -2.02, rotY: Math.PI, coat: false },
+    ];
+    silhouetteCoords.forEach((sc) => {
+      const fig = new THREE.Group();
+      const bodyH = sc.coat ? 1.05 : 0.88;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.36, bodyH, 0.22), shadowMat);
+      body.position.set(0, bodyH / 2 + 0.45, 0);
+      fig.add(body);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.18), shadowMat);
+      head.position.set(0, bodyH + 0.62, 0);
+      fig.add(head);
+
+      [-0.09, 0.09].forEach((dx) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.14), shadowMat);
+        leg.position.set(dx, 0.25, 0);
+        fig.add(leg);
+      });
+
+      fig.position.set(sc.x, 0.005, sc.z);
+      fig.rotation.y = sc.rotY;
+      fig.userData.platformSilhouette = true;
+      g.add(fig);
+    });
 
     const stationObj: StationObject = {
       g,

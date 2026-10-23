@@ -96,6 +96,12 @@ export class GameEngine {
   public speed: number = 0;
   /** Seconds into this stretch when a train passes on the other track, or null for none. */
   public passAt: number | null = null;
+  /** Seconds into this stretch when third-rail gap sparks cause an interior light dip, or null. */
+  public powerFlickerAt: number | null = null;
+  /** Seconds into this stretch when an in-transit conductor announcement plays, or null. */
+  public conductorAt: number | null = null;
+  /** Whether the brake wheel flange squeal already played this deceleration. */
+  public squealedThisBrake: boolean = false;
   /** Passenger lean and habits (src/game/carLife.ts). */
   public readonly life = carLife;
   public bandStop: number = 1;
@@ -553,6 +559,9 @@ export class GameEngine {
     this.trestleEnterAt = null;
     this.trestleOutside = 0;
     this.trestleShow = false;
+    this.powerFlickerAt = null;
+    this.conductorAt = null;
+    this.squealedThisBrake = false;
     // Put the tunnel back: the intro doesn't run the world placement that would otherwise do it.
     this.carBuilder.trestle?.reset();
     this.carBuilder.tunnelWalls.forEach((w) => (w.position.x = 0));
@@ -633,6 +642,22 @@ export class GameEngine {
     cb.stB.baseX = 9999;
     cb.stB.setName(routeManager.getStopName(2));
 
+    this.notifyUI();
+  }
+
+  /**
+   * Return to the main start/briefing screen.
+   */
+  public returnToMenu() {
+    this.newGame();
+    this.phase = 'menu';
+    polaroidManager.reset();
+    routeManager.reset();
+    audioEngine.stopLastLocalAnnouncement(0.1);
+    audioEngine.setBedLevel(1.0, 0.3);
+    audioEngine.setMasterLevel(0.85, 0.3);
+    audioEngine.resetRideMusic();
+    audioEngine.exitPause();
     this.notifyUI();
   }
 
@@ -782,6 +807,7 @@ export class GameEngine {
     }
     this.planAnomalies(seg);
     this.planPassingTrain(seg);
+    this.planAtmosphere(seg);
 
     // Mask checks are timed for the normal ride; a shorter Nightmare ride brings them forward too,
     // so none lands on the approach.
@@ -837,6 +863,26 @@ export class GameEngine {
     if (seg.b || seg.restraint || seg.stop === 13 || trestle || settings.effectsReduced()) return;
     const latest = TA + this.cruiseOf(seg) - 10 - PassingTrain.duration(this.topSpeed);
     if (latest > 8 && Math.random() < GameEngine.PASS_CHANCE) this.passAt = 8 + Math.random() * (latest - 8);
+  }
+
+  /**
+   * Plans atmospheric third-rail power gap flickers and occasional in-transit conductor broadcasts.
+   */
+  private planAtmosphere(seg: SegmentDef) {
+    this.powerFlickerAt = null;
+    this.conductorAt = null;
+    this.squealedThisBrake = false;
+
+    const trestle = Number.isFinite(this.trestleExitAt) || this.trestleEnterAt !== null;
+    if (seg.b || seg.restraint || seg.stop === 13 || trestle) return;
+
+    const cruise = this.cruiseOf(seg);
+    if (cruise > 12 && Math.random() < 0.5) {
+      this.powerFlickerAt = TA + 3 + Math.random() * (cruise - 7);
+    }
+    if (cruise > 18 && seg.chat === undefined && Math.random() < 0.45) {
+      this.conductorAt = TA + 5 + Math.random() * (cruise - 9);
+    }
   }
 
   private lifeRolesCache: { noHabits: Set<PersonObject>; still: Set<PersonObject> } | null = null;
@@ -1627,6 +1673,9 @@ export class GameEngine {
     this.phase = 'end';
     this.carBuilder.passingTrain.stop();
     this.passAt = null;
+    this.powerFlickerAt = null;
+    this.conductorAt = null;
+    this.squealedThisBrake = false;
     evp.lower();
     // The report replaces the ride: put the camera down and close the evidence log, so neither
     // is left over (or covering) the report. Its prints and tapes are on the report itself.
@@ -1921,6 +1970,23 @@ export class GameEngine {
     }
     train.update(dt, speed, !this.trestleShow);
 
+    // Atmospheric third-rail power gap arc flicker
+    if (this.phase === 'ride' && this.powerFlickerAt !== null && this.ts >= this.powerFlickerAt) {
+      this.powerFlickerAt = null;
+      const red = settings.effectsReduced();
+      this.carBuilder.triggerPowerFlicker(red ? 0.35 : 0.82, 0.16);
+      audioEngine.thirdRailSpark();
+    }
+
+    // In-transit garbled conductor PA announcement
+    if (this.phase === 'ride' && this.conductorAt !== null && this.ts >= this.conductorAt) {
+      this.conductorAt = null;
+      if (!this.choice && !this.intervening && !this.restraint) {
+        const v = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        audioEngine.conductorBroadcast(v);
+      }
+    }
+
     // Train motion & screen shake calculation linked to ride phase and sanity tier
     const isRide = this.phase === 'ride' && !!seg;
     const L = seg ? this.segLen(seg) : 37;
@@ -1943,6 +2009,11 @@ export class GameEngine {
         const u = Math.min(1, Math.max(0, (this.ts - (L - TD)) / TD));
         brakeJolt = Math.sin(u * Math.PI);
         phaseShakeMult = 1.15 + 0.85 * brakeJolt;
+
+        if (!this.squealedThisBrake && this.ts >= L - TD + 0.5 && speed > 2.5) {
+          this.squealedThisBrake = true;
+          audioEngine.wheelFlangeSqueal(2.2, 0.08);
+        }
       }
 
       // Track joint clatter ("clack-clack" over rail seams every ~1.2s at speed)

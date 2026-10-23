@@ -506,6 +506,127 @@ export class AudioEngine {
   }
 
   /**
+   * Metallic wheel flange rail squeal: sharp dual-resonant friction acoustic
+   * produced when wheels press against curved or decelerating steel tracks.
+   */
+  public wheelFlangeSqueal(duration: number = 2.2, intensity: number = 0.085) {
+    if (!this.ac || !this.whiteBuffer || !this.masterGain) return;
+    const t = this.ac.currentTime;
+
+    const src = this.ac.createBufferSource();
+    src.buffer = this.whiteBuffer;
+    src.loop = true;
+
+    // Primary resonant bandpass sweep
+    const bp1 = this.ac.createBiquadFilter();
+    bp1.type = 'bandpass';
+    bp1.Q.value = 26;
+    bp1.frequency.setValueAtTime(2150, t);
+    bp1.frequency.linearRampToValueAtTime(2750, t + duration * 0.45);
+    bp1.frequency.linearRampToValueAtTime(1950, t + duration);
+
+    // Harmonic overtone peak
+    const bp2 = this.ac.createBiquadFilter();
+    bp2.type = 'bandpass';
+    bp2.Q.value = 34;
+    bp2.frequency.setValueAtTime(3550, t);
+    bp2.frequency.linearRampToValueAtTime(4100, t + duration * 0.5);
+    bp2.frequency.linearRampToValueAtTime(3200, t + duration);
+
+    // Slip-stick friction tone with frequency modulation
+    const osc = this.ac.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(2280, t);
+    osc.frequency.linearRampToValueAtTime(2650, t + duration * 0.5);
+    osc.frequency.linearRampToValueAtTime(2040, t + duration);
+
+    const mod = this.ac.createOscillator();
+    mod.type = 'sine';
+    mod.frequency.value = 38;
+    const modGain = this.ac.createGain();
+    modGain.gain.value = 160;
+    mod.connect(modGain);
+    modGain.connect(osc.frequency);
+
+    const oscGain = this.ac.createGain();
+    oscGain.gain.value = intensity * 0.4;
+
+    const mainGain = this.ac.createGain();
+    mainGain.gain.setValueAtTime(0.0001, t);
+    mainGain.gain.linearRampToValueAtTime(intensity, t + 0.25);
+    mainGain.gain.linearRampToValueAtTime(intensity * 0.85, t + duration - 0.3);
+    mainGain.gain.linearRampToValueAtTime(0.0001, t + duration);
+
+    src.connect(bp1);
+    bp1.connect(mainGain);
+    src.connect(bp2);
+    bp2.connect(mainGain);
+    osc.connect(oscGain);
+    oscGain.connect(mainGain);
+    mainGain.connect(this.masterGain);
+
+    src.start(t);
+    src.stop(t + duration + 0.1);
+    osc.start(t);
+    osc.stop(t + duration + 0.1);
+    mod.start(t);
+    mod.stop(t + duration + 0.1);
+  }
+
+  /**
+   * Electrical third-rail power gap arc: high-frequency discharge pop and
+   * 60Hz magnetic rectifier hum surge as shoes bridge track gaps.
+   */
+  public thirdRailSpark() {
+    if (!this.ac || !this.whiteBuffer || !this.masterGain) return;
+    const t = this.ac.currentTime;
+
+    // Contact arc crackle
+    const src = this.ac.createBufferSource();
+    src.buffer = this.whiteBuffer;
+    const hp = this.ac.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 4600;
+    const gNoise = this.ac.createGain();
+    gNoise.gain.setValueAtTime(0.26, t);
+    gNoise.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    src.connect(hp).connect(gNoise).connect(this.masterGain);
+    src.start(t);
+    src.stop(t + 0.09);
+
+    // 60Hz line hum surge
+    const buzz = this.ac.createOscillator();
+    buzz.type = 'sawtooth';
+    buzz.frequency.setValueAtTime(60, t);
+    const gBuzz = this.ac.createGain();
+    gBuzz.gain.setValueAtTime(0.16, t);
+    gBuzz.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    buzz.connect(gBuzz).connect(this.masterGain);
+    buzz.start(t);
+    buzz.stop(t + 0.14);
+
+    // Contact chirp
+    const ping = this.ac.createOscillator();
+    ping.type = 'triangle';
+    ping.frequency.setValueAtTime(1420, t);
+    ping.frequency.exponentialRampToValueAtTime(340, t + 0.08);
+    const gPing = this.ac.createGain();
+    gPing.gain.setValueAtTime(0.07, t);
+    gPing.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    ping.connect(gPing).connect(this.masterGain);
+    ping.start(t);
+    ping.stop(t + 0.09);
+  }
+
+  /**
+   * In-transit conductor PA broadcast: overdriven car speaker callout.
+   */
+  public conductorBroadcast(variant: number = 0) {
+    if (!this.lastLocalAnnouncement) return;
+    this.lastLocalAnnouncement.broadcastLine(variant, 0.22);
+  }
+
+  /**
    * Procedural whispering synthesizer. Supports low-pass filtering,
    * tier-specific formant shaping, and distant spatial placement.
    */

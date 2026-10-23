@@ -45,6 +45,24 @@ const PHRASES: SyllableDef[][] = [
     { vowel: 'ih', dur: 0.13, pitchMult: 0.94, fricativeAfter: 0.04, fricFreq: 3200 },  // -sing
     { vowel: 'ao', dur: 0.32, pitchMult: 0.88, fricativeAfter: 0.05, fricFreq: 2900 },  // doors
   ],
+  // Phrase 3: "Next stop... transfer available"
+  [
+    { vowel: 'ih', dur: 0.16, pitchMult: 1.04, fricativeBefore: 0.03, fricativeAfter: 0.04, fricFreq: 3400 }, // Next
+    { vowel: 'ao', dur: 0.22, pitchMult: 0.98, fricativeBefore: 0.05, fricFreq: 3900 },                         // stop
+    { vowel: 'ae', dur: 0.18, pitchMult: 1.01 },                                                                 // trans-
+    { vowel: 'uh', dur: 0.15, pitchMult: 0.94, fricativeBefore: 0.03, fricFreq: 3100 },                         // -fer
+    { vowel: 'ea', dur: 0.26, pitchMult: 0.91 },                                                                 // clear
+  ],
+  // Phrase 4: "Held momentarily by the dispatcher"
+  [
+    { vowel: 'ih', dur: 0.18, pitchMult: 1.0, fricativeBefore: 0.03 },                                          // Held
+    { vowel: 'ow', dur: 0.14, pitchMult: 1.02 },                                                                 // mo-
+    { vowel: 'uh', dur: 0.16, pitchMult: 0.95 },                                                                 // -ment
+    { vowel: 'ih', dur: 0.14, pitchMult: 0.93 },                                                                 // -ar-
+    { vowel: 'ih', dur: 0.15, pitchMult: 0.91 },                                                                 // -i-ly
+    { vowel: 'ae', dur: 0.20, pitchMult: 0.96, fricativeBefore: 0.04, fricFreq: 3500 },                         // dis-
+    { vowel: 'uh', dur: 0.24, pitchMult: 0.88, fricativeAfter: 0.04, fricFreq: 2800 },                          // -patch
+  ],
 ];
 
 export class LastLocalAnnouncementLoop {
@@ -158,6 +176,38 @@ export class LastLocalAnnouncementLoop {
     setTimeout(() => {
       this.cleanupNodes(nodes);
     }, fadeDuration * 1000 + 50);
+  }
+
+  /**
+   * Play a single conductor broadcast phrase (e.g. during a cruise or track turn).
+   */
+  public broadcastLine(phraseIndex: number = 0, volume: number = 0.22) {
+    if (this._isPlaying) return;
+    const pIdx = Math.max(0, Math.min(PHRASES.length - 1, phraseIndex));
+    const phrase = PHRASES[pIdx];
+    this._isPlaying = true;
+    const now = this.ac.currentTime;
+    this.outGain.gain.cancelScheduledValues(now);
+    this.outGain.gain.setValueAtTime(0, now);
+    this.outGain.gain.linearRampToValueAtTime(volume, now + 0.15);
+
+    let t = now + 0.05;
+    this.playMicTransient(t, true);
+    t += 0.2;
+    t = this.renderPhrase(phrase, t, 100);
+    t += 0.08;
+    this.playMicTransient(t, false);
+    t += 0.2;
+
+    this.outGain.gain.setValueAtTime(volume, t);
+    this.outGain.gain.linearRampToValueAtTime(0.0001, t + 0.4);
+
+    const nodes = this.activeNodes;
+    this.activeNodes = [];
+    setTimeout(() => {
+      this._isPlaying = false;
+      this.cleanupNodes(nodes);
+    }, (t - now + 0.5) * 1000);
   }
 
   private cleanupNodes(nodes: { stop?: () => void; disconnect?: () => void }[] = this.activeNodes) {
