@@ -20,13 +20,14 @@
 import type * as THREE from 'three';
 import type { PersonObject } from '../types';
 import { seededRandom } from '../graphics/characterBuilder';
+import { FORWARD_X } from '../constants';
 
 type Life = NonNullable<PersonObject['life']>;
 
 export interface CarLifeContext {
   dt: number;
   gt: number;
-  /** Train speed (m/s) and top speed; the train travels toward +x. */
+  /** Train speed (m/s) and top speed; the train travels toward Car A (FORWARD_X, -x). */
   speed: number;
   topSpeed: number;
   /** Screen effects Reduced: no rhythmic sway (the lean with braking stays; it's slow). */
@@ -137,12 +138,14 @@ export class CarLife {
       const sway = c.reduced
         ? 0
         : (p.standing ? 0.007 : 0.0025) * sf * (Math.sin(c.gt * 1.25 + life.phase) + 0.35 * Math.sin(c.gt * 2.9 + life.phase * 1.7));
-      // World lean about Z (toward -x when accelerating) and sway about X, in the figure's own
-      // yaw frame. YXZ keeps rotation.y the plain facing that aimLocal reads.
+      // World lean about Z (back toward Car C, -FORWARD_X, when accelerating; life.lean > 0 is
+      // back) and sway about X, in the figure's own yaw frame. YXZ keeps rotation.y the plain
+      // facing that aimLocal reads.
       if (p.g.rotation.order !== 'YXZ') p.g.rotation.order = 'YXZ';
       const ry = p.g.rotation.y;
-      p.g.rotation.x = -life.lean * Math.sin(ry) + sway * Math.cos(ry);
-      p.g.rotation.z = life.lean * Math.cos(ry) + sway * Math.sin(ry);
+      const lz = FORWARD_X * life.lean;
+      p.g.rotation.x = -lz * Math.sin(ry) + sway * Math.cos(ry);
+      p.g.rotation.z = lz * Math.cos(ry) + sway * Math.sin(ry);
 
       // Habits.
       const act = HABIT[p.archetype || ''] || '';
