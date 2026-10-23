@@ -47,6 +47,21 @@ const TAP_MAX_MS = 350;
 // The engine notifies React on discrete events only. These HUD values change every frame,
 // so refresh at ~30 Hz while any of them is on screen.
 const HUD_REFRESH_MS = 33;
+/** Seconds without input before the HUD's non-essential parts dim (see hudIdle). */
+const HUD_IDLE_S = 6;
+
+/**
+ * The HUD can rest: nothing is asking for the player (no prompt, restraint, live hint, held flag
+ * or raised camera or recorder, the same signals that keep the HUD refreshing live) and they
+ * haven't touched anything for a while. Its station card, tools and key hints then dim to 40%
+ * (index.css, .hud-dim), which suits the empty car.
+ */
+function hudIdle(G: GameEngine, quietFor: number): boolean {
+  if (G.paused || G.phase === 'menu' || G.phase === 'end') return false;
+  if (quietFor < HUD_IDLE_S || hudNeedsLiveRefresh(G)) return false;
+  return !G.subHtml && !G.paText && !G.tutorial && !polaroidManager.isViewfinderOpen && !polaroidManager.isAlbumOpen;
+}
+
 function hudNeedsLiveRefresh(G: GameEngine): boolean {
   if (G.paused || G.phase === 'menu' || G.phase === 'end') return false;
   return (
@@ -491,6 +506,29 @@ export default function App() {
     }
     setRouteSelectorOpen(true);
   }, [releaseHeldKeys]);
+
+  // Idle HUD: any input wakes it; a slow timer checks whether it can rest (hudIdle). A data
+  // attribute on <html> does the dimming in CSS, so the HUD doesn't re-render for it.
+  useEffect(() => {
+    let last = performance.now();
+    const poke = () => {
+      last = performance.now();
+      if (document.documentElement.hasAttribute('data-hud-idle')) document.documentElement.removeAttribute('data-hud-idle');
+    };
+    const opts = { passive: true, capture: true } as const;
+    const events = ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'] as const;
+    events.forEach((ev) => window.addEventListener(ev, poke, opts));
+    const timer = window.setInterval(() => {
+      const G = engineRef.current;
+      const idle = !!G && hudIdle(G, (performance.now() - last) / 1000);
+      document.documentElement.toggleAttribute('data-hud-idle', idle);
+    }, 500);
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, poke, opts));
+      window.clearInterval(timer);
+      document.documentElement.removeAttribute('data-hud-idle');
+    };
+  }, []);
 
   // The evidence log can open mid-ride (Tab, the HUD, the viewfinder). The ride keeps going behind
   // it, so, like the route selector, it frees a captured mouse (without pausing) so its tabs,

@@ -20,6 +20,18 @@ import { polaroidManager } from '../game/polaroidManager';
 import { evp } from '../game/evpManager';
 import { EvpRecorder } from './EvpRecorder';
 import { AnalogRollsign } from './AnalogRollsign';
+import { hintStrip } from '../ui/controls';
+import { useSettings } from '../settings';
+
+/** Seconds the key hints stay up on rides after your first. */
+const HINT_SECONDS = 60;
+
+/** The HUD's one glass surface over the 3D view. No backdrop blur (see the note at the top). */
+const GLASS = 'bg-black/60 border border-white/10 shadow-lg';
+/** A tool button: a 40px circle (44px on touch) that widens for a label. Add `flex` (or a
+ * responsive display) at the call site. */
+const TOOL =
+  'h-10 min-w-10 touch:h-11 touch:min-w-11 px-0 items-center justify-center gap-1.5 rounded-full border text-xs font-semibold transition-colors active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream';
 
 interface HUDProps {
   engine: GameEngine;
@@ -61,6 +73,28 @@ export const HUD: React.FC<HUDProps> = ({
     ro.observe(el);
     return () => ro.disconnect();
   }, [hudShown]);
+  // Key hints: on for the whole of your first ride (nothing finished on this device yet), and for
+  // the first minute of later rides; then they fade. Settings can turn them off.
+  const { showHints } = useSettings();
+  const rideStartGT = React.useRef(0);
+  const firstRide = React.useMemo(() => {
+    rideStartGT.current = engine.GT;
+    try {
+      return (JSON.parse(localStorage.getItem('gtrain-runs') || '[]') as unknown[]).length === 0;
+    } catch {
+      return true;
+    }
+  }, [hudShown]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hintAge = engine.GT - rideStartGT.current;
+  const hintsOn = showHints && (firstRide || hintAge < HINT_SECONDS + 1.5);
+  const hintsFading = !firstRide && hintAge >= HINT_SECONDS;
+  // The HUD only re-renders on game events, so wake it when the hints should fade, then go.
+  const [, wake] = React.useReducer((n: number) => n + 1, 0);
+  React.useEffect(() => {
+    if (!hudShown || firstRide || !showHints || hintAge >= HINT_SECONDS + 1.5) return;
+    const t = setTimeout(wake, Math.max(0.1, (hintAge < HINT_SECONDS ? HINT_SECONDS : HINT_SECONDS + 1.5) - hintAge) * 1000);
+    return () => clearTimeout(t);
+  });
   const canFull = fullscreenSupported();
   const G = engine;
   if (G.phase === 'menu' || G.phase === 'end') return null;
@@ -135,147 +169,133 @@ export const HUD: React.FC<HUDProps> = ({
       )}
 
       {/*
-        Top bar: one row, so the route panel and the controls can't overlap. The controls keep
-        their size; the route panel gives way (the station name truncates last). Below 768px
-        (phones either way up, whose touch-size buttons need the room) the route panel drops to a
-        second row, under the controls; on the
-        narrowest phones (320px) the controls close up to fit in one row. Hidden under
-        the camera viewfinder, which has its own Album and Lower buttons along the top.
+        Top zone of the HUD grid: the station card (left) and the tools (right), one row from
+        768px; below that the tools take the first row and the card the second. Glass over the
+        scene: one surface (GLASS), one radius, one shadow. Hidden under the camera viewfinder,
+        which has its own Album and Lower buttons along the top. Dims when you're idle (hud-dim).
       */}
       <div
         ref={topBarRef}
         data-testid="hud-top"
-        className={`absolute inset-x-3 min-[360px]:inset-x-4 top-4 ${polaroidManager.isViewfinderOpen ? 'hidden' : 'flex'} flex-wrap md:flex-nowrap items-start md:items-center justify-end md:justify-between gap-2 pointer-events-none`}
+        className={`hud-dim absolute inset-x-3 min-[360px]:inset-x-4 top-3 sm:top-4 ${polaroidManager.isViewfinderOpen ? 'hidden' : 'grid'} grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] items-start gap-2 pointer-events-none`}
       >
-        {/* Route Bullet, Next Station, Consist Location */}
-        <div className="order-last basis-full md:order-none md:basis-auto min-w-0 flex items-center gap-2 *:pointer-events-auto">
-          <button
-            type="button"
-            onClick={onOpenRouteSelector}
-            title="Switch route line (L)"
-            aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
-            aria-keyshortcuts="L"
-            data-testid="hud-route-panel"
-            className="min-w-0 flex items-center gap-2 px-3 py-1.5 rounded bg-black/80 border border-white/10 hover:border-white/30 text-xs sm:text-sm cursor-pointer transition-colors transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
-          >
+        {/* Station card: where you're going, then chapter and car, then your heartbeat */}
+        <button
+          type="button"
+          onClick={onOpenRouteSelector}
+          title="Switch route line (L)"
+          aria-label={`${currentRoute.id} train, next stop ${nextStopName}. Switch route line`}
+          aria-keyshortcuts="L"
+          data-testid="hud-route-panel"
+          className={`${GLASS} order-last md:order-none justify-self-start min-w-0 max-w-full md:max-w-[24rem] flex flex-col items-stretch gap-1 px-3 pt-2 pb-1.5 rounded-xl text-left cursor-pointer pointer-events-auto transition-colors hover:border-white/25 active:translate-y-px transit-sign-flicker-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream`}
+        >
+          <span className="flex items-center gap-2 min-w-0 text-sm">
             <span
               className="shrink-0 w-6 h-6 rounded-full font-extrabold flex items-center justify-center text-xs shadow"
               style={{ backgroundColor: currentRoute.bulletColor, color: currentRoute.bulletTextColor }}
             >
               {currentRoute.id}
             </span>
-            <span className="hidden lg:inline font-mono text-3xs tracking-widest text-g-line uppercase font-bold">
-              LAST LOCAL
-            </span>
-            <span className="hidden lg:inline text-dim">Next:</span>
+            <span className="shrink-0 text-dim">Next:</span>
             <b className="min-w-0 truncate text-cream font-bold tracking-tight">{nextStopName}</b>
-            <span className="shrink-0 w-px h-4 bg-white/15" aria-hidden="true" />
-            <HeartbeatTrace engine={G} />
-          </button>
-
-          {/* Chapter badge (wide screens; elsewhere the top bar is full and the rollsign carries it) */}
-          <div
+          </span>
+          <span
             data-testid="chapter-badge"
-            className="hidden xl:flex shrink-0 items-center px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-2xs font-mono text-cream/80"
+            className="pl-8 min-w-0 truncate font-mono text-3xs font-bold tracking-[0.14em] uppercase text-cream/75"
           >
-            CH. {['I', 'II', 'III'][G.currentChapter.index - 1]} //{' '}
-            {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
-          </div>
+            CH. {['I', 'II', 'III'][G.currentChapter.index - 1]}
+            <span className="hidden xl:inline">
+              {' · '}
+              {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
+            </span>
+            {' · '}
+            {carName}
+          </span>
+          <span className="pl-8 block" aria-hidden="true">
+            <HeartbeatTrace engine={G} width={132} height={12} />
+          </span>
+        </button>
 
-          {/* Consist Car Badge */}
-          <div className="hidden md:flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-white/10 text-2xs font-mono text-cream/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-g-line" />
-            <span>{carName}</span>
-          </div>
-        </div>
-
-        {/* Controls: Camera, Album, Mute and Pause (icons only until there's room for labels) */}
-        <div className="shrink-0 flex items-center gap-1 min-[360px]:gap-2 pointer-events-auto">
-          {/* Polaroid Camera Viewfinder Trigger Button */}
+        {/* Tools: gameplay (Camera, Recorder, Evidence, Route) | system (Sound, Full screen, Pause).
+            40px circles (44px on touch); only Camera and Evidence carry labels, on wide screens. */}
+        <div className="justify-self-end shrink-0 flex items-center gap-1 min-[360px]:gap-1.5 pointer-events-auto">
           <button
             onClick={onToggleCamera}
             // While an answer or the restraint needs you, the camera can't come up; pressing it says why.
-            title={G.handsBusy && !polaroidManager.isViewfinderOpen ? `Camera: ${G.handsBusy}` : 'Equip Polaroid Camera [C]'}
+            title={G.handsBusy && !polaroidManager.isViewfinderOpen ? `Camera: ${G.handsBusy}` : 'Camera (C)'}
             aria-label="Polaroid Camera"
+            aria-keyshortcuts="C"
             aria-pressed={polaroidManager.isViewfinderOpen}
             aria-disabled={(!!G.handsBusy && !polaroidManager.isViewfinderOpen) || undefined}
-            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+            className={`flex ${TOOL} lg:px-3 ${
               polaroidManager.isViewfinderOpen
-                ? 'bg-red-600 text-white border-red-400'
+                ? 'bg-bad text-white border-bad-hi'
                 : G.handsBusy
-                ? 'bg-black/50 border-white/10 text-cream opacity-40 cursor-not-allowed'
-                : 'bg-black/70 border-white/15 text-cream hover:bg-black/80'
+                ? `${GLASS} text-cream opacity-40 cursor-not-allowed`
+                : `${GLASS} text-cream hover:bg-black/80`
             }`}
           >
             <Camera className="w-4 h-4 text-warn" />
-            <span className="hidden xl:inline">Camera</span>
-            <span className="text-3xs opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">
-              C
-            </span>
+            <span className="hidden lg:inline">Camera</span>
+            <kbd className="hidden lg:inline text-3xs opacity-70 bg-white/10 px-1 py-0.5 rounded font-mono">C</kbd>
           </button>
 
           {/* Dad's tape recorder (once he's given it to you) */}
           {evp.hasRecorder && (
             <button
               onClick={() => G.toggleRecorder()}
-              title={G.handsBusy && !evp.raised ? `Recorder: ${G.handsBusy}` : 'Tape recorder [R]'}
+              title={G.handsBusy && !evp.raised ? `Recorder: ${G.handsBusy}` : 'Tape recorder (R)'}
               aria-label="Recorder"
+              aria-keyshortcuts="R"
               aria-pressed={evp.raised}
               aria-disabled={(!!G.handsBusy && !evp.raised) || undefined}
-              className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+              className={`flex ${TOOL} ${
                 evp.raised
-                  ? 'bg-[#5a2a24] text-white border-red-400/60'
+                  ? 'bg-[#5a2a24] text-white border-bad-hi/60'
                   : G.handsBusy
-                  ? 'bg-black/50 border-white/10 text-cream opacity-40 cursor-not-allowed'
-                  : 'bg-black/70 border-white/15 text-cream hover:bg-black/80'
+                  ? `${GLASS} text-cream opacity-40 cursor-not-allowed`
+                  : `${GLASS} text-cream hover:bg-black/80`
               }`}
             >
               <Mic className="w-4 h-4 text-bad-pale" />
-              <span className="hidden xl:inline">Recorder</span>
-              <span className="text-3xs opacity-60 bg-white/10 px-1 py-0.5 rounded font-mono hidden xl:inline">R</span>
             </button>
           )}
 
           {/* The evidence log (prints and tapes): one name everywhere, "Evidence" on buttons */}
           <button
             onClick={onToggleAlbum}
-            title="Evidence log [Tab]"
+            title="Evidence log (Tab)"
             aria-label="Evidence Log"
             aria-pressed={polaroidManager.isAlbumOpen}
-            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
-              polaroidManager.isAlbumOpen
-                ? 'bg-amber-600 text-white border-amber-400'
-                : 'bg-black/70 border-white/15 text-cream hover:bg-black/80'
+            className={`flex ${TOOL} px-2.5 lg:px-3 ${
+              polaroidManager.isAlbumOpen ? 'bg-warn text-[#1a1205] border-warn-hi' : `${GLASS} text-cream hover:bg-black/80`
             }`}
           >
             <ImageIcon className="w-4 h-4 text-g-line" />
-            <span className="hidden xl:inline">Evidence</span>
-            <span className="text-3xs text-white/50 bg-white/10 px-1 py-0.5 rounded font-mono">
-              {polaroidManager.photos.length}
-            </span>
+            <span className="hidden lg:inline">Evidence</span>
+            <span className="text-3xs bg-white/10 px-1 py-0.5 rounded font-mono tabular-nums">{polaroidManager.photos.length}</span>
           </button>
 
-          {/* Route Selector Button */}
           <button
             onClick={onOpenRouteSelector}
             title="Route lines (L)"
             aria-label="Route Lines"
             aria-keyshortcuts="L"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-cream hover:bg-black/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream"
+            className={`flex ${TOOL} ${GLASS} text-cream hover:bg-black/80`}
           >
             <GitBranch className="w-4 h-4 text-dim" />
           </button>
 
-          {/* Mute Button */}
+          <span className="mx-0.5 w-px h-6 bg-white/15" aria-hidden="true" />
+
           <button
             onClick={onToggleMute}
+            title={isMuted ? 'Sound off (M)' : 'Sound on (M)'}
             aria-label={isMuted ? 'Unmute' : 'Mute'}
-            className={`h-10 px-3 flex items-center gap-1.5 rounded-full border bg-black/70 text-xs font-semibold transition-colors hover:bg-black/80 ${
-              isMuted ? 'text-warn border-warn/60' : 'text-cream border-white/15'
-            }`}
+            aria-keyshortcuts="M"
+            className={`flex ${TOOL} hover:bg-black/80 ${isMuted ? 'bg-black/60 border-warn/60 shadow-lg text-warn' : `${GLASS} text-cream`}`}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            <span className="hidden xl:inline">{isMuted ? 'Muted' : 'Sound'}</span>
           </button>
 
           {/* Full screen (wide screens; phones go full screen on boarding, or from the pause menu) */}
@@ -284,17 +304,18 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={toggleFullscreen}
               aria-label={full ? 'Exit full screen' : 'Full screen'}
               title={full ? 'Exit full screen' : 'Full screen'}
-              className="hidden lg:flex w-10 h-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-cream hover:bg-black/80 transition-colors"
+              className={`hidden lg:flex ${TOOL} ${GLASS} text-cream hover:bg-black/80`}
             >
               {full ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
           )}
 
-          {/* Pause Button */}
           <button
             onClick={onPause}
+            title="Pause (Esc or P)"
             aria-label="Pause"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 bg-black/70 text-cream hover:bg-black/80 transition-colors"
+            aria-keyshortcuts="Escape P"
+            className={`flex ${TOOL} ${GLASS} text-cream hover:bg-black/80`}
           >
             <Pause className="w-4 h-4" />
           </button>
@@ -389,30 +410,34 @@ export const HUD: React.FC<HUDProps> = ({
           <MoveStick engine={G} />
         )}
 
-      {/* Bottom Controls / Key Hints Bar (Left) — keyboard only */}
-      {!G.isTouch && (
-      <div className="absolute left-4 bottom-5 hidden md:flex items-center gap-2 pointer-events-none text-2xs text-dim font-mono bg-black/70 px-3 py-1.5 rounded border border-white/10">
-        {/* The essentials. The gangway door shows its own [E] prompt when you're at one. */}
-        <span>[F] FLAG</span>
-        <span className="text-white/30">•</span>
-        <span>[C] CAMERA</span>
-        {evp.hasRecorder && (
-          <>
-            <span className="text-white/30">•</span>
-            <span>[R] RECORDER</span>
-          </>
-        )}
-        <span className="text-white/30">•</span>
-        <span>[TAB] EVIDENCE</span>
-        <span className="text-white/30">•</span>
-        <span>[WASD] WALK</span>
-      </div>
+      {/* Key hints (keyboard only): the first ride, and the first minute of later rides, then they
+          fade. Settings → Controls → Show control hints turns them off. One list: ui/controls.ts. */}
+      {!G.isTouch && hintsOn && (
+        <div className="hud-dim absolute left-4 bottom-5 hidden md:block pointer-events-none">
+          <div
+            data-testid="hint-strip"
+            className={`flex items-center gap-2 text-2xs text-dim font-mono ${GLASS} px-3 py-1.5 rounded-xl transition-opacity duration-1000 calm:transition-none ${
+              hintsFading ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
+            {/* The essentials. The gangway door shows its own [E] prompt when you're at one. */}
+            {hintStrip(evp.hasRecorder).map((h, i) => (
+              <React.Fragment key={h.id}>
+                {i > 0 && <span className="text-white/30">•</span>}
+                <span>
+                  [{h.key}] {h.label}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* The recorder takes the Flag button's place while it's up (hands busy). */}
       {evp.raised && !showChoices && <EvpRecorder engine={G} />}
 
-      {/* Hold / Flag Button (Bottom Right) */}
+      {/* Hold / Flag Button (Bottom Right). The ring fills clockwise while held; a short pulse when
+          a flag registers (every flag the same: it never says whether you were right). */}
       {!showChoices && !evp.raised && !(G.isTouch && polaroidManager.isViewfinderOpen) && (
         <div className="absolute right-4 bottom-5 pointer-events-auto">
           <button
@@ -423,7 +448,10 @@ export const HUD: React.FC<HUDProps> = ({
             onPointerUp={onFlagUp}
             onPointerCancel={onFlagUp}
             onContextMenu={(e) => e.preventDefault()}
-            className={`flex flex-col items-center justify-center rounded-full border transition-all active:scale-95 shadow-xl ${
+            aria-label={isRestraint ? 'Hold: don’t let go' : 'Flag: hold to catch'}
+            className={`relative flex flex-col items-center justify-center rounded-full border transition-[transform,background-color,border-color] duration-200 active:scale-95 shadow-xl ${
+              isNoted ? 'scale-110 calm:scale-100' : ''
+            } ${
               isRestraint
                 ? 'w-24 h-24 sm:w-28 sm:h-28 bg-warn/20 hover:bg-warn/30 border-warn text-warn'
                 : G.flagHeld
@@ -431,10 +459,24 @@ export const HUD: React.FC<HUDProps> = ({
                 : 'w-20 h-20 sm:w-22 sm:h-22 bg-black/65 hover:bg-black/80 border-white/30 text-cream'
             }`}
           >
-            <span className="font-extrabold tracking-wider text-xs sm:text-sm">
-              {isRestraint ? 'HOLD' : 'FLAG'}
-            </span>
-            <small className="text-3xs text-dim font-normal">
+            {!isRestraint && (
+              <svg className="absolute -inset-1 w-[calc(100%+0.5rem)] h-[calc(100%+0.5rem)] -rotate-90 pointer-events-none" viewBox="0 0 100 100" aria-hidden="true">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="47"
+                  fill="none"
+                  stroke={isNoted ? '#ffffff' : currentRoute.bulletColor}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  pathLength={100}
+                  strokeDasharray="100"
+                  style={{ strokeDashoffset: 100 * (1 - flagProgRatio), opacity: flagProgRatio > 0 ? 1 : 0 }}
+                />
+              </svg>
+            )}
+            <span className="font-extrabold tracking-wider text-xs sm:text-sm">{isRestraint ? 'HOLD' : 'FLAG'}</span>
+            <small className={`text-3xs font-semibold ${isRestraint ? 'text-warn-hi' : 'text-cream/80'}`}>
               {isRestraint ? "don't let go" : 'hold to catch'}
             </small>
           </button>

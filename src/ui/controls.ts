@@ -24,6 +24,7 @@ export const CONTROLS = {
   answer: { action: 'Answer', keyboard: '1, 2 or 3', touch: 'Tap a choice' },
   steady: { action: 'Hold steady', keyboard: 'Hold Space when told to', touch: 'Hold the button when told to' },
   camera: { action: 'Camera', keyboard: 'C', key: 'C', touch: 'Camera button' },
+  recorder: { action: 'Recorder', keyboard: 'R', key: 'R', touch: 'Recorder button' },
   evidence: { action: 'Evidence log', short: 'Evidence', keyboard: 'Tab', key: 'TAB', touch: 'Evidence button' },
   walk: { action: 'Walk between cars', short: 'Walk', keyboard: 'WASD', key: 'WASD', touch: 'WALK stick, bottom left' },
   pause: { action: 'Pause', keyboard: 'Esc or P', touch: 'Pause button' },
@@ -38,12 +39,13 @@ export const how = (id: ControlId, input: InputKind): string => CONTROLS[id][inp
 /** The title's Controls block, in reading order. */
 export const BRIEFING_CONTROLS: ControlId[] = ['look', 'flag', 'answer', 'steady', 'camera', 'evidence', 'walk', 'pause', 'mute'];
 
-/** The HUD's key-hint strip (keyboard only; touch has labelled buttons). */
-export const HINT_STRIP: ControlId[] = ['flag', 'camera', 'evidence', 'walk'];
+/** The HUD's key-hint strip (keyboard only; touch has labelled buttons). The recorder joins it
+ * once Dad has given it to you. */
+export const HINT_STRIP: ControlId[] = ['flag', 'camera', 'recorder', 'evidence', 'walk'];
 
 /** "[F] FLAG" style entries for the hint strip. */
-export const hintStrip = () =>
-  HINT_STRIP.map((id) => {
+export const hintStrip = (hasRecorder: boolean) =>
+  HINT_STRIP.filter((id) => id !== 'recorder' || hasRecorder).map((id) => {
     const c: Binding = CONTROLS[id];
     return { id, key: c.key ?? c.keyboard, label: (c.short ?? c.action).toUpperCase() };
   });

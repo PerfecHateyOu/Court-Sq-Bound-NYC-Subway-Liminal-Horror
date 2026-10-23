@@ -10,9 +10,9 @@ import { GameEngine } from '../game/gameState';
 import { HEART_BPM } from '../constants';
 import { settings } from '../settings';
 
-const W = 56; // CSS px
-const H = 18;
-const WINDOW_S = 2.4; // seconds of history across the width
+const W0 = 56; // default size, CSS px
+const H0 = 18;
+const WINDOW_S = 2.4; // seconds of history across the default width (wider traces show more)
 
 // Per tier (High → Critical): stroke color and opacity. Quiet at High, insistent at Critical.
 const TIER_STYLE: Array<{ rgb: [number, number, number]; alpha: number }> = [
@@ -33,7 +33,7 @@ function ecg(dt: number): number {
 }
 
 
-export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ engine }) => {
+export const HeartbeatTrace: React.FC<{ engine: GameEngine; width?: number; height?: number }> = React.memo(({ engine, width: W = W0, height: H = H0 }) => {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ en
       ctx.lineJoin = 'round';
       ctx.beginPath();
       for (let x = 0; x <= W; x += 0.5) {
-        const t = t1 - WINDOW_S * (1 - x / W);
+        const t = t1 - WINDOW_S * (W / W0) * (1 - x / W);
         let y = 0;
         for (let i = beats.length - 1; i >= 0; i--) {
           const dt = t - beats[i];
@@ -141,7 +141,7 @@ export const HeartbeatTrace: React.FC<{ engine: GameEngine }> = React.memo(({ en
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [engine]);
+  }, [engine, W, H]);
 
   return (
     <canvas

@@ -134,6 +134,12 @@
   animation: none !important;
 }
 
+/* Idle HUD (App.tsx hudIdle): the station card, tools and key hints dim to 40% while nothing
+   needs the player; any input brings them straight back. Instant under Reduced effects. */
+.hud-dim { transition: opacity 600ms ease; }
+:root[data-hud-idle] .hud-dim { opacity: 0.4; }
+:root[data-effects='reduced'] .hud-dim { transition: none; }
+
 /* Start screen. One column on phones held upright. On wider landscape screens (laptops, desktops,
    phones turned sideways) two columns: title, station sign and Board the Train on the left, the
    briefing on the right, so the button is in view without scrolling (1280x720 and up). Unlayered,

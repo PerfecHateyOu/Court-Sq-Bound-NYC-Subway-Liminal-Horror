@@ -31,7 +31,7 @@ test.describe('Chapters', () => {
 
     expect((await show(4)).sign).toEqual({ title: 'SIGNAL DRIFT', subtitle: 'Myrtle–Willoughby Avs to Nassau Av' });
     await expect(sign).toContainText('CHAPTER II');
-    await expect(badge).toContainText('CH. II // SIGNAL DRIFT');
+    await expect(badge).toContainText('CH. II · SIGNAL DRIFT');
 
     const three = await show(10);
     expect(three).toEqual({ chimes: 0, sign: { title: 'OPERATION SKYWARD', subtitle: 'Greenpoint Av to Court Sq' } });

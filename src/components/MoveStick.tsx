@@ -42,6 +42,8 @@ export const MoveStick: React.FC<{ engine: GameEngine }> = ({ engine }) => {
     engine.setMoveInput((-dy / TRAVEL) * k, (dx / TRAVEL) * k);
   };
 
+  const active = pointerRef.current !== null;
+
   // Hidden (pause, prompt, restraint) while a thumb is down: stop walking.
   useEffect(() => stop, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -51,7 +53,7 @@ export const MoveStick: React.FC<{ engine: GameEngine }> = ({ engine }) => {
       data-testid="move-stick"
       role="group"
       aria-label="Walk: drag the stick"
-      className="absolute left-4 bottom-5 rounded-full border border-white/25 bg-black/45 pointer-events-auto touch-none select-none"
+      className={`absolute left-4 bottom-5 rounded-full border bg-black/45 pointer-events-auto touch-none select-none transition-colors calm:transition-none ${active ? 'border-white/40' : 'border-white/20'}`}
       style={{ width: BASE, height: BASE }}
       onPointerDown={(e) => {
         e.preventDefault();
@@ -78,12 +80,19 @@ export const MoveStick: React.FC<{ engine: GameEngine }> = ({ engine }) => {
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <span className="absolute inset-x-0 top-2 text-center text-4xs font-bold tracking-[0.2em] text-dim">
+      <span className={`absolute inset-x-0 top-2 text-center text-4xs font-bold tracking-[0.2em] transition-colors ${active ? 'text-cream' : 'text-dim'}`}>
         WALK
       </span>
+      {/* How far the knob travels: faint at rest, brighter under a thumb */}
+      <span
+        aria-hidden="true"
+        className={`absolute left-1/2 top-1/2 rounded-full border transition-colors calm:transition-none ${active ? 'border-g-line/60' : 'border-white/12'}`}
+        style={{ width: TRAVEL * 2 + 8, height: TRAVEL * 2 + 8, marginLeft: -(TRAVEL + 4), marginTop: -(TRAVEL + 4) }}
+      />
+      {/* Follows the thumb exactly; springs back to the middle with a short ease when let go */}
       <div
         className={`absolute left-1/2 top-1/2 w-12 h-12 -ml-6 -mt-6 rounded-full border shadow-lg ${
-          pointerRef.current !== null ? 'bg-g-line/35 border-g-line' : 'bg-cream/15 border-white/40'
+          active ? 'bg-g-line/35 border-g-line' : 'bg-cream/15 border-white/40 transition-transform duration-150 ease-out calm:transition-none'
         }`}
         style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
       />
