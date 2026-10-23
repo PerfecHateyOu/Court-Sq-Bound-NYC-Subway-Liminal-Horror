@@ -209,7 +209,7 @@ export const HUD: React.FC<HUDProps> = ({
               {routeManager.routeId !== 'G' && G.currentChapter.titleOffG ? G.currentChapter.titleOffG : G.currentChapter.title}
             </span>
             {' · '}
-            {carName}
+            {carName.replace(/ \(.*\)$/, '')}
           </span>
           <span className="pl-8 block" aria-hidden="true">
             <HeartbeatTrace engine={G} width={132} height={12} />

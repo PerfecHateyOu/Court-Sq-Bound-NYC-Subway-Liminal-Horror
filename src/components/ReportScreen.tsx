@@ -173,7 +173,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({ engine, runs, onPlay
                   <ul className="mt-2 space-y-1 text-xs text-paper-dim">
                     {susTop.map((l, i) => (
                       <li key={i} className="flex items-start gap-1">
-                        <span className="font-mono text-paper-ink font-bold">Stop {l.stop}:</span>
+                        <span className="shrink-0 whitespace-nowrap font-mono text-paper-ink font-bold">Stop {l.stop}:</span>
                         <span>{l.reason}</span>
                         {l.n > 0 && <span className="font-bold text-paper-red">(+{l.n})</span>}
                       </li>
