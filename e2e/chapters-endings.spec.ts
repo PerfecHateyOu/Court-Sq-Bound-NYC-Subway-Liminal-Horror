@@ -147,8 +147,8 @@ test.describe('Endings', () => {
 
     await page.goto('/');
     await page.getByRole('button', { name: /Case Files/ }).click();
-    const files = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
-    await expect(files.getByText(/^Endings: /)).toHaveText(`Endings: 2/${ENDING_IDS.length}`);
+    const files = page.getByRole('dialog', { name: 'Case Files' });
+    await expect(files.getByTestId('stat-endings')).toHaveText(`2/${ENDING_IDS.length}`);
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'Settings' }).click();

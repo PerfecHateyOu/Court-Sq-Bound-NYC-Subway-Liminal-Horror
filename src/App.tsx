@@ -495,13 +495,21 @@ export default function App() {
   // The evidence log can open mid-ride (Tab, the HUD, the viewfinder). The ride keeps going behind
   // it, so, like the route selector, it frees a captured mouse (without pausing) so its tabs,
   // filters and close button can be clicked.
+  // Closing it (Tab again, Esc, its close button) captures the mouse again, so you're straight back
+  // to looking around.
   const albumOpen = polaroidManager.isAlbumOpen;
+  const albumFreedLockRef = useRef(false);
   useEffect(() => {
     if (albumOpen && document.pointerLockElement) {
       quietUnlockRef.current = true;
+      albumFreedLockRef.current = true;
       document.exitPointerLock();
+    } else if (!albumOpen && albumFreedLockRef.current) {
+      albumFreedLockRef.current = false;
+      const G = engineRef.current;
+      if (G && !G.paused && G.phase !== 'menu' && G.phase !== 'end') requestLock();
     }
-  }, [albumOpen]);
+  }, [albumOpen, requestLock]);
 
   // Keyboard Event Handlers
   useEffect(() => {
@@ -739,7 +747,8 @@ export default function App() {
     };
   }, [triggerUpdate, pauseGame, resumeGame, releaseHeldKeys, openRouteSelector]);
 
-  const handleStartGame = (startMuted: boolean, showDebug: boolean, nightmare = false, startChapter = 1) => {
+  const handleStartGame = (nightmare = false, startChapter = 1) => {
+    const { startMuted } = settings.get();
     // Inside the click, as browsers require: go full screen for the ride.
     if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
@@ -748,7 +757,7 @@ export default function App() {
 
     const G = engineRef.current;
     if (G) {
-      G.debug = showDebug;
+      G.debug = false; // the backquote key turns it on (development builds)
       G.nightmare = nightmare; // kept for Ride Again / Restart until the next start screen
       G.startChapter = startChapter; // likewise; Chapter II and III are practice runs
       // The first ride starts with the practice stretch (skippable); after that, straight in.
@@ -759,7 +768,8 @@ export default function App() {
   };
 
   /** The title screen's "Practice stretch": the lesson again, then a normal ride. */
-  const handleStartTutorial = (startMuted: boolean) => {
+  const handleStartTutorial = () => {
+    const { startMuted } = settings.get();
     if (settings.get().fullscreenOnBoard) enterFullscreen();
     audioEngine.init(startMuted);
     audioEngine.wake();
@@ -945,6 +955,8 @@ export default function App() {
           engine={engineRef.current}
           runs={runsHistory}
           onPlayAgain={handlePlayAgain}
+          // The ride is already saved; a fresh page is the cleanest way back to the title.
+          onTitle={() => window.location.reload()}
         />
       )}
     </div>

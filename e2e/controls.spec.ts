@@ -118,7 +118,7 @@ test.describe('Case Files on the start screen', () => {
     const btn = page.getByRole('button', { name: /Case Files/ });
     await expect(btn).toHaveText(/2\/13/);
     await btn.click();
-    const dlg = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
+    const dlg = page.getByRole('dialog', { name: 'Case Files' });
     await expect(dlg).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dlg).toHaveCount(0);
@@ -133,8 +133,8 @@ test.describe('Case Files on the start screen', () => {
   test('the dossier lists the anomalies saved on this device', async ({ page }) => {
     await seedArchive(page);
     await page.getByRole('button', { name: /Case Files/ }).click();
-    const dlg = page.getByRole('dialog', { name: 'Case Files & Career Archive' });
-    await expect(dlg.getByText(/^Anomalies: /)).toHaveText('Anomalies: 2/13', { timeout: 3_000 });
+    const dlg = page.getByRole('dialog', { name: 'Case Files' });
+    await expect(dlg.getByTestId('stat-anomalies')).toHaveText('2/13', { timeout: 3_000 });
     await expect(dlg.getByText('DOCUMENTED', { exact: true })).toHaveCount(2, { timeout: 3_000 });
     await expect(dlg.getByText('UNCONFIRMED', { exact: true })).toHaveCount(1, { timeout: 3_000 });
   });
