@@ -76,17 +76,13 @@ test.describe('Esc', () => {
     expect(await game(`await sleep(150); return G.paused`)).toBe(false);
   });
 
-  test('cancels the Restart confirmation instead of resuming', async ({ page, game }) => {
+  test('Restart Ride restarts at once, with no confirmation', async ({ page, game }) => {
     await game(`ride(0);`);
     await page.keyboard.press('KeyP');
     await page.getByRole('button', { name: 'Restart Ride' }).click();
-    await expect(page.locator('[role=alertdialog]')).toBeVisible();
-    await page.keyboard.press('Escape');
     await expect(page.locator('[role=alertdialog]')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Restart Ride' })).toBeVisible();
-    expect(await game(`return G.paused`)).toBe(true);
-    await page.keyboard.press('Escape'); // nothing left on top: now it resumes
-    expect(await game(`await sleep(150); return G.paused`)).toBe(false);
+    await expect(page.getByRole('button', { name: 'Resume Ride' })).toHaveCount(0);
+    expect(await game(`await sleep(150); return { paused: G.paused, phase: G.phase }`)).toEqual({ paused: false, phase: 'intro' });
   });
 
   test('in Settings, cancels the erase confirmation first, then closes the panel', async ({ page }) => {

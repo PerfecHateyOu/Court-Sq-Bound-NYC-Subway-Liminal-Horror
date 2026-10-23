@@ -122,7 +122,7 @@ test.describe('Practice stretch', () => {
     const game = runner(page);
     await expect(coach(page)).toBeVisible();
     await page.keyboard.press('KeyP');
-    // A practice run skips the "Restart this ride?" step (the polish prompt, §3.4): nothing in it is saved.
+    // Restart never asks "are you sure" (Williams, Oct 23), so the practice stretch ends at once.
     await page.getByRole('button', { name: /Restart Ride/i }).click();
     await expect(page.locator('[role=alertdialog]')).toHaveCount(0);
     await expect(coach(page)).toHaveCount(0);
