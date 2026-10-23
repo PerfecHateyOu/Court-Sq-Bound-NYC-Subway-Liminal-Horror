@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:offline": "node scripts/build-offline.mjs",
     "preview": "vite preview",
+    "start": "node scripts/serve-dist.mjs",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "cd e2e && bun run test",
