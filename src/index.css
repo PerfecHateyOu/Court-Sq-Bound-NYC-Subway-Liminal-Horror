@@ -24,7 +24,7 @@
   --color-g-deep: #264a22;
   --color-warn: #e3a83a; /* amber: caution, hints, practice */
   --color-warn-hi: #f0b84a;
-  --color-bad: #c9513f; /* red: Nightmare, destructive */
+  --color-bad: #c04a38; /* red: Nightmare, destructive (white text on it: 4.9:1) */
   --color-bad-hi: #e8705e;
   --color-bad-pale: #e8a49a;
 
@@ -35,7 +35,7 @@
   --color-grout: #b8b09a;
   --color-paper-ink: #1b1d18; /* text on paper */
   --color-paper-dim: #55574c; /* muted text on paper */
-  --color-paper-mute: #6e6858;
+  --color-paper-mute: #5e594b; /* 4.5:1 on paper-2 */
   --color-paper-faint: #9f9883;
   --color-paper-red: #9b3526; /* stamps and warnings on paper */
   --color-sepia: #3a3328;
@@ -83,6 +83,19 @@
       min-height: 2.75rem;
       min-width: 2.75rem;
     }
+  }
+}
+
+/* Focus is always visible from the keyboard: a cream ring on anything focusable that doesn't
+   draw its own (utilities like focus-visible:ring-* still win). Disabled controls look it. */
+@layer base {
+  :where(button, a[href], select, input, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-cream);
+    outline-offset: 2px;
+  }
+  button:disabled,
+  button[aria-disabled='true'] {
+    cursor: not-allowed;
   }
 }
 

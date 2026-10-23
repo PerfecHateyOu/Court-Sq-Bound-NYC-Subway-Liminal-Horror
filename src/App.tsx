@@ -575,6 +575,19 @@ export default function App() {
         if (e.code !== 'KeyM') return;
       }
 
+      // The evidence log can be open mid-ride too; while it is, ride shortcuts (camera, recorder,
+      // route lines, answers, walking) don't fire behind it. Tab closes it, Esc is its own (via
+      // ui/escape.ts), and M still mutes.
+      if (polaroidManager.isAlbumOpen && G.phase !== 'menu' && G.phase !== 'end') {
+        if (e.code === 'Tab') {
+          e.preventDefault();
+          polaroidManager.toggleAlbum();
+          triggerUpdate();
+          return;
+        }
+        if (e.code !== 'KeyM' && e.code !== 'KeyP') return;
+      }
+
       if ((e.code === 'KeyP' || e.code === 'Escape') && G.phase !== 'menu' && G.phase !== 'end') {
         if (G.paused) resumeGame();
         else pauseGame();

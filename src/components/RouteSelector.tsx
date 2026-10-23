@@ -70,7 +70,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
       footer={
         <div className="px-4 sm:px-6 py-3 bg-panel border-t border-white/5 text-2xs text-dim flex items-center justify-between gap-3">
           <span>Switching renames the stops and announcements ahead, from now on. Every new ride starts on the G.</span>
-          <span className="shrink-0 whitespace-nowrap text-white/40 font-mono">LAST LOCAL v5.2</span>
+          <span className="shrink-0 whitespace-nowrap text-dim font-mono">LAST LOCAL v5.2</span>
         </div>
       }
     >
@@ -116,7 +116,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({ onClose, onSelectR
                       <span className="block text-xs text-dim mt-0.5 leading-relaxed max-w-md">
                         {r.description}
                       </span>
-                      <span className="block text-3xs font-mono text-white/50 mt-1">
+                      <span className="block text-3xs font-mono text-dim mt-1">
                         Terminals: {r.stops[1]} → {r.stops[r.stops.length - 1]}
                       </span>
                     </span>

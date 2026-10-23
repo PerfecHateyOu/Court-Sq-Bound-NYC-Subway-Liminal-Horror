@@ -58,7 +58,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             <div className="min-w-0 flex items-center gap-3 bg-black/75 px-3 sm:px-4 py-2 rounded-md border border-white/15 text-cream font-mono tracking-wider shadow-lg">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
               <span>POLAROID 600 VIEW</span>
-              <span className="hidden sm:inline text-white/40">|</span>
+              <span className="hidden sm:inline text-dim">|</span>
               <span className="hidden sm:inline text-warn">EXP 1/125s • f/11</span>
             </div>
 
@@ -70,7 +70,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
               >
                 <ImageIcon className="w-4 h-4 text-warn" />
                 <span>Evidence ({polaroidManager.photos.length})</span>
-                <span className="hidden sm:pointer-fine:inline text-3xs text-white/50 bg-white/10 px-1.5 py-0.5 rounded font-mono">
+                <span className="hidden sm:pointer-fine:inline text-3xs text-cream/80 bg-white/10 px-1.5 py-0.5 rounded font-mono">
                   TAB
                 </span>
               </button>
@@ -129,7 +129,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
               >
                 {String(remainingFilm).padStart(2, '0')} / 10
               </span>
-              <span className="text-3xs text-white/40 hidden sm:inline">600 INSTANT CARTRIDGE</span>
+              <span className="text-3xs text-dim hidden sm:inline">600 INSTANT CARTRIDGE</span>
             </div>
 
             {/* Red Shutter Trigger Button */}
@@ -183,7 +183,7 @@ export const PolaroidViewfinder: React.FC<PolaroidViewfinderProps> = ({
             {/* Handwritten Polaroid Bottom Border Caption */}
             <div className="w-full mt-2 text-center font-mono text-3xs text-gray-700 leading-tight">
               <div className="font-bold truncate">{isDeveloping ? 'Ejecting…' : 'Develops after the ride'}</div>
-              <div className="text-4xs text-gray-500">
+              <div className="text-4xs text-paper-dim">
                 CAR {lastPhoto?.carIndex === 0 ? 'A' : lastPhoto?.carIndex === 2 ? 'C' : 'B'} • {polaroidManager.remainingFilm} left
               </div>
             </div>

@@ -152,7 +152,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
             {!isTouch && (
               <Check
                 label="Show control hints"
-                hint="The key strip at the bottom of the screen, for the first minute of your first ride."
+                hint="The key strip along the bottom: all through your first ride, then for the first minute of each ride after."
                 checked={s.showHints}
                 onChange={(v) => settings.set({ showHints: v })}
               />
