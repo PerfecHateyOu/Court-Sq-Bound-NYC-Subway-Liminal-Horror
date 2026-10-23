@@ -45,6 +45,22 @@ export const HUD: React.FC<HUDProps> = ({
   onOpenRouteSelector,
 }) => {
   const full = useFullscreen();
+  // Publish the top bar's height (--hud-h) so cards that dock under it (the practice stretch's
+  // coach) never cover it, whether it's one row (wide) or two (portrait phones).
+  const topBarRef = React.useRef<HTMLDivElement>(null);
+  const hudShown = engine.phase !== 'menu' && engine.phase !== 'end';
+  React.useLayoutEffect(() => {
+    const el = topBarRef.current;
+    if (!el) return;
+    const publish = () => {
+      if (!el.offsetHeight) return; // hidden (viewfinder up): keep the last value
+      document.documentElement.style.setProperty('--hud-h', `${el.offsetTop + el.offsetHeight}px`);
+    };
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hudShown]);
   const canFull = fullscreenSupported();
   const G = engine;
   if (G.phase === 'menu' || G.phase === 'end') return null;
@@ -75,10 +91,10 @@ export const HUD: React.FC<HUDProps> = ({
     G.isCrossingGangway
       ? 'GANGWAY COUPLING'
       : G.currentCarIndex === 0
-      ? 'CAR 1 (LEAD)'
+      ? 'CAR A (LEAD)'
       : G.currentCarIndex === 2
-      ? 'CAR 3 (REAR)'
-      : 'CAR 2 (MID)';
+      ? 'CAR C (REAR)'
+      : 'CAR B (MID)'; // the same letters as the Evidence Log, the viewfinder and the Case Files
 
   return (
     <div
@@ -126,6 +142,8 @@ export const HUD: React.FC<HUDProps> = ({
         the camera viewfinder, which has its own Album and Lower buttons along the top.
       */}
       <div
+        ref={topBarRef}
+        data-testid="hud-top"
         className={`absolute inset-x-3 min-[360px]:inset-x-4 top-4 ${polaroidManager.isViewfinderOpen ? 'hidden' : 'flex'} flex-wrap sm:flex-nowrap items-start sm:items-center justify-end sm:justify-between gap-2 pointer-events-none`}
       >
         {/* Route Bullet, Next Station, Consist Location */}

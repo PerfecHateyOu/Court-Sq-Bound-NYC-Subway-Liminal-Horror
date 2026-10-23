@@ -82,7 +82,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
               <span className="w-3.5 h-3.5 rounded-full bg-g-line text-paper-ink font-black inline-flex items-center justify-center text-4xs">
                 G
               </span>
-              MTA NYCTliminal ARCHIVE DOSSIER
+              ARCHIVE DOSSIER
             </div>
             <h2 id="case-files-title" className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-none">
               Case Files & Career Archive
@@ -106,56 +106,43 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-1 px-4 sm:px-6 pt-2 border-b border-paper-line bg-paper-2 relative z-10 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('anomalies')}
-            className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
-              activeTab === 'anomalies'
-                ? 'border-paper-ink text-paper-ink bg-paper'
-                : 'border-transparent text-paper-mute hover:text-paper-ink'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Anomalies ({documentedCount}/13)
-          </button>
-          <button
-            onClick={() => setActiveTab('polaroids')}
-            className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
-              activeTab === 'polaroids'
-                ? 'border-paper-ink text-paper-ink bg-paper'
-                : 'border-transparent text-paper-mute hover:text-paper-ink'
-            }`}
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            Polaroid Album ({allPhotos.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('tapes')}
-            className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
-              activeTab === 'tapes'
-                ? 'border-paper-ink text-paper-ink bg-paper'
-                : 'border-transparent text-paper-mute hover:text-paper-ink'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5" />
-            Frequencies & Tapes ({tapeCount})
-          </button>
-          <button
-            onClick={() => setActiveTab('endings')}
-            className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
-              activeTab === 'endings'
-                ? 'border-paper-ink text-paper-ink bg-paper'
-                : 'border-transparent text-paper-mute hover:text-paper-ink'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" />
-            Endings & Badges
-          </button>
+        {/* Tab Navigation: 2×2 on phones, one row from 640px, with short labels so none clip */}
+        <div
+          role="tablist"
+          aria-label="Case Files sections"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-px px-4 sm:px-6 pt-2 border-b border-paper-line bg-paper-2 relative z-10"
+        >
+          {(
+            [
+              ['anomalies', 'Anomalies', `${documentedCount}/13`, Eye],
+              ['polaroids', 'Polaroids', `${allPhotos.length}`, ImageIcon],
+              ['tapes', 'Tapes', `${tapeCount}`, Radio],
+              ['endings', 'Endings', `${endingCount}/8`, Award],
+            ] as const
+          ).map(([id, label, count, Icon]) => {
+            const on = activeTab === id;
+            return (
+              <button
+                key={id}
+                role="tab"
+                id={`cf-tab-${id}`}
+                aria-selected={on}
+                aria-controls="cf-panel"
+                onClick={() => setActiveTab(id)}
+                className={`tap min-w-0 px-2 py-2 text-xs uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${
+                  on ? 'border-paper-ink text-paper-ink font-black bg-paper' : 'border-transparent text-paper-mute font-bold hover:text-paper-ink'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span>{label}</span>
+                <span className="font-mono text-3xs tabular-nums opacity-80">{count}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10">
+        <div id="cf-panel" role="tabpanel" aria-labelledby={`cf-tab-${activeTab}`} className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10">
           {/* TAB 1: ANOMALIES */}
           {activeTab === 'anomalies' && (
             <ul className="divide-y divide-paper-line text-xs">
@@ -267,10 +254,14 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
 
               {/* Photo Zoom Modal */}
               {selectedPhoto && (
-                <div
-                  className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80"
-                  onClick={() => setSelectedPhoto(null)}
-                >
+                <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-black/80">
+                  {/* Scrolls when the print is taller than the screen (landscape phones), centered otherwise. */}
+                  <div
+                    className="min-h-full flex items-center justify-center safe-pad"
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) setSelectedPhoto(null);
+                    }}
+                  >
                   <div
                     className="bg-[#f7f5ed] p-4 sm:p-5 rounded-sm max-w-md w-full shadow-2xl border border-paper-faint text-paper-ink"
                     onClick={(e) => e.stopPropagation()}
@@ -310,6 +301,7 @@ export const CaseFilesModal: React.FC<CaseFilesModalProps> = ({
                         Close Print
                       </button>
                     </div>
+                  </div>
                   </div>
                 </div>
               )}

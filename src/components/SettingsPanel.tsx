@@ -108,7 +108,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto safe-pad bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-40 flex items-center justify-center safe-pad bg-black/70 backdrop-blur-sm"
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -118,9 +118,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="w-full max-w-md my-auto rounded bg-panel border border-white/15 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200"
+        // Never taller than the screen: the header and Done stay put, only the body scrolls.
+        className="w-full max-w-md max-h-full flex flex-col rounded bg-panel border border-white/15 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200"
       >
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
+        <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/10">
           <h2 id="settings-title" className="text-xl font-black text-cream uppercase tracking-wide">
             Settings
           </h2>
@@ -133,7 +134,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
           </button>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4" data-testid="settings-body">
           <Section title="Look">
             <Slider
               id="set-sens"
@@ -284,7 +285,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, isTouch }
           </Section>
         </div>
 
-        <div className="px-5 pb-5">
+        <div className="shrink-0 px-5 pt-3 pb-4 border-t border-white/10">
           <button
             autoFocus
             onClick={onClose}
