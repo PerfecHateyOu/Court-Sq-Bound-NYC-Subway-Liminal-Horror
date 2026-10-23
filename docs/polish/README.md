@@ -46,7 +46,7 @@ a 150–200ms open animation that Reduced turns off. Input-based variants (`touc
 block for the current input only, from `src/ui/controls.ts` (also used by the coach and the HUD
 hints). Settings in five groups with fixed-width values, focus rings and Start rides muted.
 Case Files: 4-up stats, anomaly cards grouped by class, one status chip shared with the Evidence
-Log. Pause: Restart set apart in red with its confirm, 2×2 in short landscape. Choices: 48px
+Log. Pause: Restart set apart in red (no confirm step), 2×2 in short landscape. Choices: 48px
 stacked buttons on touch, key caps on desktop. Travel Report: one stat table, a badge row, Ride
 Again first, then Case Files and Title.
 
@@ -105,8 +105,8 @@ three. The app has no `console.log`; the one in the bundle is three's own logger
 - **Skin colours aren't varied.** An anomaly recolours Mom's skin and restores her exact colour.
 - **Dark trousers stay dark.** The floor bounce is raised a little; the rest of the darkness is the
   trousers' own colour, and lifting it with emissive cloth would glow during blackouts.
-- **Restart from the practice stretch still confirms** (it skips the rest of the lesson); restarting
-  a chapter practice run (nothing saved) doesn't.
+- **Restart never asks "are you sure".** Williams's call on Oct 23 (the brief asked for a confirm on
+  real rides): Restart Ride starts over at once, in a practice run or a real one.
 - **Texture disposal:** nothing is rebuilt at runtime. Stations, signs and the trial scene are built
   once and redrawn in place, so there's nothing to leak.
 - **The `ym()` in the brief** isn't in this source; it's a minifier name. The equivalent is
