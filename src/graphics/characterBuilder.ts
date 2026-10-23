@@ -4,8 +4,23 @@
  * articulated heads for gaze tracking, and specific anomaly state controls.
  */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { PersonArchetype, PersonObject } from '../types';
 import { TextureGenerator } from './textureGenerator';
+
+/** A small deterministic RNG seeded from a string (FNV-1a hash into mulberry32). */
+export function seededRandom(key: string): () => number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 export interface PersonConfig {
   tid: string;
@@ -37,14 +52,19 @@ export class CharacterBuilder {
     const g = new THREE.Group();
     const up = cfg.standing ? 0.48 : 0;
 
-    // Materials
+    // This passenger's own small, repeatable variation (cloth hue and shade).
+    const rng = seededRandom(cfg.tid);
+    this.tint = { dh: (rng() - 0.5) * 0.03, dl: (rng() - 0.5) * 0.08 };
+
+    // Materials. Skin stays its own material per person (an anomaly recolours Mom's); every
+    // garment is woven cloth (fabric), shared with anyone wearing the same thing.
     const skMat = new THREE.MeshLambertMaterial({ color: cfg.skin });
-    const clothMat = new THREE.MeshLambertMaterial({ color: cfg.shirt });
-    const pantsMat = new THREE.MeshLambertMaterial({ color: cfg.pants });
+    const clothMat = this.fabric(cfg.shirt);
+    const pantsMat = this.fabric(cfg.pants);
     const hairMat = new THREE.MeshLambertMaterial({ color: cfg.hair });
     const shoeMat = new THREE.MeshLambertMaterial({ color: 0x18181a });
     const eyePupilMat = new THREE.MeshBasicMaterial({ color: 0x111113 });
-    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xeeece8 });
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xe6e3dc });
 
     if (cfg.archetype) {
       this.buildArchetypeBody(g, cfg, skMat, up);
@@ -55,7 +75,7 @@ export class CharacterBuilder {
       g.add(torso);
 
       // Collar / Scarf accent
-      const collar = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.22), new THREE.MeshLambertMaterial({ color: cfg.shirt }));
+      const collar = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.22), clothMat);
       collar.position.set(0, 1.02 + up, 0);
       g.add(collar);
 
@@ -93,22 +113,20 @@ export class CharacterBuilder {
         });
       }
 
-      // Arms
+      // Arms. The forearm runs from the elbow to the wrist and the hand is its child, at its
+      // end, so the two always touch. With a phone the hands meet to hold it.
       [-1, 1].forEach((s) => {
-        // Upper arm
         const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.34, 0.1), clothMat);
         arm.position.set(s * 0.24, 0.86 + up, 0.02);
         g.add(arm);
 
-        // Forearm
-        const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.26), clothMat);
-        forearm.position.set(s * 0.2, 0.69 + up, 0.14);
-        g.add(forearm);
-
-        // Hand
-        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.08), skMat);
-        hand.position.set(s * 0.16, 0.69 + up, 0.29);
-        g.add(hand);
+        const elbow = new THREE.Vector3(s * 0.235, 0.71 + up, 0.03);
+        const wrist = cfg.phone ? new THREE.Vector3(s * 0.085, 0.71 + up, 0.27) : new THREE.Vector3(s * 0.165, 0.69 + up, 0.27);
+        const forearm = this.limb(g, elbow, wrist, 0.08, 0.08, clothMat);
+        const len = elbow.distanceTo(wrist);
+        const hand = this.box(forearm, 0.07, 0.085, 0.065, skMat, 0, len / 2 + 0.04, 0);
+        // Thumb on the inside, toward the phone or the other knee.
+        this.box(hand, 0.022, 0.04, 0.03, skMat, -s * 0.04, 0.005, 0.02);
       });
 
       // Neck
@@ -138,6 +156,11 @@ export class CharacterBuilder {
       const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.32, 0.12), hairMat);
       hairBack.position.set(0, -0.08, -0.08);
       head.add(hairBack);
+      // Side lengths, narrower and a little forward, so it isn't a flat panel from the side.
+      [-1, 1].forEach((s) => {
+        const side = this.box(head, 0.035, 0.26, 0.1, hairMat, s * 0.112, -0.06, -0.015);
+        side.rotation.z = s * 0.06;
+      });
     }
 
     // Stylized facial features: Nose
@@ -148,19 +171,23 @@ export class CharacterBuilder {
 
     // Mouth / subtle lip line
     const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.008, 0.015), new THREE.MeshLambertMaterial({ color: 0x6e3832 }));
-    mouth.position.set(0, -0.054, 0.104);
+    mouth.position.set(0, -0.054, 0.102);
     head.add(mouth);
+    // A faint jaw line under it, so the face doesn't read as a mask. Subtle: anomalies change faces.
+    // A translucent shade rather than a colour, so it follows the skin if an anomaly changes it.
+    this.box(head, 0.11, 0.012, 0.07, CharacterBuilder.jawShade, 0, -0.096, 0.05);
 
     // Eyes
     const eyes: THREE.Mesh[] = [];
     [-0.038, 0.038].forEach((ex) => {
+      // Set into the face rather than stuck on it: a smaller white, the pupil just proud of it.
       const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), eyeWhiteMat);
-      eyeWhite.scale.set(1.2, 0.8, 0.6);
-      eyeWhite.position.set(ex, 0.016, 0.096);
+      eyeWhite.scale.set(1.0, 0.68, 0.55);
+      eyeWhite.position.set(ex, 0.016, 0.094);
       head.add(eyeWhite);
 
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), eyePupilMat);
-      pupil.position.set(ex, 0.016, 0.106);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.0115, 8, 6), eyePupilMat);
+      pupil.position.set(ex, 0.016, 0.1);
       head.add(pupil);
       eyes.push(pupil);
     });
@@ -170,29 +197,37 @@ export class CharacterBuilder {
       const glassFrameMat = new THREE.MeshBasicMaterial({ color: 0x222225 });
       [-0.038, 0.038].forEach((gx) => {
         const rim = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.026, 12), glassFrameMat);
-        rim.position.set(gx, 0.016, 0.112);
+        rim.position.set(gx, 0.016, 0.109);
         head.add(rim);
+        // Arms back to the ears, so the frames sit on the head from the side too.
+        this.box(head, 0.006, 0.006, 0.09, glassFrameMat, Math.sign(gx) * 0.1, 0.018, 0.065);
       });
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.006, 0.01), glassFrameMat);
-      bridge.position.set(0, 0.018, 0.112);
+      // A bridge over the nose that joins the two rims.
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.007, 0.01), glassFrameMat);
+      bridge.position.set(0, 0.02, 0.111);
       head.add(bridge);
     }
 
     if (cfg.archetype) this.addHeadwear(head, cfg.archetype, hairMat);
 
-    // Smartphone
+    // Smartphone: a thin dark slab held in both hands, its screen lit and tilted up toward the face.
     let phone: THREE.Object3D | null = null;
     if (cfg.phone) {
-      const phoneGroup = new THREE.Group();
-      const phoneBody = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.14, 0.01), new THREE.MeshLambertMaterial({ color: 0x1f2124 }));
-      const phoneScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.065, 0.125), new THREE.MeshBasicMaterial({ color: 0xb5d4ff }));
-      phoneScreen.position.set(0, 0, 0.006);
-      phoneGroup.add(phoneBody, phoneScreen);
-      phoneGroup.position.set(0, 0.74 + up, 0.33);
-      phoneGroup.rotation.x = -0.92;
+      const phoneGroup = this.makePhone(0x1b1d20);
+      phoneGroup.position.set(0, 0.735 + up, 0.3);
+      // Screen toward the eyes, tipped up about 40° from the lap, so from across the aisle you see
+      // its dark back between the hands and the glow around it, never the screen itself.
+      phoneGroup.rotation.x = -2.27;
       g.add(phoneGroup);
       phone = phoneGroup;
     }
+
+    // One material per look, shared by everyone (skin excepted: an anomaly recolours Mom's).
+    this.shareMaterials(g, skMat);
+    // Fewer draw calls: the static parts of the body, and of the head, merged per material.
+    // Left alone: the pupils (they're scaled), the phone and any prop with a habit (they move).
+    this.mergeStatic(g, new Set<THREE.Object3D>([head, ...(phone ? [phone] : []), ...eyes]));
+    this.mergeStatic(head, new Set<THREE.Object3D>(eyes));
 
     // Position and orientation
     g.position.set(cfg.x, 0, cfg.z);
@@ -226,9 +261,109 @@ export class CharacterBuilder {
 
   private static grain: THREE.CanvasTexture | null = null;
 
+  private static jawShade = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.16, depthWrite: false });
+
+  /** This passenger's cloth variation (set at the top of createPerson). */
+  private tint = { dh: 0, dl: 0 };
+  /** Cloth materials by final colour, shared across passengers. */
+  private static cloth = new Map<number, THREE.MeshLambertMaterial>();
+
+  /** Woven cloth in `color`, nudged by this passenger's tint. */
   private fabric(color: number): THREE.MeshLambertMaterial {
     if (!CharacterBuilder.grain) CharacterBuilder.grain = new TextureGenerator().createClothGrainTexture();
-    return new THREE.MeshLambertMaterial({ color, map: CharacterBuilder.grain });
+    const c = new THREE.Color(color);
+    const hsl = { h: 0, s: 0, l: 0 };
+    c.getHSL(hsl);
+    c.setHSL((hsl.h + this.tint.dh + 1) % 1, hsl.s, Math.min(1, hsl.l * (1 + this.tint.dl)));
+    const hex = c.getHex();
+    let m = CharacterBuilder.cloth.get(hex);
+    if (!m) {
+      m = new THREE.MeshLambertMaterial({ color: hex, map: CharacterBuilder.grain });
+      CharacterBuilder.cloth.set(hex, m);
+    }
+    return m;
+  }
+
+  /** Materials by look, shared across every passenger. */
+  private static looks = new Map<string, THREE.Material>();
+
+  /** Swap each material under `root` for the shared one that looks the same. */
+  private shareMaterials(root: THREE.Object3D, keep: THREE.Material) {
+    const key = (m: THREE.Material) => {
+      const a = m as THREE.MeshPhongMaterial;
+      return [m.type, a.color?.getHex(), a.emissive?.getHex(), a.emissiveIntensity, a.map?.uuid, m.transparent, m.opacity, m.blending, m.depthWrite, a.shininess, a.specular?.getHex(), m.side, m.alphaTest].join('|');
+    };
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || Array.isArray(mesh.material) || mesh.material === keep) return;
+      const k = key(mesh.material);
+      const shared = CharacterBuilder.looks.get(k);
+      if (!shared) CharacterBuilder.looks.set(k, mesh.material);
+      else if (shared !== mesh.material) {
+        mesh.material.dispose();
+        mesh.material = shared;
+      }
+    });
+  }
+
+  /** A phone: dark body, a lit screen inset a hair from its edges, and a faint glow on the hands. */
+  private makePhone(body: number): THREE.Group {
+    const phone = new THREE.Group();
+    this.box(phone, 0.074, 0.145, 0.011, new THREE.MeshLambertMaterial({ color: body }), 0, 0, 0);
+    const screenMat = new THREE.MeshLambertMaterial({ color: 0x0b1018, emissive: 0x9cc1ea, emissiveIntensity: 0.85 });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.064, 0.132), screenMat);
+    screen.position.z = 0.0058;
+    phone.add(screen);
+    const glow = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.22),
+      new THREE.MeshBasicMaterial({ color: 0x6f9fd6, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+    );
+    glow.position.z = 0.009;
+    phone.add(glow);
+    return phone;
+  }
+
+  /**
+   * Merge the static meshes under `root` into one mesh per material (same look, far fewer draw
+   * calls). Children in `skip`, and anything with a carLife habit, keep their own meshes.
+   */
+  private mergeStatic(root: THREE.Object3D, skip: Set<THREE.Object3D>) {
+    root.updateMatrixWorld(true);
+    const inv = root.matrixWorld.clone().invert();
+    const groups = new Map<THREE.Material, { geos: THREE.BufferGeometry[]; meshes: THREE.Mesh[] }>();
+    const walk = (o: THREE.Object3D) => {
+      for (const c of o.children) {
+        if (skip.has(c) || c.userData.habit) continue;
+        const m = c as THREE.Mesh;
+        if (m.isMesh && !Array.isArray(m.material)) {
+          const geo = m.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+          const g = groups.get(m.material) ?? { geos: [], meshes: [] };
+          g.geos.push(geo);
+          g.meshes.push(m);
+          groups.set(m.material, g);
+        }
+        walk(c);
+      }
+    };
+    walk(root);
+    for (const [mat, { geos, meshes }] of groups) {
+      if (meshes.length < 2) {
+        geos.forEach((g) => g.dispose());
+        continue;
+      }
+      const merged = mergeGeometries(geos.map((g) => (g.index ? g.toNonIndexed() : g)));
+      geos.forEach((g) => g.dispose());
+      if (!merged) continue;
+      for (const m of meshes) {
+        // Keep anything a merged mesh carries that isn't merged itself (a prop on a hand).
+        for (const child of [...m.children]) {
+          if (skip.has(child) || child.userData.habit) root.attach(child);
+        }
+        m.removeFromParent();
+        m.geometry.dispose();
+      }
+      root.add(new THREE.Mesh(merged, mat));
+    }
   }
 
   private box(parent: THREE.Object3D, w: number, h: number, d: number, mat: THREE.Material, x: number, y: number, z: number): THREE.Mesh {
@@ -551,11 +686,9 @@ export class CharacterBuilder {
         this.box(g, 0.05, 0.08, 0.06, skMat, s * 0.045, hy, hz);
       });
       const phone = new THREE.Group();
-      this.box(phone, 0.072, 0.14, 0.012, new THREE.MeshLambertMaterial({ color: 0xb79a96 }), 0, 0, 0);
-      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.062, 0.125), new THREE.MeshBasicMaterial({ color: 0x9fb8d6 }));
-      screen.position.z = -0.007;
-      screen.rotation.y = Math.PI;
-      phone.add(screen);
+      const handset = this.makePhone(0xb79a96);
+      handset.rotation.y = Math.PI; // screen toward her
+      phone.add(handset);
       phone.position.set(0, hy + 0.03, hz + 0.01);
       phone.rotation.x = -0.35;
       phone.userData.habit = 'phone'; // carLife: thumb-scroll flicks

@@ -6,11 +6,48 @@
 import * as THREE from 'three';
 import { AdDefinition, STOPS } from '../constants';
 
+/**
+ * Canvas pixels per drawing unit for signs, ads and maps: the screen's pixel ratio, capped at 2×,
+ * so text stays sharp on a phone or a retina laptop without doubling memory everywhere else.
+ */
+export const TEXT_SCALE = typeof window === 'undefined' ? 1 : Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+
+/** A canvas for text at TEXT_SCALE. Draw on it in logical units through `begin`. */
+export function hiDpiCanvas(w: number, h: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = Math.round(w * TEXT_SCALE);
+  c.height = Math.round(h * TEXT_SCALE);
+  c.dataset.scale = String(TEXT_SCALE);
+  return c;
+}
+
+/** The context, scaled so drawing is in logical units, with the logical size. */
+function begin(canvas: HTMLCanvasElement): { ctx: CanvasRenderingContext2D; w: number; h: number } {
+  const k = Number(canvas.dataset.scale) || 1;
+  const ctx = canvas.getContext('2d')!;
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  return { ctx, w: canvas.width / k, h: canvas.height / k };
+}
+
 export class TextureGenerator {
   private aniso: number = 8;
 
   constructor(maxAniso: number = 8) {
     this.aniso = maxAniso;
+  }
+
+  /**
+   * A texture for a sign, ad or map: sRGB, full anisotropy, and trilinear mipmaps so the
+   * lettering doesn't shimmer when seen at an angle down the car.
+   */
+  public textTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = this.aniso;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
   }
 
   /**
@@ -51,7 +88,8 @@ export class TextureGenerator {
         ctx.fillStyle = 'rgba(180, 160, 130, 0.35)';
       }
       const s = 1.2 + Math.random() * 2.2;
-      ctx.fillRect(rx, ry, s, s);
+      // Drawn again across the opposite edge when it straddles one, so the tiling has no seam.
+      for (const ox of rx + s > w ? [0, -w] : [0]) for (const oy of ry + s > h ? [0, -h] : [0]) ctx.fillRect(rx + ox, ry + oy, s, s);
     }
 
     // Floor panel seam lines
@@ -102,6 +140,7 @@ export class TextureGenerator {
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(4, 1);
     tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = this.aniso;
     return tex;
   }
 
@@ -128,6 +167,7 @@ export class TextureGenerator {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(2, 6);
+    tex.anisotropy = this.aniso;
     return tex;
   }
 
@@ -184,42 +224,59 @@ export class TextureGenerator {
    * Station Wall Name Plate Canvas Texture
    */
   public createStationSignTexture(stationName: string): { texture: THREE.CanvasTexture; canvas: HTMLCanvasElement } {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 112;
-    const ctx = canvas.getContext('2d')!;
-
-    this.drawStationSign(ctx, stationName);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = this.aniso;
-    return { texture: tex, canvas };
+    const canvas = hiDpiCanvas(512, 112);
+    this.drawStationSign(canvas.getContext('2d')!, stationName);
+    return { texture: this.textTexture(canvas), canvas };
   }
 
+  /**
+   * The station's name tablet. Names shrink to fit, but not below about 30px: a long name
+   * ("Myrtle–Willoughby Avs") goes onto two lines instead, broken at a space or a dash.
+   */
   public drawStationSign(ctx: CanvasRenderingContext2D, stationName: string) {
+    const { w, h } = begin(ctx.canvas);
     // NYC Subway Mosaic Plaque Border
     ctx.fillStyle = '#1c241e';
-    ctx.fillRect(0, 0, 512, 112);
+    ctx.fillRect(0, 0, w, h);
 
     // Green mosaic band border
     ctx.fillStyle = '#3c754a';
-    ctx.fillRect(6, 6, 500, 100);
+    ctx.fillRect(6, 6, w - 12, h - 12);
 
     ctx.fillStyle = '#0f1411';
-    ctx.fillRect(14, 14, 484, 84);
+    ctx.fillRect(14, 14, w - 28, h - 28);
+    // A 1px bevel inside the dark field: lit along the top, shadowed along the bottom.
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(15, 15, w - 30, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(15, h - 16, w - 30, 1);
 
     // Clean white station typography
     ctx.fillStyle = '#f5f4ed';
-    let fontSize = 48;
-    ctx.font = `800 ${fontSize}px "Archivo", "Helvetica Neue", Arial, sans-serif`;
-    while (fontSize > 24 && ctx.measureText(stationName).width > 440) {
-      fontSize -= 2;
-      ctx.font = `800 ${fontSize}px "Archivo", "Helvetica Neue", Arial, sans-serif`;
-    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(stationName, 256, 56);
+    const maxW = 440;
+    const font = (px: number) => {
+      ctx.font = `800 ${px}px "Archivo", "Helvetica Neue", Arial, sans-serif`;
+      if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${(px * 0.01).toFixed(2)}px`;
+    };
+    let size = 48;
+    font(size);
+    while (size > 30 && ctx.measureText(stationName).width > maxW) font((size -= 2));
+    if (ctx.measureText(stationName).width <= maxW) {
+      ctx.fillText(stationName, w / 2, h / 2);
+      return;
+    }
+    // Two lines: break at the space or dash nearest the middle, keeping the dash on line one.
+    const breaks = [...stationName.matchAll(/[ –-]/g)].map((m) => m.index!);
+    const mid = stationName.length / 2;
+    const at = breaks.length ? breaks.reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a)) : -1;
+    const lines = at < 0 ? [stationName] : [stationName.slice(0, stationName[at] === ' ' ? at : at + 1).trim(), stationName.slice(at + 1).trim()];
+    size = 34;
+    font(size);
+    while (size > 18 && Math.max(...lines.map((l) => ctx.measureText(l).width)) > maxW) font((size -= 2));
+    const lh = size * 1.02;
+    lines.forEach((l, i) => ctx.fillText(l, w / 2, h / 2 + (i - (lines.length - 1) / 2) * lh));
   }
 
   /**
@@ -277,6 +334,7 @@ export class TextureGenerator {
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = this.aniso;
     return tex;
   }
 
@@ -284,9 +342,7 @@ export class TextureGenerator {
    * Draw high-craft subway ad with authentic logo and layout
    */
   public drawAdOnCanvas(canvas: HTMLCanvasElement, def: AdDefinition, headline: string, overrideBg?: string) {
-    const ctx = canvas.getContext('2d')!;
-    const w = canvas.width;
-    const h = canvas.height;
+    const { ctx, w, h } = begin(canvas);
 
     const bg = overrideBg || def.bg;
     ctx.fillStyle = bg;
@@ -311,17 +367,21 @@ export class TextureGenerator {
     ctx.fillStyle = def.fg;
     ctx.textBaseline = 'alphabetic';
     ctx.font = '800 60px "Archivo", "Arial Narrow", Arial, sans-serif';
-    ctx.fillText(headline, 52, 88, w - 150);
+    // One inner margin all round: text starts 20px inside the card border (x 32) and stops 20px
+    // inside its right edge (w - 12), or short of the logo for the headline.
+    const left = 52;
+    const right = w - 32;
+    ctx.fillText(headline, left, 88, right - left - 110);
 
     // Tagline / subhead
     ctx.globalAlpha = 0.9;
     ctx.font = '600 28px "Archivo", Arial, sans-serif';
-    ctx.fillText(def.sub, 52, 136, w - 120);
+    ctx.fillText(def.sub, left, 136, right - left);
 
     // Fine print / NYC contact info
     ctx.globalAlpha = 0.72;
     ctx.font = '500 20px "Archivo", Arial, sans-serif';
-    ctx.fillText(def.fine, 52, 172, w - 120);
+    ctx.fillText(def.fine, left, 170, right - left);
 
     ctx.globalAlpha = 1.0;
   }
@@ -428,9 +488,7 @@ export class TextureGenerator {
    * Route Strip Map: G Train Brooklyn to Queens
    */
   public drawRouteMap(canvas: HTMLCanvasElement, variant: 'normal' | 'extra' | 'color' = 'normal') {
-    const ctx = canvas.getContext('2d')!;
-    const w = canvas.width;
-    const h = canvas.height;
+    const { ctx, w, h } = begin(canvas);
 
     // Header background
     ctx.fillStyle = '#f6f4eb';

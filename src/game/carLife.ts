@@ -11,11 +11,15 @@
  * - Habits stop while a passenger's head belongs to something else: a stare, the chorus, a flash
  *   startle, or an anomaly. Parents keep their own heads (watching you is the game).
  *
+ * - Everyone breathes: a ±0.4% rise and fall, slow and perfectly regular, so it can never be
+ *   mistaken for something changing. Off under Reduced screen effects, and for the still figures.
+ *
  * Head habits are added after the gaze code runs and removed again before it runs (stripHeads),
  * so they never pile up on the gaze.
  */
 import type * as THREE from 'three';
 import type { PersonObject } from '../types';
+import { seededRandom } from '../graphics/characterBuilder';
 
 type Life = NonNullable<PersonObject['life']>;
 
@@ -36,6 +40,9 @@ export interface CarLifeContext {
 const LEAN_PER_ACCEL = 0.014; // rad per m/s²
 const LEAN_MAX = 0.05;
 const SEATED = 0.35;
+/** Breathing: rise and fall of the figure (fraction of its height) and breaths per second. */
+const BREATH_AMP = 0.004;
+const BREATH_HZ = 0.24;
 
 const HABIT: Record<string, Life['act']> = { hoodie: 'nod', puffer: 'nod', texter: 'scroll', office: 'page', mta: 'radio' };
 
@@ -61,7 +68,7 @@ export class CarLife {
       p.life = {
         lean: 0,
         leanVel: 0,
-        phase: Math.random() * Math.PI * 2,
+        phase: seededRandom(p.tid)() * Math.PI * 2, // the same rhythm for this passenger every ride
         headX: 0,
         headY: 0,
         nextAt: gt + rand(1, 8),
@@ -98,6 +105,7 @@ export class CarLife {
       p.life.leanVel = 0;
       p.g.rotation.x = 0;
       p.g.rotation.z = 0;
+      p.g.scale.y = 1;
     }
   }
 
@@ -115,8 +123,10 @@ export class CarLife {
       if (c.still.has(p) || p.frozen) {
         p.g.rotation.x = 0;
         p.g.rotation.z = 0;
+        p.g.scale.y = 1;
         continue;
       }
+      p.g.scale.y = c.reduced ? 1 : 1 + BREATH_AMP * Math.sin(c.gt * BREATH_HZ * Math.PI * 2 + life.phase);
 
       // Lean along the train (inertia), with a little spring so it settles naturally.
       const k = p.standing ? 1 : SEATED;
