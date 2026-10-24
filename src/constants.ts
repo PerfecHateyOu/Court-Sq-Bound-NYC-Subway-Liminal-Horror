@@ -233,18 +233,30 @@ export const MASK_DIALOGUES: MaskDialogue[][] = [
     { who: 0, line: 'You look warm. Are you warm?', calm: 'Just stuffy in here.', off: ['Is it hot to you?', 'Stop looking at me like that.'] },
     { who: 1, line: 'You\u2019re staring at something.', calm: 'Just zoning out.', off: ['No I\u2019m not.', 'Don\u2019t you see it?'], needsSus: true },
     { who: 0, line: 'Did you drop something on the floor?', calm: 'No, just adjusting my bag.', off: ['Why are you staring?', 'Leave me alone.'] },
+    { who: 1, line: 'You want the window seat?', calm: 'Nah, I\u2019m good here.', off: ['Why, what\u2019s out there?', 'Don\u2019t make me move.'] },  // DRAFT
+    { who: 0, line: 'Text your aunt we\u2019re on the train.', calm: 'Sending it now.', off: ['There\u2019s no signal down here.', 'Which train do I tell her?'] },  // DRAFT
   ],
   // Medium/Low tier (Uneasy set)
   [
     { who: 1, line: 'You\u2019d tell us if something was wrong, right?', calm: 'Of course.', off: ['Would you tell me?', 'Define wrong.'] },
     { who: 0, line: 'Why do you keep looking over there?', calm: 'Thought I saw someone I knew.', off: ['You saw it too?', 'Over where?'] },
     { who: 1, line: 'You\u2019re staring at something.', calm: 'Just zoning out.', off: ['No I\u2019m not.', 'Don\u2019t you see it?'], needsSus: true },
+    { who: 0, line: 'You\u2019re holding that pole awfully tight.', calm: 'Train\u2019s bumpy tonight.', off: ['Because it keeps moving.', 'Don\u2019t let go of yours.'] },  // DRAFT
+    { who: 1, line: 'You didn\u2019t say a word that whole stop.', calm: 'Just tired, Dad.', off: ['Was it a stop?', 'Nobody got on.'] },  // DRAFT
+    { who: 0, line: 'Is your stomach bothering you again?', calm: 'A little. It\u2019ll pass.', off: ['It\u2019s not my stomach.', 'Can you feel that too?'] },  // DRAFT
+    { who: 1, line: 'Put your phone away and talk to us.', calm: 'Okay, okay. It\u2019s away.', off: ['It stopped showing the time.', 'About what?'] },  // DRAFT
+    { who: 0, line: 'You\u2019re counting the stops again, aren\u2019t you?', calm: 'Habit. Sorry.', off: ['Someone has to.', 'We passed this one already.'] },  // DRAFT
   ],
   // Critical tier (Wrong set)
   [
     { who: 0, line: 'You can see it too, can\u2019t you?', calm: 'See what?', off: ['Yes.', 'Don\u2019t.'] },
     { who: 1, line: 'We\u2019re not getting off. You know that.', calm: 'I know.', off: ['Why would you say that?', 'Who said we were?'] },
     { who: 0, line: 'Who are you looking for?', calm: 'Nobody. Just looking.', off: ['The people who were here.', 'You.'] },
+    { who: 1, line: 'Sit still. They notice when you fidget.', calm: 'Okay. Sitting still.', off: ['Who notices?', 'You noticed.'] },  // DRAFT
+    { who: 0, line: 'We\u2019ve always taken this train, sweetie.', calm: 'Right. I know.', off: ['Since when?', 'There\u2019s no always down here.'] },  // DRAFT
+    { who: 1, line: 'Don\u2019t look at the windows. Look at me.', calm: 'I\u2019m looking at you.', off: ['What\u2019s in the windows?', 'Your face is wrong.'] },  // DRAFT
+    { who: 0, line: 'Smile for me, hon. Like you used to.', calm: 'Like this?', off: ['I don\u2019t remember how.', 'You first.'] },  // DRAFT
+    { who: 1, line: 'Nobody gets off at this one. Remember?', calm: 'I remember.', off: ['Then why do the doors open?', 'Who told you that?'] },  // DRAFT
   ],
 ];
 
