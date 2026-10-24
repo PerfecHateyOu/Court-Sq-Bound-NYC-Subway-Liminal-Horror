@@ -21,6 +21,7 @@ import {
   INTERCOM_MIN_ROOM,
   INTERCOM_RETRY,
   MASK_DIALOGUES,
+  type MaskDialogue,
   PARANOID_UI_WORDS,
   RESTRAINT_GRACE,
   RESTRAINT_RAISE,
@@ -713,6 +714,8 @@ export class GameEngine {
     audioEngine.setMasterLevel(0.85, 0.3);
     audioEngine.setBedLevel(1.0, 0.3);
     audioEngine.resetRideMusic(); // a new ride starts at the top of the tune
+    this.maskUsed.clear(); // mask lines can come back on a new ride
+    this.maskLast = null;
 
     // The practice stretch: the train waits at the platform with the doors open; nothing counts.
     if (opts.tutorial) {
@@ -1317,11 +1320,32 @@ export class GameEngine {
     return evp.raised;
   }
 
+  /** Mask lines already asked this ride (by text) and the last one asked; reset per ride. */
+  public maskUsed = new Set<string>();
+  public maskLast: string | null = null;
+
+  /**
+   * No-repeat pick (doc §7.4): a line isn't asked twice in a ride until every line in the
+   * pool has been used; then that pool starts over, but never with the line just asked.
+   */
+  public pickMaskLine(pool: MaskDialogue[]): MaskDialogue {
+    let fresh = pool.filter((l) => !this.maskUsed.has(l.line));
+    if (fresh.length === 0) {
+      pool.forEach((l) => this.maskUsed.delete(l.line));
+      fresh = pool.slice();
+    }
+    const notLast = fresh.filter((l) => l.line !== this.maskLast);
+    const L = shuffle(notLast.length ? notLast : fresh)[0];
+    this.maskUsed.add(L.line);
+    this.maskLast = L.line;
+    return L;
+  }
+
   public startMaskCheck() {
     const t = tierOf(this.san);
     const set = t <= 1 ? MASK_DIALOGUES[t === 0 ? 0 : Math.random() < 0.5 ? 0 : 1] : t === 2 ? MASK_DIALOGUES[1] : MASK_DIALOGUES[2];
     const pool = set.filter((l) => !l.needsSus || this.sus >= 10);
-    const L = pool[Math.floor(Math.random() * pool.length)];
+    const L = this.pickMaskLine(pool);
     const p = this.carBuilder.parents[L.who];
 
     p.force = true;
