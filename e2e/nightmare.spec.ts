@@ -54,7 +54,9 @@ test.describe('Nightmare mode', () => {
   });
 
   test('single tubes flicker mid-ride only: never the whole car, never near the stations, never under Reduced', async ({ game }) => {
-    const r = await game(`window.__S.set({ screenEffects: 'full' }); ride(1); G.seg._masks = [];
+    // The ambient third-rail tube flicker (one tube, any mode; e2e/atmosphere-polish.spec.ts) is
+    // switched off here so this only counts Nightmare's bulbs.
+    const r = await game(`window.__S.set({ screenEffects: 'full' }); const C = G.constructor; const was = C.TUBE_FLICKER_CHANCE; C.TUBE_FLICKER_CHANCE = 0; ride(1); G.seg._masks = [];
       const segs = G.carBuilder.lightSegs; const L = G.segLen(G.seg);
       const run = (nm) => { G.nightmare = nm; G.Q = []; G.startSegment(1); G.seg._masks = []; G.active.forEach((a) => (a.trigger = 999));
         let outs = 0, allOut = 0, early = 0, late = 0;
@@ -63,7 +65,7 @@ test.describe('Nightmare mode', () => {
           if (off && G.GT >= G.flickerUntil) { outs++; if (off === segs.length) allOut++; if (G.ts < 3) early++; if (G.ts > G.segLen(G.seg) - 6 - 8) late++; } }
         return { outs, allOut, early, late }; };
       const nightmare = run(true); const normal = run(false);
-      window.__S.set({ screenEffects: 'reduced' }); const reduced = run(true); window.__S.set({ screenEffects: 'full' }); G.nightmare = false;
+      window.__S.set({ screenEffects: 'reduced' }); const reduced = run(true); window.__S.set({ screenEffects: 'full' }); G.nightmare = false; C.TUBE_FLICKER_CHANCE = was;
       return { nightmare, normal, reduced };`);
     expect(r.nightmare.outs).toBeGreaterThan(0);
     expect(r.nightmare).toMatchObject({ allOut: 0, early: 0, late: 0 });
