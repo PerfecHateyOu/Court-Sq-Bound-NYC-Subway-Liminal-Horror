@@ -12,7 +12,8 @@ const hold = async (page: any, game: any, code: string, gt: number) => {
 
 test.describe('keyboard look', () => {
   test('a held key turns the view smoothly, scaled by look speed, and stops on release', async ({ page, game }) => {
-    await game(`ride(0);`);
+    // No conductor PA mid-measurement (it can land on any stretch: e2e/conductor-pa.spec.ts).
+    await game(`ride(0); G.conductorAt = null;`);
     // A single keydown with no OS auto-repeat: the old stepped look moved 0.08 rad once and stopped.
     const r1 = await hold(page, game, 'ArrowLeft', 0.6);
     const rate1 = r1.dty / r1.dgt;
