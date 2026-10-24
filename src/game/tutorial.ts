@@ -16,6 +16,7 @@
 import type * as THREE from 'three';
 import type { GameEngine } from './gameState';
 import { audioEngine } from '../audio/audioEngine';
+import { shuffle } from './shuffle';
 import { how, type InputKind } from '../ui/controls';
 
 export const TUTORIAL_KEY = 'gtrain-tutorial';
@@ -164,11 +165,11 @@ export class Tutorial {
     audioEngine.blip();
     G.setSub('<b>Mom:</b> You okay, hon? You look pale.', 7);
     G.presentChoice({
-      items: [
+      items: shuffle([
         { txt: 'Just tired.', val: 'calm' },
         { txt: 'Did that window just change?', val: 'off' },
         { txt: 'Someone keeps staring at us.', val: 'off' },
-      ].sort(() => Math.random() - 0.5),
+      ]),
       window: 7 + (this.touch ? 1 : 0),
       glitch: 0,
       reshuffle: false,

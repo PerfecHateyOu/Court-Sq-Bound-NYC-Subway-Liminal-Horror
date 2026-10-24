@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { SWAP_CHAR_MAP } from '../constants';
 import { SubwayCarBuilder, AdObject } from '../graphics/subwayCarBuilder';
 import { ActiveAnomaly, AnomalyDef } from '../types';
+import { shuffle } from './shuffle';
 
 /** How far along the car (m, either side of your seat) the small, close-look anomalies may happen. */
 export const NEAR_X = 5;
@@ -29,7 +30,7 @@ export class AnomalyManager {
     // read an ad's letters, however hard you look.
     const near = (x: number) => Math.abs(x) <= NEAR_X;
     const freeAd = (usedTids: Set<string>, nearOnly = false): AdObject | null => {
-      const shuffled = [...cb.acrossAds].filter((a) => !nearOnly || near(a.mesh.position.x)).sort(() => Math.random() - 0.5);
+      const shuffled = shuffle(cb.acrossAds.filter((a) => !nearOnly || near(a.mesh.position.x)));
       return shuffled.find((a) => !usedTids.has(a.tid)) || null;
     };
 
@@ -64,7 +65,7 @@ export class AnomalyManager {
       sticker: {
         tier: 0,
         make: () => {
-          const shuffledPanes = cb.panes.filter((p) => near(p.x)).sort(() => Math.random() - 0.5);
+          const shuffledPanes = shuffle(cb.panes.filter((p) => near(p.x)));
           const p = shuffledPanes[0];
           if (!p) return null;
           const kind = Math.random() < 0.5 ? 'sticker' : 'stain';
@@ -87,7 +88,7 @@ export class AnomalyManager {
       lighttemp: {
         tier: 0,
         make: () => {
-          const shuffledLights = cb.lightSegs.filter((l) => near(l.m.position.x)).sort(() => Math.random() - 0.5);
+          const shuffledLights = shuffle(cb.lightSegs.filter((l) => near(l.m.position.x)));
           const l = shuffledLights[0];
           if (!l) return null;
 
